@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Home</title>
+  <style>
+    body {
+      background-color: #3745c2;
+      margin: 0;
+      display: flex;
+      flex-direction: column; /* Set the flex direction to column */
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    form {
+      background-color: #4654e1;
+      width: 80%; /* Adjusted width of the form */
+      max-width: 400px; /* Set a maximum width for the form */
+      height: 54px;
+      border-radius: 5px;
+      display: flex;
+      align-items: center;
+    }
+
+    input {
+      all: unset;
+      font: 18px system-ui;
+      color: #fff;
+      height: 100%;
+      width: 80%;
+      padding: 8px 10px;
+    }
+
+    ::placeholder {
+      color: #fff;
+      opacity: 0.7;
+    }
+
+    svg {
+      color: #fff;
+      fill: currentColor;
+      width: 24px;
+      height: 24px;
+      padding: 10px;
+    }
+
+    button {
+      all: unset;
+      cursor: pointer;
+      width: 54px;
+      height: 54px;
+    }
+
+    .header-text {
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      font-size: 2rem;
+      color: white;
+      margin-bottom: 20px; /* Add some space below the heading */
+    }
+
+    .footer-text {
+      position: absolute;
+      bottom: 10px;
+      left: 10px;
+      font-family: Arial, sans-serif;
+      font-weight: bold;
+      font-size: 14px;
+      color: white;
+    }
+
+    .footer-text.right {
+      right: 10px;
+      left: auto;
+    }
+
+    @media (max-width: 768px) {
+      /* Adjust styles for smaller screens */
+      .header-text {
+        font-size: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="header-text">JBrowser</div>
+  <form role="search" id="form">
+    <div style="flex: 1;"> <!-- Add a flex container to push down the search bar -->
+      <input type="search" id="query" name="q" placeholder="Search Here..." aria-label="Search Google">
+    </div>
+    <button>
+      <svg viewBox="0 0 1024 1024">
+        <path class="path1" d="M848.471 928l-263.059-263.059c-48.941 36.706-110.118 55.059-177.412 55.059-171.294 0-312-140.706-312-312s140.706-312 312-312c171.294 0 312 140.706 312 312 0 67.294-24.471 128.471-55.059 177.412l263.059 263.059-79.529 79.529zM189.623 408.078c0 121.364 97.091 218.455 218.455 218.455s218.455-97.091 218.455-218.455c0-121.364-103.159-218.455-218.455-218.455-121.364 0-218.455 97.091-218.455 218.455z"></path>
+      </svg>
+    </button>
+  </form>
+  <div class="footer-text">A Minimalistic Space-Saving Browser</div>
+  <div class="footer-text right">Made by JB</div>
+  <script>
+    const f = document.getElementById('form');
+    const q = document.getElementById('query');
+
+    function submitted(event) {
+      event.preventDefault();
+      const googleSearchUrl = 'https://www.google.com/search?q=' + encodeURIComponent(q.value);
+      window.location.href = googleSearchUrl;
+    }
+
+    f.addEventListener('submit', submitted);
+  </script>
+</body>
+</html>
