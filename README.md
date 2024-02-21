@@ -21,7 +21,7 @@ Say goodbye to intrusive ads that disrupt your browsing flow and potentially com
 ### Anonymous browsing with proxy support: 
 Connect through anonymizing proxies to mask your IP address and location, adding an extra layer of protection to your online activities.
 
-## Identity refresher for ultimate anonymity: 
+### Identity refresher for ultimate anonymity: 
 Get a brand new online identity every time you launch JBrowser. This unique feature eliminates the risk of tracking and profiling, allowing you to truly browse anonymously.
 
 ### i2p network compatibility: 
