@@ -1,8 +1,23 @@
 # JBrowser
-A Minimalistic Browser made in Python, HTML5 and CSS.
+JBrowser is an open-source browser made in Python, HTML, CSS and Javascript. It utilises the PyQt5 Library, as we want our software to be open-source and easy to understand.
 
 ## Downloading Process
-To open the file, download the lastest version (currently version 1.2), extract the .zip file and open the .exe file called "JBrowser v1.2"
+
+### To open the .exe file
+  1. Go to the 'Applications' respirtory
+  2. Download the desired .zip file (e.g. 'JBrowser_v3.1.2.zip')
+  3. Extract the .zip file
+  4. Open the JBrowser application
+  5. Press 'more info'
+  6. Press 'Run Anyways'
+
+### To use the .py and .html files (Python 3.11+ and Chronium/Firefox Required)
+  1. Go to the 'Scripts' respirtory
+  2. Download the desired .zip file (e.g. 'JBrowser_v3.1.2_RAW.zip')
+  3. Extract the .zip file into any empty folder
+  4. Make sure the .html and .py scripts aree together
+  5a. Execute the python script (.py) by executing through an IDE (e.g. Pycharm/VS Code)
+  5b. To execute the web script (.html), right click and select 'run with', then your browser
 
 ## Why use JBrowser?
 Tired of bloated browsers slowing you down and tracking your every move? JBrowser offers a revolutionary solution. With its featherweight design, unwavering commitment to privacy, and powerful anonymity tools, JBrowser empowers you to browse freely and securely.
