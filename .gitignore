@@ -1,0 +1,22 @@
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Build output (tools/build_app.ps1, tools/build_installer.ps1)
+build/
+dist/
+dist_*/
+*.part
+
+# Local test profiles and logs (use --profile-dir outside the repo when you can)
+profile*/
+jb-*/
+*.log
+
+# Editors and OS
+.vscode/
+.idea/
+*.swp
+Thumbs.db
+desktop.ini

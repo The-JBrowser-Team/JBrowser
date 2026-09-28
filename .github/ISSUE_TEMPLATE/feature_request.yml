@@ -1,0 +1,18 @@
+name: Feature request
+description: An idea to make JBrowser better
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What would you like to do that JBrowser makes hard today?
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: How could it work?
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else (screenshots, other browsers that do it well)?

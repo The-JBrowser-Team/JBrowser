@@ -1,0 +1,112 @@
+"""Script-opened popup windows (window.open with features — OAuth / payment flows).
+
+They share the opener's profile so sign-ins flow back to the originating space, and keep
+the window.opener relationship intact because the page is created by the engine request.
+"""
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
+from PyQt6.QtCore import QRect, Qt, QUrl
+from PyQt6.QtGui import QPainter
+from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
+from PyQt6.QtWebEngineWidgets import QWebEngineView
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+
+from jbrowser.core.urls import pretty_url
+from jbrowser.models.space import Space
+from jbrowser.platform import win
+from jbrowser.services.privacy import PageInterceptor
+from jbrowser.ui.icons import app_icon, draw_glyph
+from jbrowser.ui.theme import theme
+from jbrowser.ui.widgets import IconButton
+
+if TYPE_CHECKING:
+    from jbrowser.context import AppContext
+    from jbrowser.ui.controller import BrowserController
+
+
+class PopupPage(QWebEnginePage):
+    def __init__(self, profile: QWebEngineProfile, popup: "PopupWindow"):
+        super().__init__(profile, popup)
+        self._popup = popup
+
+    def createWindow(self, window_type):
+        return self._popup.ctx.hooks.create_popup(self.profile(), self._popup.space)
+
+
+class PopupWindow(QWidget):
+    def __init__(self, ctx: "AppContext", ui: "BrowserController", profile: QWebEngineProfile, space: Space):
+        super().__init__(None, Qt.WindowType.Window)
+        self.ctx = ctx
+        self.ui = ui
+        self.space = space
+        self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setWindowIcon(app_icon())
+        self.setWindowTitle("JBrowser popup")
+        self.resize(560, 680)
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        lay.setSpacing(0)
+        bar = QWidget(self)
+        bar.setFixedHeight(38)
+        bl = QHBoxLayout(bar)
+        bl.setContentsMargins(10, 0, 4, 0)
+        self._lock = QLabel(bar)
+        self._lock.setFixedSize(18, 18)
+        self.address = QLabel(bar)
+        self.address.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+        promote = IconButton("newwindow", "Open as a card in this space", bar, size=30, glyph_px=12)
+        promote.clicked.connect(self._promote)
+        bl.addWidget(self._lock)
+        bl.addWidget(self.address, 1)
+        bl.addWidget(promote)
+        lay.addWidget(bar)
+        self.view = QWebEngineView(self)
+        self.page = PopupPage(profile, self)
+        self._interceptor = PageInterceptor(ctx.privacy, lambda _h: None, self)
+        self.page.setUrlRequestInterceptor(self._interceptor)
+        self.view.setPage(self.page)
+        lay.addWidget(self.view, 1)
+        self.page.urlChanged.connect(self._on_url)
+        self.page.titleChanged.connect(lambda t: self.setWindowTitle(f"{t} · {space.name}" if t else "JBrowser popup"))
+        self.page.windowCloseRequested.connect(self.close)
+        self.page.geometryChangeRequested.connect(self._on_geometry)
+        self.page.iconChanged.connect(lambda ic: self.setWindowIcon(ic if not ic.isNull() else app_icon()))
+        self._bar = bar
+
+    def showEvent(self, e) -> None:
+        super().showEvent(e)
+        hwnd = int(self.winId())
+        win.set_dark_title(hwnd, theme().dark)
+        win.set_caption_colors(hwnd, theme().c("dialog_solid"), theme().c("text"))
+
+    def _on_url(self, url: QUrl) -> None:
+        self.address.setText(pretty_url(url))
+        self.address.setToolTip(url.toString())
+        self._secure = url.scheme() == "https"
+        self._bar.update()
+        self._lock.update()
+
+    def _on_geometry(self, rect: QRect) -> None:
+        if rect.width() > 100 and rect.height() > 100:
+            self.resize(rect.width(), rect.height() + self._bar.height())
+
+    def _promote(self) -> None:
+        url = self.page.url()
+        if url.isValid() and not url.isEmpty():
+            self.ui.open_url(url, "new", space_id=self.space.id)
+        self.close()
+
+    def paintEvent(self, _e) -> None:
+        p = QPainter(self)
+        p.fillRect(self.rect(), theme().c("dialog_solid"))
+        secure = getattr(self, "_secure", False)
+        draw_glyph(p, self._lock.geometry().toRectF(), "lock" if secure else "warning",
+                   theme().c("text2") if secure else theme().c("warning"), 12)
+        p.end()
+
+    def closeEvent(self, e) -> None:
+        # WA_DeleteOnClose destroys children in creation order: the view before its page.
+        self.page.windowCloseRequested.disconnect()
+        super().closeEvent(e)

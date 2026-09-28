@@ -1,0 +1,40 @@
+name: Bug report
+description: Something in JBrowser doesn't work as it should
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Thanks for reporting! Security problems go through SECURITY.md instead, not here.
+  - type: input
+    id: version
+    attributes:
+      label: JBrowser version
+      description: Settings → About
+      placeholder: "1.4.0"
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: "Windows 11 24H2"
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open …
+        2. Click …
+        3. See …
+  - type: textarea
+    id: log
+    attributes:
+      label: Log (optional)
+      description: The last lines of %APPDATA%\JBrowser\Logs\jbrowser.log. Remove anything private first.
+      render: text

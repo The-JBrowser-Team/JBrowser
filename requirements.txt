@@ -1,0 +1,6 @@
+# JBrowser runtime dependencies (Python 3.14+, Windows 11)
+PyQt6>=6.8
+PyQt6-WebEngine>=6.8
+pywinstyles>=1.8
+requests>=2.32
+cryptography>=43

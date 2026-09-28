@@ -1,0 +1,13 @@
+# Normalise text files to LF in the repository; Git converts them for your editor as needed.
+* text=auto eol=lf
+
+# Windows-only files keep CRLF so PowerShell, Inno Setup and the version resource read them natively.
+*.ps1  text eol=crlf
+*.iss  text eol=crlf
+tools/version_info.txt text eol=crlf
+
+# Binary assets
+*.ico  binary
+*.png  binary
+*.wav  binary
+*.mp3  binary

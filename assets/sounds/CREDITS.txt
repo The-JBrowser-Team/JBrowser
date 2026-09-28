@@ -1,0 +1,13 @@
+Sound effects used by the first-run welcome screen
+===================================================
+
+intro.wav  converted from "amadozapana-sfx-efect-sound-logo-215037.mp3" (by amadozapana)
+click.wav  converted from "universfield-computer-mouse-click-352734.mp3" (by Universfield),
+           leading silence trimmed, 0.32 s
+
+Both source files come from Pixabay (https://pixabay.com/sound-effects/) and are used under the
+Pixabay Content License (https://pixabay.com/service/license-summary/), which allows their use in
+an application. They are not covered by JBrowser's GNU GPL licence, and should not be redistributed
+on their own.
+
+Converted with tools/convert_sounds.py.
