@@ -147,7 +147,7 @@ it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RE
 | [`installer/`](installer/README.md) | The Inno Setup script for `JBrowser-Setup.exe` |
 | [`tools/`](tools/README.md) | Scripts for dependencies, versions, icons, builds and releases |
 | [`docs/`](docs/README.md) | Features, architecture, development, building, releasing and updates |
-| [`.github/`](.github/README.md) | Continuous integration, issue and pull-request templates |
+| [`.github/`](.github/GITHUB_CONFIG.md) | Continuous integration, issue and pull-request templates |
 | `master.ps1` | Builds, packages and publishes everything in one command |
 | `install.ps1` | Installs or updates JBrowser from the latest release zip (the one-command install) |
 | `distribution/` | Zips made by `master.ps1` (local only, not in git) |
