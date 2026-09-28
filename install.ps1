@@ -37,7 +37,9 @@ function Install-JBrowser {
 
     $sumAsset = $release.assets | Where-Object { $_.name -eq "$($zip.name).sha256" } | Select-Object -First 1
     if ($sumAsset) {
-        $expected = ((Invoke-WebRequest $sumAsset.browser_download_url -UseBasicParsing -Headers @{ "User-Agent" = "JBrowser-install" }).Content -split '\s+')[0]
+        $content = (Invoke-WebRequest $sumAsset.browser_download_url -UseBasicParsing -Headers @{ "User-Agent" = "JBrowser-install" }).Content
+        if ($content -is [byte[]]) { $content = [Text.Encoding]::ASCII.GetString($content) }   # served as binary
+        $expected = ($content.Trim() -split '\s+')[0]
         if ((Get-FileHash $zipPath -Algorithm SHA256).Hash -ne $expected) { throw "The download is damaged or has been changed (SHA-256 mismatch). Nothing was installed." }
     }
 
