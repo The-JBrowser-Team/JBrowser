@@ -42,6 +42,8 @@ $git = Find-Tool "git.exe" @($desktopGit, "$env:ProgramFiles\Git\cmd\git.exe")
 $gh = Find-Tool "gh.exe" @("$env:ProgramFiles\GitHub CLI\gh.exe", "$env:LOCALAPPDATA\Programs\GitHub CLI\gh.exe")
 if (-not $git) { throw "git was not found (install Git, or GitHub Desktop which bundles it)." }
 if (-not $gh) { throw "GitHub CLI was not found. Install it with: winget install GitHub.cli" }
+# gh calls git itself (to find the repository), and GitHub Desktop's git is not on PATH.
+$env:PATH = (Split-Path -Parent $git) + ";" + $env:PATH
 
 Step "Checking GitHub sign-in"
 & $gh auth status --hostname github.com | Out-Null
@@ -67,7 +69,9 @@ $match = [regex]::Match($changelog, $pattern)
 if (-not $match.Success) { throw "CHANGELOG.md has no '## [$version]' section. Describe the release first." }
 $notesFile = Join-Path $env:TEMP "jbrowser-release-notes-$version.md"
 $notes = $match.Groups[1].Value.Trim() + "`n`n---`nInstall: download **JBrowser-Setup-$version.exe** below and run it. " +
-         "Existing installations update themselves automatically.`n"
+         "Existing installations update themselves automatically.`n`n" +
+         "The installer is not code-signed yet, so Windows SmartScreen may warn about it: choose " +
+         "*More info* → *Run anyway*. You can check the download against **JBrowser-Setup-$version.exe.sha256**.`n"
 [System.IO.File]::WriteAllText($notesFile, $notes)
 
 if (-not $SkipBuild) {
@@ -77,8 +81,15 @@ $setup = Join-Path $DistDir "installer\JBrowser-Setup-$version.exe"
 if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Installer for $version not found in $DistDir\installer." }
 
 Step "Tagging $tag and pushing"
-& $git tag -a $tag -m "JBrowser $version"
-if ($LASTEXITCODE -ne 0) { throw "Could not create tag $tag" }
+$tagCommit = & $git rev-parse -q --verify "refs/tags/$tag^{commit}"
+if ($tagCommit) {
+    # Resuming a run that stopped after tagging: fine as long as the tag is on this commit.
+    if ($tagCommit -ne (& $git rev-parse HEAD)) { throw "Tag $tag already exists on a different commit." }
+    Write-Host "Tag $tag already exists on this commit; reusing it."
+} else {
+    & $git tag -a $tag -m "JBrowser $version"
+    if ($LASTEXITCODE -ne 0) { throw "Could not create tag $tag" }
+}
 # Push with GitHub CLI's sign-in (for these commands only), so git needs no credentials of its own.
 $gitAuth = @("-c", "credential.helper=", "-c", "credential.helper=!'$($gh -replace '\\', '/')' auth git-credential")
 & $git @gitAuth push origin HEAD
