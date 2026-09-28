@@ -23,31 +23,16 @@
 #>
 param(
     [switch]$SkipBuild,
-    [switch]$Draft
+    [switch]$Draft,
+    [string[]]$ExtraAssets = @()     # more files to attach (master.ps1 passes the zip)
 )
 $ErrorActionPreference = "Stop"
 . (Join-Path $PSScriptRoot "common.ps1")
 Set-Location $Root
 
-function Find-Tool($name, [string[]]$candidates) {
-    $cmd = Get-Command $name -ErrorAction SilentlyContinue
-    if ($cmd) { return $cmd.Source }
-    foreach ($p in $candidates) { if ($p -and (Test-Path $p)) { return $p } }
-    return $null
-}
-
-$desktopGit = Get-ChildItem "$env:LOCALAPPDATA\GitHubDesktop" -Directory -Filter "app-*" -ErrorAction SilentlyContinue |
-    Sort-Object Name | Select-Object -Last 1 | ForEach-Object { Join-Path $_.FullName "resources\app\git\cmd\git.exe" }
-$git = Find-Tool "git.exe" @($desktopGit, "$env:ProgramFiles\Git\cmd\git.exe")
-$gh = Find-Tool "gh.exe" @("$env:ProgramFiles\GitHub CLI\gh.exe", "$env:LOCALAPPDATA\Programs\GitHub CLI\gh.exe")
-if (-not $git) { throw "git was not found (install Git, or GitHub Desktop which bundles it)." }
-if (-not $gh) { throw "GitHub CLI was not found. Install it with: winget install GitHub.cli" }
-# gh calls git itself (to find the repository), and GitHub Desktop's git is not on PATH.
-$env:PATH = (Split-Path -Parent $git) + ";" + $env:PATH
-
 Step "Checking GitHub sign-in"
-& $gh auth status --hostname github.com | Out-Null
-if ($LASTEXITCODE -ne 0) { throw "GitHub CLI is not signed in. Run: gh auth login" }
+Initialize-GitHubTools
+$git, $gh = $Git, $Gh
 
 $version = (& $Py tools\version.py).Trim()
 $tag = "v$version"
@@ -55,12 +40,7 @@ $tag = "v$version"
 Step "Checking the working tree"
 $dirty = & $git status --porcelain
 if ($dirty) { throw "There are uncommitted changes. Commit them first:`n$dirty" }
-# (Windows PowerShell turns a redirected native error stream into an exception under "Stop".)
-$ErrorActionPreference = "Continue"
-& $gh release view $tag 2>&1 | Out-Null
-$releaseExists = $LASTEXITCODE -eq 0
-$ErrorActionPreference = "Stop"
-if ($releaseExists) { throw "Release $tag already exists. Set a new version with: python tools\version.py --set X.Y.Z" }
+if (Test-GitHubRelease $tag) { throw "Release $tag already exists. Set a new version with: python tools\version.py --set X.Y.Z" }
 
 Step "Reading the release notes for $version from CHANGELOG.md"
 $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
@@ -91,15 +71,15 @@ if ($tagCommit) {
     if ($LASTEXITCODE -ne 0) { throw "Could not create tag $tag" }
 }
 # Push with GitHub CLI's sign-in (for these commands only), so git needs no credentials of its own.
-$gitAuth = @("-c", "credential.helper=", "-c", "credential.helper=!'$($gh -replace '\\', '/')' auth git-credential")
-& $git @gitAuth push origin HEAD
+& $git @GitAuth push origin HEAD
 if ($LASTEXITCODE -ne 0) { throw "Could not push the branch" }
-& $git @gitAuth push origin $tag
+& $git @GitAuth push origin $tag
 if ($LASTEXITCODE -ne 0) { throw "Could not push the tag" }
 
 Step "Creating the GitHub release"
-$ghArgs = @("release", "create", $tag, $setup, "$setup.sha256", "--title", "JBrowser $version", "--notes-file",
-          $notesFile, "--verify-tag")
+foreach ($f in $ExtraAssets) { if (-not (Test-Path $f)) { throw "Extra asset not found: $f" } }
+$ghArgs = @("release", "create", $tag, $setup, "$setup.sha256") + @($ExtraAssets) +
+          @("--title", "JBrowser $version", "--notes-file", $notesFile, "--verify-tag")
 if ($Draft) { $ghArgs += "--draft" }
 & $gh @ghArgs
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }

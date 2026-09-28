@@ -21,6 +21,9 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
   need, then imports every module to prove they work (`--check`, `--lock`).
 - `tools/version.py`, `tools/build_app.ps1`, `tools/build_installer.ps1` and `tools/release.ps1` for a one-command
   build and release.
+- `master.ps1` runs the whole process: packages, build, installer, a dated zip in `distribution\`, and (with
+  `-Publish`) the GitHub release.
+- One-command install and update from PowerShell: `irm https://raw.githubusercontent.com/The-JBrowser-Team/JBrowser/main/install.ps1 | iex`.
 
 ### Changed
 - The welcome intro is livelier: three brand-coloured orbs swirl in on comet trails, pulse on the sound's first

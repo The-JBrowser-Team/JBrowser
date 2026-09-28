@@ -1,14 +1,17 @@
 # Building
 
-There are two outputs, and each has one script:
+**The short version:** run `.\master.ps1` from the repository root. It updates the packages, builds the app and the
+installer, and packages `distribution\JBrowser-<version>-<date>.zip`. See [RELEASING.md](RELEASING.md) for `-Publish`.
+
+Each step also has its own script:
 
 | Output | Script | Result |
 |---|---|---|
 | The app (PyInstaller, one folder) | `.\tools\build_app.ps1` | `dist\JBrowser\JBrowser.exe` and its `_internal\` folder |
 | The installer (Inno Setup) | `.\tools\build_installer.ps1` | `dist\installer\JBrowser-Setup-<version>.exe` and `.exe.sha256` |
+| The zip | `.\master.ps1` | `distribution\JBrowser-<version>-<yyyy-MM-dd>.zip` and `.zip.sha256` |
 
-`build_installer.ps1` runs `build_app.ps1` first, so for a release you only need the installer script (or
-`tools\release.ps1`, which runs it for you).
+`build_installer.ps1` runs `build_app.ps1` first.
 
 ### Where the output goes
 

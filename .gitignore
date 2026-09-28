@@ -9,6 +9,9 @@ dist/
 dist_*/
 *.part
 
+# Packaged releases made by master.ps1 (published on GitHub Releases instead)
+distribution/
+
 # Local test profiles and logs (use --profile-dir outside the repo when you can)
 profile*/
 jb-*/

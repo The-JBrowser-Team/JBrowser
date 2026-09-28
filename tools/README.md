@@ -1,5 +1,8 @@
 # `tools/`: maintenance scripts
 
+Most of the time you only need **`..\master.ps1`** in the repository root, which runs these in order (dependencies,
+build, installer, zip in `distribution\`, and publishing with `-Publish`). The tools below are its individual steps.
+
 Run them from the repository root. The Python tools use `.venv\Scripts\python.exe`, except `update_deps.py`,
 which can create `.venv` from any Python 3.14+.
 

@@ -65,16 +65,30 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 Every change is listed in **[CHANGELOG.md](CHANGELOG.md)**, and each release's notes are on the
 [Releases page](https://github.com/The-JBrowser-Team/JBrowser/releases).
 
-## Install
+## Install the latest version
 
-1. Download **`JBrowser-Setup-<version>.exe`** from the
-   [latest release](https://github.com/The-JBrowser-Team/JBrowser/releases/latest).
-2. Run it. It installs for your Windows account without asking for administrator rights, adds a Start menu entry,
-   and can register JBrowser as a web browser so you can make it your default in Windows Settings.
-3. To uninstall, use *Settings → Apps → Installed apps → JBrowser*. Your data is kept unless you choose to delete it.
+### One command (recommended)
 
-Windows SmartScreen may warn about an unrecognised app, because the installer is not code-signed. Choose
-*More info → Run anyway*. You can check the download against the `.sha256` file published beside it.
+Open **PowerShell** and paste:
+
+```powershell
+irm https://raw.githubusercontent.com/The-JBrowser-Team/JBrowser/main/install.ps1 | iex
+```
+
+This downloads the latest release zip, checks its SHA-256 fingerprint, and starts the installer. Run the same command
+again at any time to update. [install.ps1](install.ps1) is short, so you can read it first.
+
+### Download the zip yourself
+
+1. Open the **[latest release](https://github.com/The-JBrowser-Team/JBrowser/releases/latest)** and download
+   **`JBrowser-<version>-<date>.zip`**, for example `JBrowser-1.4.0-2026-09-28.zip`.
+2. Extract it, then run **`JBrowser-Setup-<version>.exe`**. `INSTALL.txt` in the zip explains each step.
+3. The installer works for your Windows account without administrator rights. It adds a Start menu entry, and it can
+   register JBrowser as a web browser so you can make it your default in Windows Settings.
+
+The release page also has the installer on its own (`JBrowser-Setup-<version>.exe`). Windows SmartScreen may warn about
+an unrecognised app, because the installer is not code-signed; choose *More info → Run anyway*. To uninstall, use
+*Settings → Apps → Installed apps → JBrowser*. Your data is kept unless you choose to delete it.
 
 ### Updates
 
@@ -98,19 +112,24 @@ covers the command-line options, test profiles, debugging and code conventions.
 
 ## Build and release
 
-After the one-time setup above (`tools\update_deps.py`), plus [Inno Setup 6](https://jrsoftware.org/isinfo.php)
-(`winget install JRSoftware.InnoSetup`) for the installer, run from the repository folder:
+You need Python 3.14+, [Inno Setup 6](https://jrsoftware.org/isinfo.php) (`winget install JRSoftware.InnoSetup`)
+and, to publish, [GitHub CLI](https://cli.github.com/) signed in with `gh auth login`.
+**[master.ps1](master.ps1)** does everything else, from the repository folder:
 
-| Goal | Command | Output |
-|---|---|---|
-| Build the app | `.\tools\build_app.ps1` | `dist\JBrowser\JBrowser.exe` |
-| Build the installer | `.\tools\build_installer.ps1` | `dist\installer\JBrowser-Setup-<version>.exe` + `.sha256` |
-| Publish a release | `.\tools\release.ps1` | a GitHub release, which installed copies update to |
+| Goal | Command |
+|---|---|
+| Build and package the current version | `.\master.ps1` |
+| Release a new version (update) | `.\master.ps1 -Version 1.4.1 -Publish` |
+| Rebuild the current version and refresh its release files | `.\master.ps1 -Publish` |
 
-`build_installer.ps1` builds the app first, so it is the only command you need for a new installer. When the
-repository is inside **OneDrive**, `dist\` is **`%LOCALAPPDATA%\JBrowser-build\dist`** instead, so OneDrive doesn't
-sync the build. The scripts print the exact path when they finish. Guides: [docs/BUILDING.md](docs/BUILDING.md) and
-[docs/RELEASING.md](docs/RELEASING.md).
+It updates every package and checks every import, builds the app and the installer, and packages them as
+**`distribution\JBrowser-<version>-<date>.zip`**. With `-Publish`, it also commits and pushes your changes and publishes
+the GitHub release. Installed copies then update themselves, and the one-command install above picks it up. Before
+releasing a new version, describe it in [CHANGELOG.md](CHANGELOG.md) and under *Release notes* above.
+
+The steps can also be run on their own (`tools\build_app.ps1`, `tools\build_installer.ps1`, `tools\release.ps1`).
+When the repository is inside OneDrive, the build folder is `%LOCALAPPDATA%\JBrowser-build` so OneDrive doesn't sync
+it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Repository layout
 
@@ -129,6 +148,9 @@ sync the build. The scripts print the exact path when they finish. Guides: [docs
 | [`tools/`](tools/README.md) | Scripts for dependencies, versions, icons, builds and releases |
 | [`docs/`](docs/README.md) | Features, architecture, development, building, releasing and updates |
 | [`.github/`](.github/README.md) | Continuous integration, issue and pull-request templates |
+| `master.ps1` | Builds, packages and publishes everything in one command |
+| `install.ps1` | Installs or updates JBrowser from the latest release zip (the one-command install) |
+| `distribution/` | Zips made by `master.ps1` (local only, not in git) |
 | `main.py`, `JBrowser.spec` | Entry point and the PyInstaller recipe |
 | `requirements*.txt` | Runtime and build dependencies |
 
