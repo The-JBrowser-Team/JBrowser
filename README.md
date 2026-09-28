@@ -38,8 +38,32 @@ Made with ❤️ by the JBrowser Company. © 2026 The JBrowser Company.
 - **Light on memory.** Out-of-sight cards stop rendering, and idle cards hibernate.
 - **Updates itself.** New versions arrive from GitHub Releases and are verified before they install.
 
-See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard shortcuts, and
-**[CHANGELOG.md](CHANGELOG.md)** for what changed in each version.
+See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard shortcuts.
+
+## Release notes
+
+### 1.4.0 (latest) · 28 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.0)
+
+- **Automatic updates.** JBrowser checks GitHub once a day. When a new version is out, an **Update** button appears
+  on the ribbon. One click shows what's new, downloads the installer, checks its SHA-256 fingerprint and restarts
+  JBrowser on the new version.
+- **A proper Windows installer.** `JBrowser-Setup-1.4.0.exe` installs without administrator rights, adds a Start
+  menu entry, can register JBrowser as a web browser, and uninstalls from *Settings → Apps*.
+- **A livelier welcome.** Coloured orbs swirl in and burst into sparkles, the logo springs out with a twist, and the
+  letters hop in one by one. The click sound is softer.
+- **Open source.** JBrowser now lives on GitHub under the GNU GPL v3, with documentation for every folder.
+- **Fixed:** after a restart, a removed HTTPS proxy could stay in use.
+
+### Earlier versions
+
+| Version | Highlights |
+|---|---|
+| 1.2.0 | First-run welcome and guided tour, pull to add a card, favourites and pinned cards, the Archive (closed cards from the last 48 hours), an optional Home button |
+| 1.1.0 | Rebuilt Settings, phishing and malware protection, fingerprinting protection, HTTPS-first, download protection, *Clear browsing data* and *Reset* |
+| 1.0.0 | First release: the spatial card canvas, isolated Spaces, the Lazy Toolbar, memory saver, secure DNS, tracker blocking and the password manager |
+
+Every change is listed in **[CHANGELOG.md](CHANGELOG.md)**, and each release's notes are on the
+[Releases page](https://github.com/The-JBrowser-Team/JBrowser/releases).
 
 ## Install
 
@@ -74,14 +98,19 @@ covers the command-line options, test profiles, debugging and code conventions.
 
 ## Build and release
 
+After the one-time setup above (`tools\update_deps.py`), plus [Inno Setup 6](https://jrsoftware.org/isinfo.php)
+(`winget install JRSoftware.InnoSetup`) for the installer, run from the repository folder:
+
 | Goal | Command | Output |
 |---|---|---|
 | Build the app | `.\tools\build_app.ps1` | `dist\JBrowser\JBrowser.exe` |
 | Build the installer | `.\tools\build_installer.ps1` | `dist\installer\JBrowser-Setup-<version>.exe` + `.sha256` |
 | Publish a release | `.\tools\release.ps1` | a GitHub release, which installed copies update to |
 
-If the repository is inside OneDrive, the output goes to `%LOCALAPPDATA%\JBrowser-build\dist` instead, so OneDrive
-doesn't sync it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RELEASING.md).
+`build_installer.ps1` builds the app first, so it is the only command you need for a new installer. When the
+repository is inside **OneDrive**, `dist\` is **`%LOCALAPPDATA%\JBrowser-build\dist`** instead, so OneDrive doesn't
+sync the build. The scripts print the exact path when they finish. Guides: [docs/BUILDING.md](docs/BUILDING.md) and
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ## Repository layout
 

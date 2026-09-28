@@ -29,7 +29,8 @@ gh auth login                      # choose GitHub.com → HTTPS → sign in wit
    This updates `jbrowser/__init__.py` (the single source of the version) and `tools/version_info.txt`.
 2. **Write the release notes.** In [CHANGELOG.md](../CHANGELOG.md), rename `## [Unreleased]` to
    `## [1.4.1] - YYYY-MM-DD`, or add that section. Its text becomes the GitHub release notes and is what users see
-   in the *Update* dialog.
+   in the *Update* dialog. Then update **Release notes** in [README.md](../README.md): put a short summary of the
+   new version at the top, and move the previous one into the *Earlier versions* table.
 3. **Commit and push** (GitHub Desktop, or `git commit -am "JBrowser 1.4.1"` then `git push`).
 4. **Release:**
    ```powershell
