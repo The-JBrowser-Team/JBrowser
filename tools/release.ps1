@@ -56,8 +56,12 @@ $tag = "v$version"
 Step "Checking the working tree"
 $dirty = & $git status --porcelain
 if ($dirty) { throw "There are uncommitted changes. Commit them first:`n$dirty" }
-& $gh release view $tag *> $null
-if ($LASTEXITCODE -eq 0) { throw "Release $tag already exists. Set a new version with: python tools\version.py --set X.Y.Z" }
+# (Windows PowerShell turns a redirected native error stream into an exception under "Stop".)
+$ErrorActionPreference = "Continue"
+& $gh release view $tag 2>&1 | Out-Null
+$releaseExists = $LASTEXITCODE -eq 0
+$ErrorActionPreference = "Stop"
+if ($releaseExists) { throw "Release $tag already exists. Set a new version with: python tools\version.py --set X.Y.Z" }
 
 Step "Reading the release notes for $version from CHANGELOG.md"
 $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
@@ -78,8 +82,11 @@ if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Insta
 Step "Tagging $tag and pushing"
 & $git tag -a $tag -m "JBrowser $version"
 if ($LASTEXITCODE -ne 0) { throw "Could not create tag $tag" }
-& $git push origin HEAD
-& $git push origin $tag
+# Push with GitHub CLI's sign-in (for these commands only), so git needs no credentials of its own.
+$gitAuth = @("-c", "credential.helper=", "-c", "credential.helper=!'$($gh -replace '\\', '/')' auth git-credential")
+& $git @gitAuth push origin HEAD
+if ($LASTEXITCODE -ne 0) { throw "Could not push the branch" }
+& $git @gitAuth push origin $tag
 if ($LASTEXITCODE -ne 0) { throw "Could not push the tag" }
 
 Step "Creating the GitHub release"

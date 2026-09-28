@@ -17,6 +17,7 @@ gh auth login                      # choose GitHub.com → HTTPS → sign in wit
 ```
 
 `git` comes from Git for Windows, or from GitHub Desktop, which bundles it (the scripts find either).
+`release.ps1` pushes with the GitHub CLI sign-in, so git needs no separate credentials.
 
 ## Every release
 
