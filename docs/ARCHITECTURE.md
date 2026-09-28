@@ -33,13 +33,15 @@ never import `ui`. The UI observes lower layers through Qt signals.
 1. Parse the command line, then set the Chromium flags and Qt environment (D3D11 widgets, the native Windows audio
    backend).
 2. Enforce a single instance (`single_instance.py`): a second launch forwards its URLs to the running window and
-   exits. Hold the named mutex `JBrowser.AppMutex`, which the installer uses to see that JBrowser is running.
+   exits. Hold the named mutex `JBrowser.AppMutex`, which the uninstaller uses to see that JBrowser is running.
 3. Build the `AppContext` (`context.py`), a dependency container that creates every service in order and holds
    no globals.
 4. Restore the session, create the `MainWindow`, and show the first-run welcome if it has not been seen.
 5. Start background jobs: tracker and threat list refreshes, and the update check (after 15 s).
 6. On exit, tear down in reverse order: save the session, stop pages, then close profiles before the application
-   object goes away. The order matters for Qt WebEngine.
+   object goes away. The order matters for Qt WebEngine. The same path runs when Windows asks JBrowser to close
+   (signing out, or an installer's Restart Manager): `aboutToQuit` closes the main window, whose `closeEvent` does
+   the saving and teardown.
 
 ## Data flow
 

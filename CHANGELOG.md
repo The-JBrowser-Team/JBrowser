@@ -5,6 +5,27 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.4.1] - 2026-09-29
+
+### Fixed
+- **Setup no longer stops with "JBrowser is currently running".** If JBrowser is open, Setup now offers to close it
+  for you: JBrowser saves your cards and spaces, closes, and the last page offers to start it again. You can install
+  this version straight over an open JBrowser 1.4.0.
+- Setup no longer asks whether to install "for me" or "for all users". It installs for your account, as before.
+- When Windows or an installer asks JBrowser to close (for example when you sign out), it now saves everything and
+  shuts down in order, instead of quitting without saving the latest changes.
+- Saving settings, the session and other data no longer fails with "Access is denied" when an antivirus scan or
+  the search indexer briefly holds the file. Before, that save was lost and "Something went wrong" appeared.
+- Update window: after closing it during a download, *Install* no longer downloads the update a second time, and
+  *Check for updates* during a download now shows its progress instead of leaving a stray message for later.
+
+### Changed
+- **30 MB smaller download** (108 MB instead of 138 MB, and 344 MB instead of 523 MB installed). Parts of Qt that
+  JBrowser never uses, non-English translations and a debug copy of the DevTools files are no longer included.
+- The build scripts start from empty output folders, so files from an earlier build can never end up in an installer.
+- GitHub: private vulnerability reporting is switched on (the *Report a vulnerability* link in SECURITY.md works now),
+  a code of conduct was added, and the page links to the latest release.
+
 ## [1.4.0] - 2026-09-28
 
 ### Added
@@ -84,6 +105,7 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
   per-space proxies, tracker blocking, an encrypted password manager, downloads, history, bookmarks, DevTools and
   user scripts, on a Windows 11 Mica / Acrylic window. See [docs/FEATURES.md](docs/FEATURES.md).
 
+[1.4.1]: https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.1
 [1.4.0]: https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.0
 [1.2.0]: https://github.com/The-JBrowser-Team/JBrowser/blob/main/CHANGELOG.md#120---2026-09-28
 [1.1.0]: https://github.com/The-JBrowser-Team/JBrowser/blob/main/CHANGELOG.md#110---2026-09-28

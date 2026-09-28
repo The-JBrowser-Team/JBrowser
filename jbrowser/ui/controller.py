@@ -1151,6 +1151,11 @@ class BrowserController(QObject):
     def check_for_updates(self) -> None:
         """Manual check: report the result instead of staying quiet."""
         up = self.ctx.updater
+        if up.state in ("downloading", "ready"):
+            self.show_update_dialog()        # an update is already on its way: show its progress
+            return
+        if up.state == "checking":
+            return                           # the running check will report itself
 
         def done(state: str) -> None:
             if state == "checking":

@@ -34,6 +34,17 @@ if (-not $SkipDeps -or -not (Test-Path $Py)) {
 $running = Get-Process JBrowser -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$DistDir\*" }
 if ($running) { throw "JBrowser is running from $DistDir. Close it, then build again." }
 
+# Start from empty folders. PyInstaller clears them too, but if that silently fails (a file locked by
+# an antivirus scan, for example) old files stay and end up in the installer.
+Step "Clearing the previous build"
+foreach ($old in @((Join-Path $DistDir "JBrowser"), (Join-Path $DistDir "JBrowser.exe"), (Join-Path $WorkDir "JBrowser"))) {
+    for ($try = 0; $try -lt 10 -and (Test-Path $old); $try++) {   # scanners hold new files for a moment
+        Remove-Item $old -Recurse -Force -ErrorAction SilentlyContinue
+        if (Test-Path $old) { Start-Sleep -Milliseconds 700 }
+    }
+    if (Test-Path $old) { throw "Could not delete $old. Close anything using it (Explorer, JBrowser), then build again." }
+}
+
 Step "Rendering the icon and version resource"
 & $Py tools\make_icon.py
 & $Py tools\version.py --sync

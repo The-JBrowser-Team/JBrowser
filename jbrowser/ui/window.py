@@ -459,6 +459,7 @@ class MainWindow(QMainWindow):
         if self._shut_down:
             e.accept()
             return
+        log.info("Closing: saving the session")
         s = self.ctx.settings
         if self._immersive is not None:
             self.exit_immersive()

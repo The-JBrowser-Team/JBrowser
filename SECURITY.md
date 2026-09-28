@@ -17,8 +17,8 @@ picks them up, and a new JBrowser release ships them.
 
 Please **do not open a public issue**. Instead:
 
-1. Open the repository's **Security** tab and choose **Report a vulnerability** (GitHub private vulnerability
-   reporting), or
+1. Use **[Report a vulnerability](https://github.com/The-JBrowser-Team/JBrowser/security/advisories/new)**
+   (GitHub private vulnerability reporting, also on the repository's **Security** tab), or
 2. If that isn't available, open an issue titled "Security contact request" that contains **no details**, and a
    maintainer will reach out privately.
 

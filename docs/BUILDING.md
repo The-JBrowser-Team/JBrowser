@@ -19,7 +19,7 @@ Each step also has its own script:
 
 - normally `dist\` (and `build\` for temporary files) inside the repository, ignored by git;
 - **`%LOCALAPPDATA%\JBrowser-build\dist`** when the repository is inside **OneDrive**. Otherwise OneDrive would
-  upload about 700 MB per build, and it locks files while PyInstaller is still writing them, which breaks the build;
+  upload about 450 MB per build, and it locks files while PyInstaller is still writing them, which breaks the build;
 - any folder you like: set `JBROWSER_BUILD_DIR` before running the scripts.
 
 The rule lives in [tools/common.ps1](../tools/common.ps1), which all the build scripts share.
@@ -55,6 +55,10 @@ The spec's choices, and the equivalent command-line flags:
 | `PyQt6.QtPrintSupport` | Printing |
 | `PyQt6.QtMultimedia` + `assets\sounds` | Welcome-screen sounds. The FFmpeg media plugin is filtered out because sounds use the native Windows backend. |
 | `upx=False` (`--noupx`) | UPX corrupts Qt WebEngine binaries (`QtWebEngineProcess.exe`, `Qt6WebEngineCore.dll`) |
+| `_needed()` filter (spec only) | Leaves out what a widgets app never loads: Qt Quick 3D / Controls / PDF and similar modules, the QML folder, non-English translations and the debug copy of the DevTools resources. That takes the app from 523 MB to 344 MB and the installer from 138 MB to 108 MB. Qt6Quick, Qt6Qml and Qt6QuickWidgets stay, because Qt6WebEngineCore links against them. |
+
+After changing the filter, check that nothing needed went missing: every DLL's imports must resolve inside the build,
+a page must load, and F12 must open DevTools. `-OneFile` builds don't use the filter.
 
 PyInstaller's PyQt6 hooks bundle `QtWebEngineProcess.exe`, the Chromium `.pak` resources, locales and ICU data.
 Keep the whole `dist\JBrowser` folder together.

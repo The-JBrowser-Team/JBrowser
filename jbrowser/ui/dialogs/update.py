@@ -54,6 +54,11 @@ class UpdateDialog(JDialog):
         self._refresh()
 
     # ---------------------------------------------------------------- state
+    def _downloaded(self) -> bool:
+        """The verified installer for the latest version is already on disk."""
+        path = self.updater.installer_path
+        return self.updater.state == "ready" and bool(path) and os.path.exists(path)
+
     def _refresh(self) -> None:
         info = self.updater.latest
         can_install = self.updater.can_install()
@@ -63,7 +68,11 @@ class UpdateDialog(JDialog):
             self.skip_btn.hide()
             return
         size = f", {info.installer_size / 1048576:.0f} MB" if info.installer_size else ""
-        if can_install:
+        if can_install and self._downloaded():
+            self.sub.setText(f"JBrowser {info.version} has been downloaded and checked. JBrowser will close, "
+                             "update and reopen. Your cards, spaces, passwords and settings stay as they are.")
+            self.go_btn.setText("Restart and update")
+        elif can_install:
             self.sub.setText(f"You have version {__version__}. The update downloads{size} in the background, is "
                              "checked for tampering, and then JBrowser restarts on the new version. Your cards, "
                              "spaces, passwords and settings stay exactly as they are.")
@@ -112,7 +121,9 @@ class UpdateDialog(JDialog):
         if info is None:
             self.updater.check(manual=True)
             return
-        if self.updater.can_install():
+        if self.updater.can_install() and self._downloaded():
+            self._install_now()              # finished while this window was closed: no need to fetch it again
+        elif self.updater.can_install():
             self.updater.download()
         else:
             QDesktopServices.openUrl(QUrl(info.page_url or RELEASES_PAGE))

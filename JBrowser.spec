@@ -29,6 +29,36 @@ a = Analysis(
 # FFmpeg media plugin and its libraries are not needed. (Web video uses Chromium's own codecs.)
 _FFMPEG = ("ffmpegmediaplugin", "avcodec-", "avformat-", "avutil-", "swresample-", "swscale-")
 a.binaries = [b for b in a.binaries if not any(k in b[0].lower().replace("\\", "/") for k in _FFMPEG)]
+
+# Qt modules JBrowser never loads. The PyQt6 hooks bring them in with the QML plugins of Qt WebEngine
+# and Qt Multimedia, but a widgets app needs none of them. (Qt6Quick, Qt6Qml and Qt6QuickWidgets
+# stay: Qt6WebEngineCore links against them.) Together with the files below this saves ~170 MB
+# on disk and ~45 MB in the installer.
+_UNUSED_QT = ("qt6quick3d", "qt6quickcontrols2", "qt6quickdialogs2", "qt6quicktemplates2", "qt6quickparticles",
+              "qt6quickeffects", "qt6quickshapes", "qt6quicklayouts", "qt6quicktest", "qt6quicktimeline",
+              "qt6quickvectorimage", "qt6pdf", "qt6shadertools", "qt6spatialaudio", "qt6remoteobjects",
+              "qt6sensors", "qt6texttospeech", "qt6statemachine", "qt6test.",
+              "qt6webenginequick", "qt6webchannelquick", "qt6positioningquick", "qt6multimediaquick",
+              "qt6websockets")
+
+
+def _needed(dest: str) -> bool:
+    d = dest.lower().replace("\\", "/")
+    name = d.rsplit("/", 1)[-1]
+    if "/qt6/qml/" in d or d.startswith("pyqt6/qt6/qml"):
+        return False                                   # QML modules: not used by a widgets app
+    if name.startswith(_UNUSED_QT) or name == "qpdf.dll":   # qpdf.dll: the PDF image plugin needs Qt6Pdf
+        return False
+    if name == "qtwebengine_devtools_resources.debug.pak":
+        return False                                   # debug-build copy; DevTools use the other .pak
+    if "/qt6/translations/" in d:
+        # The UI is English: keep only Chromium's English strings (en-GB also covers en-AU etc.).
+        return name in ("en-us.pak", "en-gb.pak")
+    return True
+
+
+a.binaries = [b for b in a.binaries if _needed(b[0])]
+a.datas = [d for d in a.datas if _needed(d[0])]
 pyz = PYZ(a.pure)
 
 exe = EXE(

@@ -5,10 +5,31 @@ import json
 import logging
 import os
 import tempfile
+import time
 from pathlib import Path
 from typing import Any
 
 log = logging.getLogger(__name__)
+
+# Antivirus scanners and the search indexer briefly open files that were just written, and Windows
+# refuses to replace a file while another program has it open ("Access is denied"). Retrying for up
+# to ~2.5 seconds rides that out instead of losing the save.
+_REPLACE_ATTEMPTS = 20
+
+
+def _replace(src: str, dst: Path) -> None:
+    delay = 0.02
+    for attempt in range(_REPLACE_ATTEMPTS):
+        try:
+            os.replace(src, dst)
+            if attempt:
+                log.info("Saved %s after %d retries (the file was briefly in use)", dst.name, attempt)
+            return
+        except PermissionError:
+            if attempt == _REPLACE_ATTEMPTS - 1:
+                raise
+            time.sleep(delay)
+            delay = min(delay * 1.5, 0.2)
 
 
 def atomic_write_bytes(path: Path, data: bytes) -> None:
@@ -20,7 +41,7 @@ def atomic_write_bytes(path: Path, data: bytes) -> None:
             fh.write(data)
             fh.flush()
             os.fsync(fh.fileno())
-        os.replace(tmp, path)
+        _replace(tmp, path)
     except BaseException:
         try:
             os.unlink(tmp)

@@ -42,22 +42,20 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.4.0 (latest) · 28 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.0)
+### 1.4.1 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.1)
 
-- **Automatic updates.** JBrowser checks GitHub once a day. When a new version is out, an **Update** button appears
-  on the ribbon. One click shows what's new, downloads the installer, checks its SHA-256 fingerprint and restarts
-  JBrowser on the new version.
-- **A proper Windows installer.** `JBrowser-Setup-1.4.0.exe` installs without administrator rights, adds a Start
-  menu entry, can register JBrowser as a web browser, and uninstalls from *Settings → Apps*.
-- **A livelier welcome.** Coloured orbs swirl in and burst into sparkles, the logo springs out with a twist, and the
-  letters hop in one by one. The click sound is softer.
-- **Open source.** JBrowser now lives on GitHub under the GNU GPL v3, with documentation for every folder.
-- **Fixed:** after a restart, a removed HTTPS proxy could stay in use.
+- **Setup closes JBrowser for you.** Setup no longer stops with "JBrowser is currently running". It offers to close
+  JBrowser, which saves your cards first, and it no longer asks "install for me or for all users?".
+- **30 MB smaller download** (108 MB), and 180 MB less on disk, by leaving out parts of Qt that JBrowser never uses.
+- **Nothing lost when Windows closes JBrowser** (signing out, or an installer), and saves no longer fail when an
+  antivirus scan briefly holds a file.
+- Update window fixes: no second download after closing it mid-download, and no stray messages.
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.4.0 | Automatic updates from GitHub, a proper Windows installer, a livelier welcome animation, open source under the GNU GPL v3 |
 | 1.2.0 | First-run welcome and guided tour, pull to add a card, favourites and pinned cards, the Archive (closed cards from the last 48 hours), an optional Home button |
 | 1.1.0 | Rebuilt Settings, phishing and malware protection, fingerprinting protection, HTTPS-first, download protection, *Clear browsing data* and *Reset* |
 | 1.0.0 | First release: the spatial card canvas, isolated Spaces, the Lazy Toolbar, memory saver, secure DNS, tracker blocking and the password manager |
@@ -156,7 +154,7 @@ it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RE
 
 ## Contributing and security
 
-Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md). Please report vulnerabilities privately, as
+Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md) and the [code of conduct](CODE_OF_CONDUCT.md). Please report vulnerabilities privately, as
 described in [SECURITY.md](SECURITY.md).
 
 ## Licence

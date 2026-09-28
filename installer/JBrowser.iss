@@ -8,10 +8,12 @@
 ;
 ; Design notes
 ;   * Per-user install (no administrator prompt) into %LOCALAPPDATA%\Programs\JBrowser, so the
-;     built-in auto-updater can run the next installer silently. Choosing "Install for all
-;     users" on the first page is still possible and then asks for administrator rights.
+;     built-in auto-updater can run the next installer silently. An administrator can still
+;     install for all users from the command line with /ALLUSERS.
 ;   * Upgrades install over the previous version (same AppId). Old program files are removed
 ;     first so no stale Qt libraries survive. User data in %APPDATA%\JBrowser is never touched.
+;   * If JBrowser is open, Setup offers to close it (Windows Restart Manager): JBrowser saves its
+;     session and exits cleanly, and the last page offers to start it again.
 ;   * The auto-updater runs this installer with /SILENT /RELAUNCH; /RELAUNCH (JBrowser's own
 ;     switch) starts the new version at the end. Other silent installs (e.g. winget) don't.
 ; ------------------------------------------------------------------------------------------
@@ -30,6 +32,8 @@
 #define AppExe "JBrowser.exe"
 #define AppPublisher "The JBrowser Company"
 #define AppURL "https://github.com/The-JBrowser-Team/JBrowser"
+; Held by a running JBrowser for its whole life (jbrowser/app.py).
+#define AppMutex "JBrowser.AppMutex"
 
 [Setup]
 ; The AppId identifies JBrowser to Windows forever: never change it, or upgrades will
@@ -49,7 +53,7 @@ DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
-PrivilegesRequiredOverridesAllowed=dialog
+PrivilegesRequiredOverridesAllowed=commandline
 UsedUserAreasWarning=no
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
@@ -63,9 +67,10 @@ OutputBaseFilename={#AppName}-Setup-{#AppVersion}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
-; Detect a running JBrowser (the app holds this named mutex) and close it before updating.
-AppMutex=JBrowser.AppMutex
-CloseApplications=yes
+; A running JBrowser is closed through the Restart Manager instead of blocking Setup with
+; AppMutex's "please close JBrowser" message. The window gets a normal close request first
+; (it saves and exits); "force" only ends leftover web-engine helper processes.
+CloseApplications=force
 RestartApplications=no
 ChangesAssociations=yes
 
@@ -127,6 +132,35 @@ begin
     for I := 1 to ParamCount do
       if CompareText(ParamStr(I), '/RELAUNCH') = 0 then
         Result := True;
+end;
+
+{ Uninstalling while JBrowser is open would leave files behind: ask for it to be closed first.
+  A silent uninstall waits up to 30 seconds for it to close, then gives up. }
+function InitializeUninstall: Boolean;
+var
+  Waited: Integer;
+begin
+  Result := True;
+  Waited := 0;
+  while CheckForMutexes('{#AppMutex}') do
+  begin
+    if UninstallSilent then
+    begin
+      if Waited >= 30 then
+      begin
+        Result := False;
+        Exit;
+      end;
+      Sleep(1000);
+      Waited := Waited + 1;
+    end
+    else if MsgBox('JBrowser is open. Please close it (your cards and spaces are saved), then click OK '
+                   + 'to continue uninstalling.', mbInformation, MB_OKCANCEL) = IDCANCEL then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
 end;
 
 { On an interactive uninstall, offer to delete the user's JBrowser data as well (default: keep). }

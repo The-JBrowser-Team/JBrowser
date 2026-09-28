@@ -210,6 +210,12 @@ def run(argv: list[str] | None = None) -> int:
         open_request(list(data.get("urls") or []), bool(data.get("incognito")))
 
     instance.received.connect(on_message)
+    # Windows asks running apps to close when the user signs out, and an installer asks through the
+    # Restart Manager when it updates JBrowser. Qt then quits without a close event, so save when
+    # asked and close the window ourselves: that saves everything and tears the web engine down in
+    # order. (After a normal close the window is already shut down and this does nothing.)
+    app.commitDataRequest.connect(lambda _session: ctx.save_all())
+    app.aboutToQuit.connect(window.close)
     window.show_restored()
     ctx.session.start()
     from jbrowser.ui.onboarding import ONBOARDING_VERSION

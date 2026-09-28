@@ -11,7 +11,7 @@
 
     Normally both live in the repository (dist\ and build\, ignored by git). When the repository
     is inside OneDrive they go to %LOCALAPPDATA%\JBrowser-build instead: OneDrive would otherwise
-    upload ~700 MB per build and lock files while PyInstaller is still writing them. Set
+    upload ~450 MB per build and lock files while PyInstaller is still writing them. Set
     JBROWSER_BUILD_DIR to choose another folder.
 #>
 $Root = Split-Path -Parent $PSScriptRoot

@@ -26,8 +26,8 @@ Code: [`jbrowser/services/updater.py`](../jbrowser/services/updater.py) (the log
    (JBrowser's own switch, handled in `installer/JBrowser.iss`) starts the new version.
    User data in `%APPDATA%\JBrowser` is never touched.
 
-If JBrowser is still running when the installer starts, the installer sees the `JBrowser.AppMutex` named mutex and
-closes it first.
+If JBrowser is somehow still running when the installer starts, the installer's Restart Manager support closes it
+first. JBrowser treats that request like a normal close: it saves the session and exits in order.
 
 ## Which copies update themselves
 
