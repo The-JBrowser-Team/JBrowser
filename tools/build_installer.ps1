@@ -1,12 +1,15 @@
 <#
 .SYNOPSIS
-    Builds the Windows installer: dist\installer\JBrowser-Setup-<version>.exe (+ .sha256).
+    Builds the Windows installer: <dist>\installer\JBrowser-Setup-<version>.exe (+ .sha256).
 
 .DESCRIPTION
-    1. Builds the app with tools\build_app.ps1 (skip with -SkipAppBuild to reuse dist\JBrowser).
+    1. Builds the app with tools\build_app.ps1 (skip with -SkipAppBuild to reuse <dist>\JBrowser).
     2. Compiles installer\JBrowser.iss with Inno Setup 6 (ISCC.exe).
     3. Writes JBrowser-Setup-<version>.exe.sha256, which the auto-updater uses to verify
        downloads. Both files are what tools\release.ps1 uploads to GitHub.
+
+    <dist> is dist\ in the repository, or %LOCALAPPDATA%\JBrowser-build\dist when the repository
+    is inside OneDrive (see tools\common.ps1).
 
     Inno Setup: winget install JRSoftware.InnoSetup
 
@@ -19,11 +22,8 @@ param(
     [switch]$SkipDeps
 )
 $ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "common.ps1")
 Set-Location $Root
-$py = Join-Path $Root ".venv\Scripts\python.exe"
-
-function Step($text) { Write-Host "==> $text" -ForegroundColor Cyan }
 
 function Find-ISCC {
     $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
@@ -38,15 +38,16 @@ function Find-ISCC {
 if (-not $SkipAppBuild) {
     & (Join-Path $PSScriptRoot "build_app.ps1") -SkipDeps:$SkipDeps
 }
-if (-not (Test-Path "dist\JBrowser\JBrowser.exe")) { throw "dist\JBrowser is missing. Build the app first." }
+$appDir = Join-Path $DistDir "JBrowser"
+if (-not (Test-Path "$appDir\JBrowser.exe")) { throw "$appDir is missing. Build the app first." }
 
-$version = (& $py tools\version.py).Trim()
-$outDir = Join-Path $Root "dist\installer"
+$version = (& $Py tools\version.py).Trim()
+$outDir = Join-Path $DistDir "installer"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $iscc = Find-ISCC
 
 Step "Compiling the installer for JBrowser $version (this takes a few minutes)"
-& $iscc /Q "/DAppVersion=$version" "/DSourceDir=$Root\dist\JBrowser" "/DOutputDir=$outDir" "installer\JBrowser.iss"
+& $iscc /Q "/DAppVersion=$version" "/DSourceDir=$appDir" "/DOutputDir=$outDir" "installer\JBrowser.iss"
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
 
 $setup = Join-Path $outDir "JBrowser-Setup-$version.exe"

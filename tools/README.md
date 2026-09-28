@@ -10,9 +10,14 @@ which can create `.venv` from any Python 3.14+.
 | `build_app.ps1` | Builds `dist\JBrowser\JBrowser.exe` with PyInstaller | `.\tools\build_app.ps1` · `-SkipDeps` · `-OneFile` |
 | `build_installer.ps1` | Builds the app, then `dist\installer\JBrowser-Setup-<v>.exe` and its `.sha256` | `.\tools\build_installer.ps1` · `-SkipAppBuild` |
 | `release.ps1` | Tags, pushes and publishes the GitHub release that installed copies update to | `.\tools\release.ps1` · `-Draft` · `-SkipBuild` |
+| `common.ps1` | Shared by the three `.ps1` scripts: paths, and where build output goes (outside OneDrive, see below) | dot-sourced, not run directly |
 | `make_icon.py` | Renders the vector logo into `assets\jbrowser.ico` and `jbrowser.png` | runs during every build |
 | `convert_sounds.py` | Converts an MP3 into the WAV format used for UI sounds, and prints its loudness envelope | `python tools\convert_sounds.py in.mp3 assets\sounds\x.wav` |
 | `version_info.txt` | The exe's version resource (generated: don't edit by hand) | written by `version.py --sync` |
+
+`dist\` above is the build output folder. When the repository is inside OneDrive it is
+`%LOCALAPPDATA%\JBrowser-build\dist` instead, so OneDrive doesn't sync (and lock) the build. Set `JBROWSER_BUILD_DIR` to
+override it.
 
 Guides: [docs/DEVELOPMENT.md](../docs/DEVELOPMENT.md), [docs/BUILDING.md](../docs/BUILDING.md) and
 [docs/RELEASING.md](../docs/RELEASING.md).

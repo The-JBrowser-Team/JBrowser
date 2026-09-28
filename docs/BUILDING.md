@@ -10,6 +10,17 @@ There are two outputs, and each has one script:
 `build_installer.ps1` runs `build_app.ps1` first, so for a release you only need the installer script (or
 `tools\release.ps1`, which runs it for you).
 
+### Where the output goes
+
+`dist\` in this guide means the output folder, which the scripts print as they run:
+
+- normally `dist\` (and `build\` for temporary files) inside the repository, ignored by git;
+- **`%LOCALAPPDATA%\JBrowser-build\dist`** when the repository is inside **OneDrive**. Otherwise OneDrive would
+  upload about 700 MB per build, and it locks files while PyInstaller is still writing them, which breaks the build;
+- any folder you like: set `JBROWSER_BUILD_DIR` before running the scripts.
+
+The rule lives in [tools/common.ps1](../tools/common.ps1), which all the build scripts share.
+
 ## Prerequisites
 
 - Python 3.14+ (`tools\update_deps.py` builds `.venv`, and the build scripts call it automatically)

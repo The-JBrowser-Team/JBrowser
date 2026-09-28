@@ -80,7 +80,8 @@ covers the command-line options, test profiles, debugging and code conventions.
 | Build the installer | `.\tools\build_installer.ps1` | `dist\installer\JBrowser-Setup-<version>.exe` + `.sha256` |
 | Publish a release | `.\tools\release.ps1` | a GitHub release, which installed copies update to |
 
-Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RELEASING.md).
+If the repository is inside OneDrive, the output goes to `%LOCALAPPDATA%\JBrowser-build\dist` instead, so OneDrive
+doesn't sync it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Repository layout
 

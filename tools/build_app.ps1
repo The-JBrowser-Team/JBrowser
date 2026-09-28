@@ -7,7 +7,9 @@
     2. Regenerates the icon and the exe's version resource from jbrowser\__init__.py.
     3. Runs PyInstaller with JBrowser.spec (one-folder, recommended) or as a single file.
 
-    Output: dist\JBrowser\JBrowser.exe  (or dist\JBrowser.exe with -OneFile)
+    Output: <dist>\JBrowser\JBrowser.exe  (or <dist>\JBrowser.exe with -OneFile), where <dist> is
+    dist\ in the repository, or %LOCALAPPDATA%\JBrowser-build\dist when the repository is inside
+    OneDrive (see tools\common.ps1).
 
 .EXAMPLE
     .\tools\build_app.ps1
@@ -19,43 +21,42 @@ param(
     [switch]$SkipDeps
 )
 $ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "common.ps1")
 Set-Location $Root
-$py = Join-Path $Root ".venv\Scripts\python.exe"
 
-function Step($text) { Write-Host "==> $text" -ForegroundColor Cyan }
-
-if (-not $SkipDeps -or -not (Test-Path $py)) {
+if (-not $SkipDeps -or -not (Test-Path $Py)) {
     Step "Installing / checking dependencies (tools\update_deps.py)"
-    $bootstrap = if (Test-Path $py) { $py } else { "py" }
-    if ($bootstrap -eq "py") { & py -3.14 tools\update_deps.py } else { & $py tools\update_deps.py }
+    if (Test-Path $Py) { & $Py tools\update_deps.py } else { & py -3.14 tools\update_deps.py }
     if ($LASTEXITCODE -ne 0) { throw "Dependency check failed" }
 }
 
-# A running copy from dist\ locks its files and makes PyInstaller fail half-way.
-$running = Get-Process JBrowser -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$Root\dist\*" }
-if ($running) { throw "JBrowser is running from $Root\dist. Close it, then build again." }
+# A running copy from the output folder locks its files and makes PyInstaller fail half-way.
+$running = Get-Process JBrowser -ErrorAction SilentlyContinue | Where-Object { $_.Path -like "$DistDir\*" }
+if ($running) { throw "JBrowser is running from $DistDir. Close it, then build again." }
 
 Step "Rendering the icon and version resource"
-& $py tools\make_icon.py
-& $py tools\version.py --sync
-$version = (& $py tools\version.py).Trim()
+& $Py tools\make_icon.py
+& $Py tools\version.py --sync
+$version = (& $Py tools\version.py).Trim()
+$outputs = @("--distpath", $DistDir, "--workpath", $WorkDir)
 
 if ($OneFile) {
-    Step "Building single-file JBrowser.exe $version"
-    & $py -m PyInstaller main.py --noconfirm --clean --onefile --windowed `
-        --name JBrowser --icon assets\jbrowser.ico --version-file tools\version_info.txt `
-        --add-data "assets\jbrowser.ico;assets" --add-data "assets\jbrowser.png;assets" `
-        --add-data "assets\sounds\intro.wav;assets\sounds" --add-data "assets\sounds\click.wav;assets\sounds" `
+    Step "Building single-file JBrowser.exe $version into $DistDir"
+    # --specpath keeps the generated spec out of the repository (JBrowser.spec is hand-written),
+    # which is also why every path below is absolute.
+    & $Py -m PyInstaller main.py --noconfirm --clean --onefile --windowed @outputs --specpath $WorkDir `
+        --name JBrowser --icon "$Root\assets\jbrowser.ico" --version-file "$Root\tools\version_info.txt" `
+        --add-data "$Root\assets\jbrowser.ico;assets" --add-data "$Root\assets\jbrowser.png;assets" `
+        --add-data "$Root\assets\sounds\intro.wav;assets\sounds" --add-data "$Root\assets\sounds\click.wav;assets\sounds" `
         --collect-submodules jbrowser `
         --hidden-import PyQt6.QtWebChannel --hidden-import PyQt6.QtPrintSupport `
         --hidden-import PyQt6.QtNetwork --hidden-import PyQt6.QtMultimedia --hidden-import pywinstyles `
         --exclude-module tkinter --exclude-module PyQt5 --noupx
-    $out = "dist\JBrowser.exe"
+    $out = Join-Path $DistDir "JBrowser.exe"
 } else {
-    Step "Building JBrowser $version (one-folder)"
-    & $py -m PyInstaller JBrowser.spec --noconfirm --clean
-    $out = "dist\JBrowser\JBrowser.exe"
+    Step "Building JBrowser $version (one-folder) into $DistDir"
+    & $Py -m PyInstaller JBrowser.spec --noconfirm --clean @outputs
+    $out = Join-Path $DistDir "JBrowser\JBrowser.exe"
 }
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out)) { throw "PyInstaller build failed" }
 Write-Host "Built $out ($version)" -ForegroundColor Green

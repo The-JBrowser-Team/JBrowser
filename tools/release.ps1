@@ -19,18 +19,15 @@
 .EXAMPLE
     .\tools\release.ps1
     .\tools\release.ps1 -Draft          # create the release as a draft to review on github.com first
-    .\tools\release.ps1 -SkipBuild      # reuse dist\installer from a previous build
+    .\tools\release.ps1 -SkipBuild      # reuse the installer from a previous build
 #>
 param(
     [switch]$SkipBuild,
     [switch]$Draft
 )
 $ErrorActionPreference = "Stop"
-$Root = Split-Path -Parent $PSScriptRoot
+. (Join-Path $PSScriptRoot "common.ps1")
 Set-Location $Root
-$py = Join-Path $Root ".venv\Scripts\python.exe"
-
-function Step($text) { Write-Host "==> $text" -ForegroundColor Cyan }
 
 function Find-Tool($name, [string[]]$candidates) {
     $cmd = Get-Command $name -ErrorAction SilentlyContinue
@@ -50,7 +47,7 @@ Step "Checking GitHub sign-in"
 & $gh auth status --hostname github.com | Out-Null
 if ($LASTEXITCODE -ne 0) { throw "GitHub CLI is not signed in. Run: gh auth login" }
 
-$version = (& $py tools\version.py).Trim()
+$version = (& $Py tools\version.py).Trim()
 $tag = "v$version"
 
 Step "Checking the working tree"
@@ -76,8 +73,8 @@ $notes = $match.Groups[1].Value.Trim() + "`n`n---`nInstall: download **JBrowser-
 if (-not $SkipBuild) {
     & (Join-Path $PSScriptRoot "build_installer.ps1")
 }
-$setup = Join-Path $Root "dist\installer\JBrowser-Setup-$version.exe"
-if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Installer for $version not found in dist\installer." }
+$setup = Join-Path $DistDir "installer\JBrowser-Setup-$version.exe"
+if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Installer for $version not found in $DistDir\installer." }
 
 Step "Tagging $tag and pushing"
 & $git tag -a $tag -m "JBrowser $version"
