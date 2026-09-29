@@ -31,6 +31,7 @@ from __future__ import annotations
 import argparse
 import ast
 import copy
+import hashlib
 import html
 import io
 import json
@@ -1076,7 +1077,20 @@ class Site:
         self.build_404()
         self.build_sitemap()
         write(self.out / ".nojekyll", "")
+        self.stamp_assets()
         self.broken = self.check_links()
+
+    def stamp_assets(self) -> None:
+        """Adds ?v=<content hash> to every stylesheet and script link, so browsers fetch a changed file
+        at once instead of using the copy GitHub Pages lets them cache for 10 minutes."""
+        stamps = {p.relative_to(self.out).as_posix(): hashlib.sha256(p.read_bytes()).hexdigest()[:10]
+                  for p in (self.out / "static").rglob("*") if p.suffix in (".css", ".js")}
+        pattern = re.compile(r'((?:href|src)="[^"?#]*?(static/(?:css|js)/[\w.-]+\.(?:css|js)))"')
+        for page in self.out.rglob("*.html"):
+            text = page.read_text(encoding="utf-8")
+            stamped = pattern.sub(lambda m: f'{m[1]}?v={stamps[m[2]]}"' if m[2] in stamps else m[0], text)
+            if stamped != text:
+                page.write_text(stamped, encoding="utf-8")
 
     def check_links(self) -> int:
         """Every relative link and #anchor in the built site must point at something that exists."""
@@ -1097,6 +1111,7 @@ class Site:
                 if re.match(r"^[a-z][a-z0-9+.\-]*:", url) or url.startswith("//"):
                     continue        # http:, https:, mailto: ...
                 path, _, frag = url.partition("#")
+                path = path.partition("?")[0]
                 target = (page.parent / path).resolve() if path else page
                 if target.is_dir():
                     target = target / "index.html"
@@ -1382,13 +1397,14 @@ class Site:
         latest = self.latest
         banner = ""
         if v.is_main:
-            banner = (f'<div class="version-banner dev"><strong>Development version.</strong> This describes '
-                      f'<code>main</code>, which may include changes that are not released yet. '
+            # the text is one <span>: the banner is a flex row, and loose text would split into items
+            banner = (f'<div class="version-banner dev"><span><strong>Development version.</strong> This '
+                      f'describes <code>main</code>, which may include changes that are not released yet.</span> '
                       f'<a href="{esc(rel(out_path, "docs/latest/index.html"))}">Documentation for '
                       f'{esc(latest.id)}</a></div>')
         elif not v.latest and dir_id != "latest":
-            banner = (f'<div class="version-banner old">You are reading the documentation for JBrowser '
-                      f'<strong>{esc(v.id)}</strong>. The newest release is {esc(latest.id)}. '
+            banner = (f'<div class="version-banner old"><span>You are reading the documentation for JBrowser '
+                      f'<strong>{esc(v.id)}</strong>. The newest release is {esc(latest.id)}.</span> '
                       f'<a class="to-latest" data-page="{esc(p["slug"])}.html" '
                       f'href="{esc(rel(out_path, "docs/latest/index.html"))}">Go to the latest documentation</a></div>')
         # breadcrumbs

@@ -93,6 +93,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   canvas fingerprint. Everything else reports what Chrome reports: JBrowser sends Chrome's headers (including a real
   `Accept-Language`), changes no hardware values, and leaves sign-in and security-check sites (Google, Cloudflare,
   Microsoft, Apple, PayPal, CAPTCHA providers) untouched, so it doesn't look like a bot.
+- **Google sign-in works**: Google's sign-in server gets a Firefox user agent, as in other Qt WebEngine browsers,
+  because Google refuses embedded browser engines ("This browser or app may not be secure"). Everything else still
+  sees Chrome.
 - **Tracking codes removed from links** (`utm_*`, `fbclid`, `gclid`, `mc_eid`, …) before the page opens, plus
   "Copy link without trackers" for sharing.
 - **HTTPS-first (optional)**: http links try the encrypted version first; if it fails, the page opens over http with

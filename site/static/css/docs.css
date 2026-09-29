@@ -106,6 +106,7 @@ body[data-version="main"] .version-btn .v-label::before { content: ""; }
 }
 .version-banner.old { background: rgba(255, 159, 67, .1); border-color: rgba(255, 159, 67, .35); }
 .version-banner.dev { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+.version-banner > span { flex: 1 1 320px; }
 .version-banner a { font-weight: 600; margin-left: auto; }
 .generated-note {
   display: inline-flex; gap: 6px; align-items: center; margin: -6px 0 18px; padding: 3px 10px; border-radius: 999px;

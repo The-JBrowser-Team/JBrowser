@@ -43,7 +43,7 @@ script in the page's own world; everything else runs in the isolated world, wher
 |---|---|
 | CPU cores (`hardwareConcurrency`), memory (`deviceMemory`) | Workers report the real values and can't be patched; a mismatch between the page and a worker is a classic bot signal. |
 | The WebGL vendor and renderer | A generic "ANGLE (Generic Renderer)" contradicts every other GPU detail and is itself unusual. |
-| The user agent | Qt's `QtWebEngine/x.y` token is removed, so the user agent is exactly Chrome's. |
+| The user agent | Qt's `QtWebEngine/x.y` token is removed, so the user agent is exactly Chrome's<!-- if >= 1.5.1 --> (except on [Google's sign-in server](#google-sign-in))<!-- endif -->. |
 | `Accept-Language` | Built from the Windows display languages like Chrome's (`en-AU,en;q=0.9`). Qt sends none by default, which no real browser does. |
 
 ## Sites that get no changes at all
@@ -53,6 +53,27 @@ providers and the big sign-in pages: Google (and every `google.*` domain), gstat
 Cloudflare, Arkose Labs / FunCaptcha, Microsoft sign-in (`microsoftonline.com`, `live.com`, `microsoft.com`), Apple
 and iCloud, PayPal. On those sites `privacy_js` returns immediately, and CAPTCHA providers may keep their third-party
 cookies ([cookies](request-pipeline.md#cookies)). Sites on the user's allowed list are treated the same way.
+<!-- if >= 1.5.1 -->
+
+## Google sign-in
+
+[[new 1.5.1]] Google refuses to sign in browsers it takes for a web view embedded in another app, with *"Couldn't
+sign you in. This browser or app may not be secure."* A Chromium-based Qt WebEngine browser looks like one to its
+checks. JBrowser does what other Qt WebEngine browsers do (qutebrowser calls it the `ua-google` quirk):
+requests **to `accounts.google.com`** carry a current **Firefox** user agent, which Google's sign-in accepts.
+
+- `ProfileInterceptor` ([request pipeline](request-pipeline.md)) sets the `User-Agent` header when the request's host
+  is in `SIGNIN_UA_HOSTS`, in every space, incognito included. Every other site, Google's other services and
+  JavaScript's `navigator.userAgent` still see Chrome.
+- `firefox_user_agent()` works out the Firefox version from the date (Firefox 140 came out on 24 June 2025, and a new
+  version follows every four weeks), so the user agent never looks years old. It counts 30 days per version, so it
+  never names a version that doesn't exist yet.
+- Once signed in, the Google account works everywhere, because the sign-in cookies belong to the space, not the user
+  agent.
+
+If Google changes its checks and sign-in breaks again, test a newer Firefox user agent, or a user agent from another
+browser, against a Google account in a throw-away space before changing `SIGNIN_UA_HOSTS` or the helper.
+<!-- endif -->
 
 ## If a site still shows a challenge
 

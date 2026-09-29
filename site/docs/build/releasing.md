@@ -24,6 +24,11 @@ gh auth login                      # GitHub.com → HTTPS → sign in with a bro
 
 `git` can come from Git for Windows or from GitHub Desktop, which bundles it; the scripts find either. They push with
 the GitHub CLI's sign-in, so git needs no credentials of its own.
+<!-- if >= 1.5.1 -->
+
+Optional: configure a code-signing certificate ([code signing](signing.md)) so releases are signed. `master.ps1`
+says at the start whether the build will be signed, and refuses to publish a test-signed build.
+<!-- endif -->
 
 ## The version
 

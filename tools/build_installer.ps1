@@ -4,7 +4,8 @@
 
 .DESCRIPTION
     1. Builds the app with tools\build_app.ps1 (skip with -SkipAppBuild to reuse <dist>\JBrowser).
-    2. Compiles installer\JBrowser.iss with Inno Setup 6 (ISCC.exe).
+    2. Compiles installer\JBrowser.iss with Inno Setup 6 (ISCC.exe). When a code-signing
+       certificate is configured (tools\sign.ps1), Setup and its uninstaller are signed.
     3. Writes JBrowser-Setup-<version>.exe.sha256, which the auto-updater uses to verify
        downloads. Both files are what tools\release.ps1 uploads to GitHub.
 
@@ -45,11 +46,22 @@ $version = (& $Py tools\version.py).Trim()
 $outDir = Join-Path $DistDir "installer"
 New-Item -ItemType Directory -Force $outDir | Out-Null
 $iscc = Find-ISCC
+$isccArgs = @("/Q", "/DAppVersion=$version", "/DSourceDir=$appDir", "/DOutputDir=$outDir")
 
-Step "Compiling the installer for JBrowser $version (this takes a few minutes)"
-& $iscc /Q "/DAppVersion=$version" "/DSourceDir=$appDir" "/DOutputDir=$outDir" "installer\JBrowser.iss"
+# With a code-signing certificate, Inno Setup signs Setup and the uninstaller it contains by
+# running tools\sign.ps1 on each ($q is a quote and $f the quoted file name, in Inno's syntax).
+$signing = & (Join-Path $PSScriptRoot "sign.ps1") -Status
+if ($signing) {
+    $signScript = Join-Path $PSScriptRoot "sign.ps1"
+    $isccArgs += @("/DSignSetup", ('/Sjbsign=powershell.exe -NoProfile -ExecutionPolicy Bypass -File $q' + $signScript + '$q $f'))
+}
+
+$how = if ($signing) { "signed with $signing" } else { "unsigned" }
+Step "Compiling the installer for JBrowser $version, $how (this takes a few minutes)"
+& $iscc @isccArgs "installer\JBrowser.iss"
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup failed" }
 
+# The checksum is taken last: signing changes the file.
 $setup = Join-Path $outDir "JBrowser-Setup-$version.exe"
 $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
 $name = Split-Path -Leaf $setup

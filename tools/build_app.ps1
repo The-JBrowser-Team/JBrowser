@@ -6,6 +6,7 @@
     1. Makes sure .venv exists and is up to date (tools\update_deps.py) unless -SkipDeps.
     2. Regenerates the icon and the exe's version resource from jbrowser\__init__.py.
     3. Runs PyInstaller with JBrowser.spec (one-folder, recommended) or as a single file.
+    4. Signs JBrowser.exe when a code-signing certificate is configured (tools\sign.ps1).
 
     Output: <dist>\JBrowser\JBrowser.exe  (or <dist>\JBrowser.exe with -OneFile), where <dist> is
     dist\ in the repository, or %LOCALAPPDATA%\JBrowser-build\dist when the repository is inside
@@ -70,4 +71,7 @@ if ($OneFile) {
     $out = Join-Path $DistDir "JBrowser\JBrowser.exe"
 }
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path $out)) { throw "PyInstaller build failed" }
+
+Step "Code signing"
+& (Join-Path $PSScriptRoot "sign.ps1") $out
 Write-Host "Built $out ($version)" -ForegroundColor Green

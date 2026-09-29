@@ -5,6 +5,8 @@
 ;   /DAppVersion=1.4.0            the version from jbrowser\__init__.py
 ;   /DSourceDir=<dist\JBrowser>   the PyInstaller one-folder build
 ;   /DOutputDir=<dist\installer>  where JBrowser-Setup-<version>.exe is written
+;   /DSignSetup /Sjbsign=...      only with a code-signing certificate (tools\sign.ps1): signs
+;                                 Setup and the uninstaller
 ;
 ; Design notes
 ;   * Per-user install (no administrator prompt) into %LOCALAPPDATA%\Programs\JBrowser, so the
@@ -64,6 +66,10 @@ UninstallDisplayIcon={app}\{#AppExe}
 UninstallDisplayName={#AppName}
 OutputDir={#OutputDir}
 OutputBaseFilename={#AppName}-Setup-{#AppVersion}
+#ifdef SignSetup
+SignTool=jbsign
+SignedUninstaller=yes
+#endif
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

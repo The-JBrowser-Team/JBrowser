@@ -132,16 +132,7 @@
 .install-shot { box-shadow: 0 30px 80px rgba(20, 10, 70, .35), 0 0 0 1px var(--border); }
 .ps-install { margin-top: 18px; color: var(--text-2); font-size: 14px; }
 .ps-install summary { cursor: pointer; color: var(--link); width: fit-content; }
-.code-copy {
-  display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 6px 6px 12px;
-  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
-}
-.code-copy code { background: none; padding: 0; flex: 1; overflow-x: auto; white-space: nowrap; font-size: 13px; }
-.copy {
-  border: 1px solid var(--border-2); background: var(--surface); color: var(--text-2); border-radius: 7px;
-  font: 600 12px var(--font); padding: 5px 10px; cursor: pointer;
-}
-.copy.done { color: var(--good); }
+.ps-install p { margin: 8px 0 0; }
 
 /* ---------------------------------------------------------------- closing */
 .closing-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }

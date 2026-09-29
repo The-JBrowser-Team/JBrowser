@@ -54,7 +54,16 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.5.0 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.0)
+### 1.5.1 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.1)
+
+- **Google sign-in works again**: no more *"Couldn't sign you in. This browser or app may not be secure"*.
+  Google's sign-in server sees a Firefox user agent; everything else still sees Chrome.
+- **Ready for code signing**: with a code-signing certificate configured, every build signs the app, the installer
+  and the uninstaller, which is what removes SmartScreen's *"Windows protected your PC"*
+  ([docs/SIGNING.md](docs/SIGNING.md)). Until then, the one-command install below avoids the warning.
+- **A website** with the download, the changelog, real screenshots and developer documentation for every version.
+
+### 1.5.0 · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.0)
 
 - **Gallery** (Ctrl+Shift+G, or the new *Gallery* button): every card of a space as a grid of live thumbnails. Filter,
   open, close and reorder cards, and switch to **All spaces** to see every space at once and drag cards between them.
@@ -91,8 +100,9 @@ Open **PowerShell** and paste:
 irm https://raw.githubusercontent.com/The-JBrowser-Team/JBrowser/main/install.ps1 | iex
 ```
 
-This downloads the latest release zip, checks its SHA-256 fingerprint, and starts the installer. Run the same command
-again at any time to update. [install.ps1](install.ps1) is short, so you can read it first.
+This downloads the latest release zip, checks its SHA-256 fingerprint, and starts the installer, without Windows
+SmartScreen's "Windows protected your PC" warning. Run the same command again at any time to update.
+[install.ps1](install.ps1) is short, so you can read it first.
 
 ### Download the zip yourself
 
@@ -102,9 +112,10 @@ again at any time to update. [install.ps1](install.ps1) is short, so you can rea
 3. The installer works for your Windows account without administrator rights. It adds a Start menu entry, and it can
    register JBrowser as a web browser so you can make it your default in Windows Settings.
 
-The release page also has the installer on its own (`JBrowser-Setup-<version>.exe`). Windows SmartScreen may warn about
-an unrecognised app, because the installer is not code-signed; choose *More info → Run anyway*. To uninstall, use
-*Settings → Apps → Installed apps → JBrowser*. Your data is kept unless you choose to delete it.
+The release page also has the installer on its own (`JBrowser-Setup-<version>.exe`). When a downloaded installer isn't
+code-signed, Windows SmartScreen says "Windows protected your PC"; choose *More info → Run anyway*
+([why](docs/SIGNING.md)). To uninstall, use *Settings → Apps → Installed apps → JBrowser*. Your data is kept unless you
+choose to delete it.
 
 ### Updates
 

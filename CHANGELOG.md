@@ -5,9 +5,22 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## [Unreleased]
+## [1.5.1] - 2026-09-29
+
+### Fixed
+- **Signing in to Google works.** Google stopped JBrowser with *"Couldn't sign you in. This browser or app may not
+  be secure"*, because it refuses browser engines built into other apps, which is what Qt WebEngine looks like to it.
+  Like other Qt WebEngine browsers, JBrowser now presents a current Firefox user agent to Google's sign-in server
+  (`accounts.google.com`) only. Every other site, Google's other services included, still sees Chrome.
 
 ### Added
+- **Code signing.** The build can now sign `JBrowser.exe`, the installer and its uninstaller with a code-signing
+  certificate, which is what removes SmartScreen's *"Windows protected your PC"* warning. `tools/sign.ps1` works with
+  a certificate in the Windows certificate store (including hardware tokens and cloud keys), a `.pfx` file or Azure
+  Artifact Signing, timestamps every signature and checks it. `master.ps1` shows whether a build is signed, and the
+  release notes and `INSTALL.txt` follow. [docs/SIGNING.md](docs/SIGNING.md) explains why the warning appears and
+  compares the ways to get a certificate. This release is still unsigned: a certificate from a trusted authority has
+  to be requested by the publisher first.
 - **A website** at [the-jbrowser-team.github.io/JBrowser](https://the-jbrowser-team.github.io/JBrowser/): a home page
   with a direct download of the newest installer, a permanent download link, this changelog, and developer
   documentation for every release (architecture, web engine, privacy, UI, building and releasing, and references
@@ -16,6 +29,10 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
 - The home page shows real, high-resolution screenshots of JBrowser, with a feature tour to click through, a colour
   picker that shows each tint on the real window, and screenshots that follow the site's light or dark mode.
   `tools/site_screenshots.py` retakes them all in one command.
+
+### Changed
+- The download page and the home page explain SmartScreen's warning and offer the PowerShell install, which checks
+  the download and doesn't trigger the warning, with a *Copy* button.
 
 ## [1.5.0] - 2026-09-29
 

@@ -20,6 +20,9 @@ gh auth login                      # choose GitHub.com → HTTPS → sign in wit
 `git` comes from Git for Windows, or from GitHub Desktop, which bundles it (the scripts find either). The scripts push
 with the GitHub CLI sign-in, so git needs no separate credentials.
 
+Optional: configure a code-signing certificate ([SIGNING.md](SIGNING.md)) so releases are signed and SmartScreen
+doesn't warn about them. `master.ps1` says at the start whether the build will be signed.
+
 ## Every release
 
 1. **Pick the version.** Use `major.minor.patch`: a patch for fixes only, a minor for new features, a major for big

@@ -9,7 +9,7 @@ APP_NAME = "JBrowser"
 APP_ID = "JBrowser.Browser.1"             # Windows AppUserModelID (taskbar grouping)
 ORG_NAME = "JBrowser"                     # Qt organisation name (do not change: it names data folders)
 COMPANY = "The JBrowser Company"
-__version__ = "1.5.0"
+__version__ = "1.5.1"
 
 # Where releases are published. The auto-updater asks the GitHub Releases API for the
 # latest release of this repository.

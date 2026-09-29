@@ -17,6 +17,7 @@ See [docs/BUILDING.md](../docs/BUILDING.md).
 | **Silent mode** | `/SILENT` or `/VERYSILENT` installs without questions. The auto-updater also passes JBrowser's own `/RELAUNCH` switch, which starts the new version at the end. |
 | **Uninstall** | *Apps & features*. It asks whether to delete your JBrowser data too (default: keep it). A silent uninstall always keeps the data. |
 | **Licence page** | Shows [LICENSE](../LICENSE) (GNU GPL v3) |
+| **Code signing** | With a code-signing certificate configured, the build passes `/DSignSetup` and a `jbsign` sign tool, and Inno Setup signs Setup and the uninstaller with `tools\sign.ps1` ([docs/SIGNING.md](../docs/SIGNING.md)). Otherwise both are unsigned. |
 
 ## Editing tips
 

@@ -7,7 +7,8 @@
 
       1. (-Version X.Y.Z) sets the new version everywhere (tools\version.py).
       2. Creates or updates .venv and every package, and checks every module imports (tools\update_deps.py).
-      3. Builds the app and the installer (tools\build_installer.ps1).
+      3. Builds the app and the installer (tools\build_installer.ps1), and signs them when a
+         code-signing certificate is configured (tools\sign.ps1, docs\SIGNING.md).
       4. Packages them as distribution\JBrowser-<version>-<yyyy-MM-dd>.zip (+ .zip.sha256):
          the installer, its checksum, LICENSE and INSTALL.txt.
       5. (-Publish) commits any changes, pushes them, and publishes the GitHub release with the
@@ -39,7 +40,10 @@ $started = Get-Date
 if ($Publish) {
     Step "Checking GitHub sign-in"
     Initialize-GitHubTools
+    if ($env:JBROWSER_SIGN_TEST -eq "1") { throw "JBROWSER_SIGN_TEST is set: test-signed builds must not be published. Remove it and run again." }
 }
+$signing = & (Join-Path $Root "tools\sign.ps1") -Status
+Step $(if ($signing) { "Code signing: $signing" } else { "Code signing: none configured, the build will be unsigned (see docs\SIGNING.md)" })
 
 # --- 1. Version ------------------------------------------------------------------------------
 if (-not (Test-Path $Py)) {
@@ -88,14 +92,21 @@ $stage = Join-Path $WorkDir "package"
 if (Test-Path $stage) { Remove-Item $stage -Recurse -Force -Confirm:$false }
 New-Item -ItemType Directory -Force $stage | Out-Null
 Copy-Item $setup, "$setup.sha256", (Join-Path $Root "LICENSE") $stage
+$setupSigned = (Get-AuthenticodeSignature $setup).Status -eq "Valid"
+$smartScreen = if ($setupSigned) {
+    "  2. If Windows SmartScreen still warns (a new version can take a little while to be recognised),`r`n" +
+    "     choose `"More info`", check the publisher, then `"Run anyway`"."
+} else {
+    "  2. If Windows SmartScreen warns about an unrecognised app, choose `"More info`", then `"Run anyway`"`r`n" +
+    "     (this installer is not code-signed)."
+}
 $installText = @"
 JBrowser $ver ($date)
 Welcome to the internet - again.
 
 To install or update:
   1. Run JBrowser-Setup-$ver.exe.
-  2. If Windows SmartScreen warns about an unrecognised app, choose "More info", then "Run anyway"
-     (the installer is not code-signed yet).
+$smartScreen
   3. Follow the steps. No administrator rights are needed. Your data is kept when updating.
 
 Check the installer (optional), in PowerShell in this folder:
@@ -143,7 +154,7 @@ $took = [int]((Get-Date) - $started).TotalMinutes
 Write-Host ""
 Write-Host "JBrowser $ver is ready ($took min)" -ForegroundColor Green
 Write-Host "  Zip:       $zip ($mb)"
-Write-Host "  Installer: $setup"
+Write-Host "  Installer: $setup ($(if ($setupSigned) { 'signed' } else { 'not signed' }))"
 if ($Publish) {
     Write-Host "  Release:   https://github.com/The-JBrowser-Team/JBrowser/releases/tag/$tag"
 } else {

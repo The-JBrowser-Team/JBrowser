@@ -11,6 +11,7 @@ are the short versions that live next to the code.
 | [ARCHITECTURE.md](ARCHITECTURE.md) | understand how the code is organised and how data flows through it |
 | [DEVELOPMENT.md](DEVELOPMENT.md) | run JBrowser from source, test safely, debug, add settings or commands |
 | [BUILDING.md](BUILDING.md) | build `JBrowser.exe` and the `JBrowser-Setup.exe` installer |
+| [SIGNING.md](SIGNING.md) | understand SmartScreen's "Windows protected your PC", get a code-signing certificate and sign builds |
 | [RELEASING.md](RELEASING.md) | publish a new version to GitHub (step by step) |
 | [AUTO_UPDATE.md](AUTO_UPDATE.md) | understand, test or troubleshoot the built-in updater |
 

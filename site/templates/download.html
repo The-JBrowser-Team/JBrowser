@@ -18,10 +18,15 @@
   </header>
   <ol class="steps compact">
     <li><span>1</span><h3>Run the installer</h3><p>No administrator rights are needed. Your cards, passwords and settings are kept when you update.</p></li>
-    <li><span>2</span><h3>If SmartScreen warns you</h3><p>Choose <em>More info</em>, then <em>Run anyway</em>. The installer isn't code-signed yet.</p></li>
+    <li><span>2</span><h3>If SmartScreen warns you</h3><p>"Windows protected your PC" appears for new programs that haven't built a reputation yet. Choose <em>More info</em>, then <em>Run anyway</em>, or use the PowerShell install below.</p></li>
     <li><span>3</span><h3>Check it (optional)</h3><p>In PowerShell: <code>(Get-FileHash .\JBrowser-Setup-*.exe).Hash</code> must match the <code>.sha256</code> file on the release page.</p></li>
   </ol>
-  <p class="center muted">Prefer the command line? <code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code></p>
+  <section class="ps-box">
+    <h3>Install without the SmartScreen warning</h3>
+    <p>Paste this into PowerShell. It downloads the newest release, checks its SHA-256 fingerprint and starts the installer. Run it again any time to update.</p>
+    <div class="code-copy"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
+      <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
+  </section>
 </main>
 {% include _footer.html %}
 <script>

@@ -4,6 +4,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from datetime import date
 from pathlib import Path
 from typing import Callable
 
@@ -36,6 +37,21 @@ CHALLENGE_SITES = ("google.com", "gstatic.com", "recaptcha.net", "youtube.com", 
                    "arkoselabs.com", "funcaptcha.com", "microsoftonline.com", "live.com", "microsoft.com",
                    "apple.com", "icloud.com", "paypal.com")
 CAPTCHA_COOKIE_SITES = ("recaptcha.net", "hcaptcha.com", "challenges.cloudflare.com", "arkoselabs.com")
+
+# Google refuses to sign in browsers it takes for web views embedded in other apps ("Couldn't sign
+# you in. This browser or app may not be secure"), and Qt WebEngine looks like one to its checks.
+# Like other Qt WebEngine browsers (qutebrowser's "ua-google" quirk), JBrowser sends a current
+# Firefox user agent in the requests to Google's sign-in server only; everywhere else, and in
+# JavaScript, it stays Chrome.
+SIGNIN_UA_HOSTS = ("accounts.google.com",)
+
+
+def firefox_user_agent(today: date | None = None) -> str:
+    """A current Firefox user agent for Windows. Firefox 140 came out on 2025-06-24 and a new
+    version follows about every four weeks; counting 30 days per version never runs ahead."""
+    days = ((today or date.today()) - date(2025, 6, 24)).days
+    version = 140 + max(0, days // 30)
+    return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0"
 
 BLOCKLIST_SOURCES = [
     ("EasyPrivacy (trackers & telemetry)", "https://easylist.to/easylist/easyprivacy.txt"),
@@ -423,6 +439,7 @@ class ProfileInterceptor(QWebEngineUrlRequestInterceptor):
     def __init__(self, privacy: PrivacyService, parent: QObject | None = None):
         super().__init__(parent)
         self._p = privacy
+        self._signin_ua = firefox_user_agent().encode("ascii")
 
     def interceptRequest(self, info: QWebEngineUrlRequestInfo) -> None:
         try:
@@ -434,6 +451,8 @@ class ProfileInterceptor(QWebEngineUrlRequestInterceptor):
                 info.setHttpHeader(b"DNT", b"1")
             if self._p.gpc:
                 info.setHttpHeader(b"Sec-GPC", b"1")
+            if info.requestUrl().host().lower() in SIGNIN_UA_HOSTS:
+                info.setHttpHeader(b"User-Agent", self._signin_ua)
         except Exception:  # never let an exception escape into the engine
             log.exception("ProfileInterceptor failed")
 

@@ -45,6 +45,9 @@ The PowerShell scripts share [tools/common.ps1](source:tools/common.ps1): `$Root
 4. `tools\make_icon.py` renders `assets\jbrowser.ico` from the vector logo, and `tools\version.py --sync` writes the
    exe's version resource (`tools\version_info.txt`).
 5. PyInstaller builds with [JBrowser.spec](source:JBrowser.spec).
+<!-- if >= 1.5.1 -->
+6. `tools\sign.ps1` signs `JBrowser.exe` when a code-signing certificate is configured ([code signing](signing.md)).
+<!-- endif -->
 
 ## The spec
 
@@ -81,9 +84,14 @@ the welcome sound plays, and it exits cleanly (exit code 0, no `QtWebEngineProce
 
 ## Code signing (optional)
 
+<!-- if >= 1.5.1 -->
+With a code-signing certificate configured, `build_app.ps1` signs `JBrowser.exe` right after PyInstaller, and the
+installer build signs Setup and its uninstaller. See [Code signing and SmartScreen](signing.md).
+<!-- else -->
 Unsigned installers trigger a SmartScreen warning until they build up a reputation. With a code-signing certificate,
 sign `JBrowser.exe` before building the installer, then sign the installer and recompute its `.sha256`:
 
 ```powershell
 signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a dist\JBrowser\JBrowser.exe
 ```
+<!-- endif -->

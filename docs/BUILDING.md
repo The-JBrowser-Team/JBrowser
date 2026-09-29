@@ -91,13 +91,7 @@ use JBrowser day to day.
 
 ## Code signing (optional)
 
-Unsigned installers trigger a SmartScreen warning until they have built up a reputation. With a code-signing
-certificate, sign both files before releasing:
-
-```powershell
-signtool sign /fd SHA256 /tr http://timestamp.digicert.com /td SHA256 /a dist\JBrowser\JBrowser.exe
-# then build the installer with -SkipAppBuild, and sign dist\installer\JBrowser-Setup-<version>.exe the same way
-```
-
-Recompute the `.sha256` after signing the installer. The simplest way is to add the signing step to
-`build_installer.ps1` before the hash is written.
+Unsigned installers trigger SmartScreen's "Windows protected your PC" warning when they are downloaded with a
+browser. Once a code-signing certificate is configured (environment variables, see [SIGNING.md](SIGNING.md)), the
+build signs `JBrowser.exe`, the installer and its uninstaller through `tools\sign.ps1`, and writes the `.sha256` after
+signing. Without one, builds are unsigned.

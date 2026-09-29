@@ -47,18 +47,25 @@ $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
 $pattern = "(?ms)^## \[$([regex]::Escape($version))\][^\n]*\n(.*?)(?=^## \[|\z)"
 $match = [regex]::Match($changelog, $pattern)
 if (-not $match.Success) { throw "CHANGELOG.md has no '## [$version]' section. Describe the release first." }
-$notesFile = Join-Path $env:TEMP "jbrowser-release-notes-$version.md"
-$notes = $match.Groups[1].Value.Trim() + "`n`n---`nInstall: download **JBrowser-Setup-$version.exe** below and run it. " +
-         "Existing installations update themselves automatically.`n`n" +
-         "The installer is not code-signed yet, so Windows SmartScreen may warn about it: choose " +
-         "*More info* → *Run anyway*. You can check the download against **JBrowser-Setup-$version.exe.sha256**.`n"
-[System.IO.File]::WriteAllText($notesFile, $notes)
 
 if (-not $SkipBuild) {
     & (Join-Path $PSScriptRoot "build_installer.ps1")
 }
 $setup = Join-Path $DistDir "installer\JBrowser-Setup-$version.exe"
 if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Installer for $version not found in $DistDir\installer." }
+
+$signer = Get-AuthenticodeSignature $setup
+$smartScreen = if ($signer.Status -eq "Valid") {
+    "The installer is signed by *$($signer.SignerCertificate.GetNameInfo('SimpleName', $false))*. "
+} else {
+    "The installer is not code-signed, so Windows SmartScreen may warn about it: choose *More info* → *Run anyway*. " +
+    "The one-command install in the README avoids the warning. "
+}
+$notesFile = Join-Path $env:TEMP "jbrowser-release-notes-$version.md"
+$notes = $match.Groups[1].Value.Trim() + "`n`n---`nInstall: download **JBrowser-Setup-$version.exe** below and run it. " +
+         "Existing installations update themselves automatically.`n`n" + $smartScreen +
+         "You can check the download against **JBrowser-Setup-$version.exe.sha256**.`n"
+[System.IO.File]::WriteAllText($notesFile, $notes)
 
 Step "Tagging $tag and pushing"
 $tagCommit = & $git rev-parse -q --verify "refs/tags/$tag^{commit}"

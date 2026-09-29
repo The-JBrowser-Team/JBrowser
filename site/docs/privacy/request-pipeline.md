@@ -16,6 +16,9 @@ ProfileInterceptor (one per space)      rewrite():   developer host → redirect
    │                                                  tracking parameters → redirect to the clean URL
    │                                                  http → https (HTTPS-first) → redirect
    │                                    otherwise:   add DNT: 1 and Sec-GPC: 1 headers
+<!-- if >= 1.5.1 -->
+   │                                                 Firefox User-Agent for accounts.google.com
+<!-- endif -->
    ▼
 PageInterceptor (one per card)          should_block(): block, and count it on the card
    │                                    (a WebSocket request is noted for the memory saver)
@@ -41,6 +44,12 @@ In order, the first rule that applies wins:
    doesn't try that host again this session.
 
 If nothing redirects, the interceptor adds `DNT: 1` (`privacy.dnt`) and `Sec-GPC: 1` (`privacy.gpc`).
+<!-- if >= 1.5.1 -->
+
+[[new 1.5.1]] Requests to Google's sign-in server (`SIGNIN_UA_HOSTS`, `accounts.google.com`) also get a Firefox
+`User-Agent` header, so Google lets the user sign in. [Fingerprinting and bot checks](fingerprinting.md#google-sign-in)
+explains why.
+<!-- endif -->
 
 ## `should_block()`: blocking
 

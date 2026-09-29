@@ -169,6 +169,24 @@ h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; letter-spac
 .steps.compact { grid-template-columns: 1fr; }
 .download-logo { filter: drop-shadow(0 12px 30px rgba(120, 90, 255, .35)); }
 
+/* a one-line command with a Copy button (home and download) */
+.code-copy {
+  display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 6px 6px 12px;
+  background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px; text-align: left;
+}
+.code-copy code { background: none; padding: 0; flex: 1; overflow-x: auto; white-space: nowrap; font-size: 13px; }
+.copy {
+  border: 1px solid var(--border-2); background: var(--surface); color: var(--text-2); border-radius: 7px;
+  font: 600 12px var(--font); padding: 5px 10px; cursor: pointer;
+}
+.copy.done { color: var(--good); }
+.ps-box {
+  margin: 0 auto 36px; padding: 20px 22px; border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--surface); box-shadow: var(--shadow);
+}
+.ps-box h3 { margin: 0 0 4px; font-size: 18px; }
+.ps-box p { margin: 0; color: var(--text-2); font-size: 15px; }
+
 /* ---------------------------------------------------------------- changelog */
 .changelog-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 48px; align-items: start; }
 .release-nav { position: sticky; top: calc(var(--topbar-h) + 24px); max-height: calc(100vh - 120px); overflow: auto; }

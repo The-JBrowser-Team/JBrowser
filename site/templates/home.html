@@ -169,7 +169,8 @@
         <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
       </div>
       <details class="ps-install">
-        <summary>Prefer PowerShell?</summary>
+        <summary>Prefer PowerShell? (no SmartScreen warning)</summary>
+        <p>Downloads the newest release, checks it and starts the installer.</p>
         <div class="code-copy"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
           <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
       </details>

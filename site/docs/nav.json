@@ -44,6 +44,7 @@
       "build/dependencies",
       "build/building",
       "build/installer",
+      "build/signing",
       "build/releasing",
       "build/auto-update",
       "build/website"
