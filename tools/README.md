@@ -12,6 +12,8 @@ which can create `.venv` from any Python 3.14+.
 | `version.py` | Prints, sets or syncs the version. `jbrowser/__init__.py` is the single source, and `version_info.txt` is generated from it. | `python tools\version.py --set 1.4.1` |
 | `build_app.ps1` | Builds `dist\JBrowser\JBrowser.exe` with PyInstaller | `.\tools\build_app.ps1` · `-SkipDeps` · `-OneFile` |
 | `build_installer.ps1` | Builds the app, then `dist\installer\JBrowser-Setup-<v>.exe` and its `.sha256` | `.\tools\build_installer.ps1` · `-SkipAppBuild` |
+| `chrome_version.py` | Records the newest stable Chrome for Windows in `jbrowser/engine/identity.py`, the version JBrowser presents to websites. `master.ps1` runs it for every release. | `python tools\chrome_version.py` · `--update` |
+| `package.ps1` | Packages the built installer as `JBrowser-<version>-<date>.zip` with its checksum, `LICENSE` and `INSTALL.txt`; used by `master.ps1` and the release-build workflow | `.\tools\package.ps1` · `-OutDir` |
 | `sign.ps1` | Code-signs `JBrowser.exe`, Setup and the uninstaller when a certificate is configured (`JBROWSER_SIGN_*` variables, see [docs/SIGNING.md](../docs/SIGNING.md)); does nothing otherwise. The build scripts call it. | `.\tools\sign.ps1 -Status` |
 | `release.ps1` | Tags, pushes and publishes the GitHub release that installed copies update to | `.\tools\release.ps1` · `-Draft` · `-SkipBuild` |
 | `common.ps1` | Shared by the build and release scripts: paths, and where build output goes (outside OneDrive, see below) | dot-sourced, not run directly |

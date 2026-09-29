@@ -1073,6 +1073,7 @@ class Site:
         self.copy_static()
         self.build_home()
         self.build_download()
+        self.build_pages()
         self.build_changelog()
         self.build_docs()
         self.build_404()
@@ -1199,6 +1200,27 @@ class Site:
                        "intro": self.fix_links(intro_html, page, None)})
         write(self.out / page, render("changelog.html", values))
         self.sitemap.append("changelog/")
+
+    def build_pages(self) -> None:
+        """site/pages/<name>.md → <name>/index.html: plain text pages such as the code signing policy.
+        Front matter: title (the heading), kicker, lead and description."""
+        for src in sorted((SRC / "pages").glob("*.md")):
+            text = src.read_text(encoding="utf-8")
+            meta: dict[str, str] = {}
+            m = _FRONT.match(text)
+            if m:
+                for line in m[1].splitlines():
+                    key, _, value = line.partition(":")
+                    meta[key.strip()] = value.strip()
+                text = text[m.end():]
+            page = f"{src.stem}/index.html"
+            body, _ = md_to_html(text, toc_depth="0", permalinks=False)
+            title = meta.get("title", src.stem)
+            values = self.common(page, f"{title} · JBrowser", meta.get("description", ""))
+            values.update({"kicker": esc(meta.get("kicker", "JBrowser")), "heading": esc(title),
+                           "lead": esc(meta.get("lead", "")), "body": self.fix_links(body, page, None)})
+            write(self.out / page, render("page.html", values))
+            self.sitemap.append(f"{src.stem}/")
 
     def build_404(self) -> None:
         values = self.common("404.html", "Page not found · JBrowser", "")

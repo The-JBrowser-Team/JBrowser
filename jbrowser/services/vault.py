@@ -2,7 +2,7 @@
 
 * Entries are serialised to JSON and sealed with AES-256-GCM using a random 256-bit key.
 * The vault key is protected either by Windows DPAPI (default — bound to the Windows
-  user account, transparent unlock) or by a master password (Scrypt KDF, n=2^15).
+  user account, transparent unlock) or by a master password (Scrypt KDF, n=2^17).
 * Nothing sensitive is ever written to disk in plaintext.
 """
 from __future__ import annotations
@@ -30,7 +30,9 @@ log = logging.getLogger(__name__)
 
 _AAD_DATA = b"jbrowser-vault-data-v1"
 _AAD_KEY = b"jbrowser-vault-key-v1"
-_SCRYPT = {"n": 2 ** 15, "r": 8, "p": 1}
+# OWASP's recommended Scrypt cost (about 0.2 s and 128 MB per unlock). Each vault stores the parameters
+# it was sealed with, so vaults made with the older n=2^15 still open and move up when the password is set.
+_SCRYPT = {"n": 2 ** 17, "r": 8, "p": 1}
 
 
 def _b64(b: bytes) -> str:

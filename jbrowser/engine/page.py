@@ -56,3 +56,7 @@ class PageBridge(QObject):
     @pyqtSlot(str, str)
     def credentialsSubmitted(self, username: str, password: str) -> None:
         self._controller.on_credentials(username, password)
+
+    @pyqtSlot(str)
+    def mediaUnsupported(self, kind: str) -> None:
+        self._controller.on_media_unsupported("audio" if kind == "audio" else "video")

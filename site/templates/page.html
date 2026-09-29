@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+<head>
+{% include _head.html %}
+</head>
+<body class="text-page">
+{% include _topbar.html %}
+<main id="main" class="wrap page narrow">
+  <header class="page-head">
+    <p class="kicker">{{kicker}}</p>
+    <h1>{{heading}}</h1>
+    <p class="lead">{{lead}}</p>
+  </header>
+  <article class="text-prose">{{body}}</article>
+</main>
+{% include _footer.html %}
+</body>
+</html>

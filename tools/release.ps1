@@ -56,7 +56,10 @@ $setup = Join-Path $DistDir "installer\JBrowser-Setup-$version.exe"
 if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) { throw "Installer for $version not found in $DistDir\installer." }
 
 $signer = Get-AuthenticodeSignature $setup
-$smartScreen = if ($signer.Status -eq "Valid") {
+$ciSigning = Test-SignPath
+$smartScreen = if ($ciSigning) {
+    "The installer and JBrowser.exe are signed by *SignPath Foundation* (free code signing provided by SignPath.io). "
+} elseif ($signer.Status -eq "Valid") {
     "The installer is signed by *$($signer.SignerCertificate.GetNameInfo('SimpleName', $false))*. "
 } else {
     # ASCII only: Windows PowerShell reads this BOM-less script as ANSI, which would garble an arrow.
@@ -84,6 +87,21 @@ if ($tagCommit) {
 if ($LASTEXITCODE -ne 0) { throw "Could not push the branch" }
 & $git @GitAuth push origin $tag
 if ($LASTEXITCODE -ne 0) { throw "Could not push the tag" }
+
+if ($ciSigning) {
+    # SignPath signs only builds made on GitHub's runners: create the release as a draft, and let the
+    # release-build workflow build, sign, attach the files and publish it.
+    Step "Creating the draft release and starting the signed build on GitHub Actions"
+    & $gh release create $tag --title "JBrowser $version" --notes-file $notesFile --verify-tag --draft
+    if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
+    $publish = if ($Draft) { "false" } else { "true" }
+    & $gh workflow run release-build.yml --ref main -f "ref=$tag" -f "publish=$publish"
+    if ($LASTEXITCODE -ne 0) { throw "Could not start the release-build workflow" }
+    Write-Host "Draft release $tag created. The signed build is running:" -ForegroundColor Green
+    Write-Host "  https://github.com/$((& $gh repo view --json nameWithOwner --jq .nameWithOwner))/actions/workflows/release-build.yml"
+    Write-Host "  Approve the signing requests in SignPath when asked; the workflow then publishes the release."
+    return
+}
 
 Step "Creating the GitHub release"
 foreach ($f in $ExtraAssets) { if (-not (Test-Path $f)) { throw "Extra asset not found: $f" } }

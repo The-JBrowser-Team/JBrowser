@@ -5,6 +5,41 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.5.2] - 2026-09-29
+
+### Changed
+- **JBrowser presents itself as the current Chrome.** Websites now see Chrome 155, the newest stable version, instead
+  of the year-old Chromium 140 that JBrowser's engine is built on, so no site treats JBrowser as outdated. The user
+  agent is `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0
+  Safari/537.36`, and the browser details sites can ask for (client hints) match it. Every release records the Chrome
+  version that is current when it is built, and between releases JBrowser keeps up by date.
+- **The active card's outline takes your colour.** Instead of the blue outline, the card you're using is outlined in
+  a soft, washed version of your colour tint, or grey with *No colour*.
+- The engine's real Chromium version is shown in *Settings → About JBrowser*.
+
+### Fixed
+- **Google sign-in, second round.** JBrowser's ad and tracker filters blocked two requests on Google's sign-in page
+  that Google's security check relies on, so Google could still refuse with *"Couldn't sign you in"*. Sign-in pages
+  (Google, YouTube, Microsoft and Apple) are no longer filtered; dangerous sites are still blocked everywhere.
+- **Security: local files.** A web page saved on your computer and opened in JBrowser could read your other files (Qt
+  allows this by default, unlike Chrome). Local pages can now show their own images and styles but can't read other
+  files.
+- Videos and sounds in a format JBrowser can't play yet (H.264 and AAC, which JBrowser's engine doesn't include) no
+  longer just stay black: a bar explains why and offers to copy the link to open it in another browser.
+- The loading spinner draws half as often (30 times a second), and not at all when its card is out of sight.
+
+### Security
+- A master password for the password vault now uses a stronger key derivation (Scrypt N=2^17, OWASP's
+  recommendation). Existing vaults keep working and move up when the password is changed.
+- Once JBrowser is code-signed, it installs only updates signed by the same publisher, on top of the SHA-256 check.
+
+### Added
+- **Ready for free code signing by SignPath Foundation**, which will remove *"Windows protected your PC"*: releases
+  can now be built on GitHub's own Windows machines (`release-build.yml`), sent to SignPath for signing, and published
+  from there. The website has the required [code signing policy](https://the-jbrowser-team.github.io/JBrowser/code-signing/)
+  and a [privacy policy](https://the-jbrowser-team.github.io/JBrowser/privacy/) listing every connection JBrowser makes.
+  [docs/SIGNING.md](docs/SIGNING.md) lists the steps left for the project owner. This release is still unsigned.
+
 ## [1.5.1] - 2026-09-29
 
 ### Fixed

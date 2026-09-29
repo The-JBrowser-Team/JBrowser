@@ -51,6 +51,10 @@ AppUpdatesURL={#AppURL}/releases
 AppCopyright=(c) 2026 {#AppPublisher}. GNU General Public License v3.
 VersionInfoVersion={#AppVersion}.0
 VersionInfoDescription={#AppName} Setup
+; Product name and version as in JBrowser.exe: code signing checks they match (docs/SIGNING.md).
+VersionInfoProductName={#AppName}
+VersionInfoProductTextVersion={#AppVersion}
+VersionInfoCompany={#AppPublisher}
 DefaultDirName={autopf}\{#AppName}
 DefaultGroupName={#AppName}
 DisableProgramGroupPage=yes

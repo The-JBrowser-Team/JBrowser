@@ -7,7 +7,7 @@ import logging
 from typing import TYPE_CHECKING, Callable
 
 from PyQt6.QtCore import QByteArray, QDataStream, QIODevice, QObject, QTimer, QUrl, pyqtSignal
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtGui import QDesktopServices, QGuiApplication
 from PyQt6.QtWebChannel import QWebChannel
 from PyQt6.QtWebEngineCore import (QWebEngineCertificateError, QWebEnginePage, QWebEnginePermission,
                                    QWebEngineProfile)
@@ -448,6 +448,17 @@ class TabController(QObject):
         self.tab.update(saved_logins=len(creds))
         if creds and not self._autofilled and self.ctx.settings.get("passwords.autofill") and len(creds) == 1:
             self.fill(creds[0])
+
+    def on_media_unsupported(self, kind: str) -> None:
+        """A video or sound on the page is in a format Qt WebEngine can't play (H.264, AAC)."""
+        if self.disposed:
+            return
+        url = self.page.url().toString()
+        self.infobar.emit(InfoBarSpec(
+            "media-unsupported", f"This {kind} uses a format JBrowser can't play yet (such as H.264 or AAC). "
+                                 "To watch it, open the page in another browser.",
+            icon="info", kind="info", timeout_ms=30000,
+            actions=[InfoAction("Copy link", lambda u=url: QGuiApplication.clipboard().setText(u), primary=True)]))
 
     def fill(self, cred) -> None:
         js = (f"window.__jbFill && window.__jbFill({json.dumps(cred.username)}, {json.dumps(cred.password)})")

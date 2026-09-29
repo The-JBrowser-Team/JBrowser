@@ -7,6 +7,7 @@
 |---|---|
 | `workflows/ci.yml` | On every push and pull request: installs the dependencies on Windows and runs `tools/update_deps.py --check` (every module imports, pyflakes is clean) |
 | `workflows/pages.yml` | Builds the website with `tools/build_site.py` and deploys it to GitHub Pages: on pushes to `main` that touch the site, docs, changelog or code, and by hand (`tools/release.ps1` starts it after each release) |
+| `workflows/release-build.yml` | Builds a release (a tag) on a GitHub-hosted Windows runner, signs `JBrowser.exe` and the installer through SignPath once the `SIGNPATH_API_TOKEN` secret and `SIGNPATH_ORGANIZATION_ID` variable exist, and with *publish* attaches the files and publishes the release. Started by `tools/release.ps1` when SignPath is set up, or by hand. See [docs/SIGNING.md](../docs/SIGNING.md). |
 | `ISSUE_TEMPLATE/bug_report.yml` | The form for bug reports (version, Windows version, steps, log) |
 | `ISSUE_TEMPLATE/feature_request.yml` | The form for ideas |
 | `ISSUE_TEMPLATE/config.yml` | Points security reports to [SECURITY.md](../SECURITY.md) |

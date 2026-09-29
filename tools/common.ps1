@@ -76,6 +76,17 @@ function Update-Website {
     else { Write-Warning "Could not start the website rebuild. Run: gh workflow run pages.yml --ref main" }
 }
 
+# True when SignPath code signing is set up for the repository (the SIGNPATH_ORGANIZATION_ID
+# variable exists): releases are then built and signed on GitHub Actions (release-build.yml).
+function Test-SignPath {
+    $saved = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $value = & $script:Gh variable get SIGNPATH_ORGANIZATION_ID 2>$null
+    $ok = $LASTEXITCODE -eq 0 -and "$value".Trim()
+    $ErrorActionPreference = $saved
+    return [bool]$ok
+}
+
 $BuildRoot = Get-BuildRoot
 $DistDir = Join-Path $BuildRoot "dist"
 $WorkDir = Join-Path $BuildRoot "build"

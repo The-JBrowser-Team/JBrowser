@@ -198,12 +198,13 @@ class Spinner(QWidget):
         self.setFixedSize(size, size)
         self._angle = 0
         self._timer = QTimer(self)
-        self._timer.setInterval(16)
+        self._timer.setInterval(33)            # 30 fps: as smooth as Chrome's spinner, half the repaints of 60
         self._timer.timeout.connect(self._tick)
 
     def _tick(self) -> None:
-        self._angle = (self._angle + 9) % 360
-        self.update()
+        self._angle = (self._angle + 18) % 360
+        if not self.visibleRegion().isEmpty():  # a card scrolled out of sight doesn't need its spinner drawn
+            self.update()
 
     def showEvent(self, e) -> None:
         self._timer.start()

@@ -58,6 +58,13 @@ application palette and a small style sheet for standard Qt widgets (scroll bars
 
 The picker is `TintPicker` in [ui/widgets.py](source:jbrowser/ui/widgets.py): a keyboard-accessible row of swatches
 (arrow keys move, the choice applies live) used by Settings and the welcome's *Look* page.
+<!-- if >= 1.5.2 -->
+
+[[new 1.5.2]] **The active card's outline** follows the tint too. `card_outline(alpha)` returns the tint washed 30 %
+towards white on dark (12 % on light, `_OUTLINE_WASH`) at 90 % opacity, or grey (`_OUTLINE_GREY`) with *No colour*
+and in incognito spaces. `WebCard` draws it 2 px wide around the active card, and at 60 % (and 14 % as the header
+fill) for cards selected together. Earlier versions used the accent blue.
+<!-- endif -->
 
 ## Incognito is black
 

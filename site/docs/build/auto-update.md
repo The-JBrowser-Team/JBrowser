@@ -24,7 +24,7 @@ Code: [`services/updater.py`](source:jbrowser/services/updater.py) (the logic),
 3. **Download.** *Install and restart* first fetches `JBrowser-Setup-<version>.exe.sha256`, then streams the
    installer to `%TEMP%\JBrowser-Update\` while hashing it. A file whose SHA-256 doesn't match, or that grows past
    `MAX_INSTALLER_BYTES` (1 GB), is deleted and never run. Downloads come only from the release's own asset URLs,
-   and redirects may not downgrade from HTTPS.
+   and redirects may not downgrade from HTTPS.<!-- if >= 1.5.2 --> [[new 1.5.2]] Once the running `JBrowser.exe` is code-signed, the installer must also carry a valid signature from the same publisher (`signature_problem()`, using `win.authenticode()`), so a signed JBrowser never installs an unsigned or foreign update. Unsigned copies skip this check.<!-- endif -->
 4. **Install.** JBrowser starts a hidden PowerShell helper and closes itself. The helper waits for JBrowser and its
    `QtWebEngineProcess.exe` children to exit, then runs the installer with
    `/SILENT /SUPPRESSMSGBOXES /NORESTART /SP- /RELAUNCH`. Inno Setup replaces the program files and `/RELAUNCH` starts

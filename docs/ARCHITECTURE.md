@@ -111,7 +111,10 @@ See [AUTO_UPDATE.md](AUTO_UPDATE.md) and [BUILDING.md](BUILDING.md).
   host and adds a `<style>` before the first paint. Procedural filters (`:has-text()`, `+js()` and similar) are
   skipped. Rules with more than 4 wildcards or longer than 512 characters are skipped, and URLs are cut at 2,048
   characters, so no filter can make matching slow.
-- **Looking like Chrome.** The only script in the page's main world is `privacy_js` (canvas noise and the GPC/DNT
+- **Looking like Chrome.** `engine/identity.py` presents the newest stable Chrome version (recorded by
+  `tools/chrome_version.py` at every release, estimated by date in between) in the user agent and the client hints,
+  as a Chromium browser without the "Google Chrome" brand, which Google's sign-in checks. The only script in the
+  page's main world is `privacy_js` (canvas noise and the GPC/DNT
   signals), and every function it patches reports itself as native code. Hardware values are not changed, the
   `Accept-Language` header follows the Windows display languages, and sites that run bot checks
   (`CHALLENGE_SITES` in `services/privacy.py`) get no page scripts at all. Memory-saver probes run in the isolated

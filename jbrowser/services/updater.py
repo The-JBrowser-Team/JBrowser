@@ -38,6 +38,7 @@ from PyQt6.QtNetwork import QNetworkAccessManager, QNetworkReply, QNetworkReques
 
 from jbrowser import APP_NAME, GITHUB_REPO, RELEASES_PAGE, __version__
 from jbrowser.core.settings import Settings
+from jbrowser.platform import win
 
 log = logging.getLogger(__name__)
 
@@ -288,8 +289,30 @@ class UpdateService(QObject):
         except OSError as exc:
             self._set_state("error", f"Could not prepare the update: {exc}")
             return
+        problem = self.signature_problem(self.installer_path)
+        if problem:
+            self._discard(self.installer_path)
+            log.warning("Update rejected: %s", problem)
+            self._set_state("error", "The downloaded update is not signed by JBrowser's publisher and was deleted")
+            return
         self._set_state("ready", f"JBrowser {self.latest.version} is ready to install")
         self.readyToInstall.emit(self.installer_path)
+
+    @staticmethod
+    def signature_problem(installer: str) -> str:
+        """Once JBrowser itself is code-signed, an update must be signed by the same publisher.
+        Returns why ``installer`` fails that, or "" (also while JBrowser is unsigned)."""
+        if not getattr(sys, "frozen", False):
+            return ""
+        status, publisher = win.authenticode(sys.executable)
+        if status != "Valid":
+            return ""                                  # an unsigned JBrowser accepts unsigned updates
+        new_status, new_publisher = win.authenticode(installer)
+        if new_status != "Valid":
+            return f"signature {new_status} (JBrowser is signed by {publisher})"
+        if new_publisher != publisher:
+            return f"signed by {new_publisher}, not {publisher}"
+        return ""
 
     def cancel_download(self) -> None:
         if self._reply is not None:

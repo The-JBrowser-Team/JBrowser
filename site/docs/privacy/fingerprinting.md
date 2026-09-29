@@ -43,7 +43,7 @@ script in the page's own world; everything else runs in the isolated world, wher
 |---|---|
 | CPU cores (`hardwareConcurrency`), memory (`deviceMemory`) | Workers report the real values and can't be patched; a mismatch between the page and a worker is a classic bot signal. |
 | The WebGL vendor and renderer | A generic "ANGLE (Generic Renderer)" contradicts every other GPU detail and is itself unusual. |
-| The user agent | Qt's `QtWebEngine/x.y` token is removed, so the user agent is exactly Chrome's<!-- if >= 1.5.1 --> (except on [Google's sign-in server](#google-sign-in))<!-- endif -->. |
+| The user agent | <!-- if >= 1.5.2 -->JBrowser presents the [current Chrome version](#the-browser-jbrowser-presents), consistently in headers and JavaScript (except on [Google's sign-in server](#google-sign-in)).<!-- else -->Qt's `QtWebEngine/x.y` token is removed, so the user agent is exactly Chrome's<!-- endif --><!-- if == 1.5.1 --> (except on [Google's sign-in server](#google-sign-in))<!-- endif --><!-- if < 1.5.2 -->.<!-- endif --> |
 | `Accept-Language` | Built from the Windows display languages like Chrome's (`en-AU,en;q=0.9`). Qt sends none by default, which no real browser does. |
 
 ## Sites that get no changes at all
@@ -73,6 +73,41 @@ requests **to `accounts.google.com`** carry a current **Firefox** user agent, wh
 
 If Google changes its checks and sign-in breaks again, test a newer Firefox user agent, or a user agent from another
 browser, against a Google account in a throw-away space before changing `SIGNIN_UA_HOSTS` or the helper.
+<!-- endif -->
+<!-- if >= 1.5.2 -->
+
+[[new 1.5.2]] **Sign-in pages get no blocking.** With the filter lists loaded, EasyPrivacy blocked two requests on
+Google's sign-in page (`accounts.google.com/generate_204` and `play.google.com/log`), which Google's checks rely on.
+A fresh profile, without lists, got through; a real one didn't. `SIGNIN_PAGE_HOSTS` (Google, YouTube, Microsoft and
+Apple sign-in hosts) now get neither network blocking nor element hiding when they are the page being shown; threats
+are still blocked. The pages carry no ads.
+
+## The browser JBrowser presents
+
+[[new 1.5.2]] Qt 6.11's engine is Chromium 140. Presenting that version makes JBrowser look a year out of date, and
+some sites treat an outdated browser as suspicious or unsupported. [engine/identity.py](source:jbrowser/engine/identity.py)
+presents the **newest stable Chrome** instead, the same way everywhere a site can look:
+
+| Where | Value (September 2026) |
+|---|---|
+| `User-Agent` header and `navigator.userAgent` | `Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36` |
+| `Sec-CH-UA` and `navigator.userAgentData.brands` | `"Chromium";v="155", "Not(A:Brand";v="24"` |
+| `Sec-CH-UA-Full-Version-List`, `getHighEntropyValues()` | `Chromium 155.0.8059.12`, and the placeholder brand at `24.0.0.0` |
+
+- **The numbers follow every release.** `tools/chrome_version.py --update` asks Google's version history service
+  (`versionhistory.googleapis.com`) for the newest stable Chrome for Windows and writes it into `identity.py`;
+  `master.ps1` runs it for every release. Between releases, `chrome_version()` adds one major version per 30 days
+  after the recorded date (Chrome ships one every 4 weeks), so a copy that isn't updated keeps up and never runs ahead.
+- **The placeholder brand is Chrome's own.** Chrome adds a "GREASE" brand whose name and version depend on the major
+  version (`Not=A?Brand` 24 for 140, `Not(A:Brand` 24 for 155); `grease_brand()` uses Chromium's algorithm, so the
+  list is what that Chrome version sends.
+- **No "Google Chrome" brand.** Google's sign-in recognises the genuine Google Chrome by more than its brand: claiming
+  the brand made it reject JBrowser at once (redirecting to `/signin/rejected`), while the plain Chromium brand works.
+  Chromium itself and several Chromium-based browsers send the same brands.
+- The engine's real version shows in *Settings → About JBrowser* (`qWebEngineChromiumVersion()`).
+
+Pages still run on Chromium 140. Sites that choose code by the version they see get code for a newer Chrome; in
+testing (YouTube, Reddit, X, Google, Microsoft, GitHub and 20 more), none broke.
 <!-- endif -->
 
 ## If a site still shows a challenge

@@ -1,0 +1,160 @@
+# Builds a JBrowser release on GitHub's own Windows machines, has it code-signed by SignPath once
+# SignPath is set up, and (with "publish") attaches the files to the GitHub release and publishes it.
+#
+# SignPath Foundation signs open-source releases for free, but only builds it can trace to this
+# repository: every job before the signing request must run on a GitHub-hosted runner, as here.
+# Setup (docs/SIGNING.md): the SIGNPATH_API_TOKEN secret and the SIGNPATH_ORGANIZATION_ID variable
+# (optionally SIGNPATH_PROJECT_SLUG and SIGNPATH_POLICY_SLUG). Without them the build is unsigned,
+# which is how the pipeline is tested.
+#
+# tools/release.ps1 starts this workflow when SignPath is set up; it can also be started by hand.
+name: Release build
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Tag (or branch) to build, for example v1.5.2"
+        required: true
+      publish:
+        description: "Attach the files to the release of that tag and publish it"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write     # attach files to the release and publish it
+  actions: write      # start the website rebuild
+
+concurrency:
+  group: release-build-${{ inputs.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      SIGNPATH: ${{ vars.SIGNPATH_ORGANIZATION_ID != '' }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.ref }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.14"
+
+      - name: Python environment
+        id: version
+        run: |
+          python -m venv .venv
+          .\.venv\Scripts\python.exe tools\update_deps.py
+          if ($LASTEXITCODE -ne 0) { throw "tools/update_deps.py failed" }
+          $v = (.\.venv\Scripts\python.exe tools\version.py).Trim()
+          "version=$v" >> $env:GITHUB_OUTPUT
+          Write-Host "Building JBrowser $v (signing: $env:SIGNPATH)"
+
+      - name: Inno Setup
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Get-Command ISCC.exe -ErrorAction SilentlyContinue) -and -not (Test-Path $iscc)) {
+            choco install innosetup --no-progress -y
+          }
+
+      - name: Build JBrowser.exe
+        run: .\tools\build_app.ps1 -SkipDeps
+
+      # ---- sign JBrowser.exe before it goes into the installer
+      - name: Upload JBrowser.exe for signing
+        if: env.SIGNPATH == 'true'
+        id: unsigned-app
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-app
+          path: dist/JBrowser/JBrowser.exe
+          if-no-files-found: error
+
+      - name: Sign JBrowser.exe (SignPath)
+        if: env.SIGNPATH == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'JBrowser' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: app
+          github-artifact-id: ${{ steps.unsigned-app.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400   # an approver approves every release
+          output-artifact-directory: dist/JBrowser
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      # ---- the installer, then sign it
+      - name: Build the installer
+        run: .\tools\build_installer.ps1 -SkipAppBuild
+
+      - name: Upload the installer for signing
+        if: env.SIGNPATH == 'true'
+        id: unsigned-setup
+        uses: actions/upload-artifact@v7
+        with:
+          name: unsigned-setup
+          path: dist/installer/JBrowser-Setup-${{ steps.version.outputs.version }}.exe
+          if-no-files-found: error
+
+      - name: Sign the installer (SignPath)
+        if: env.SIGNPATH == 'true'
+        uses: signpath/github-action-submit-signing-request@v3
+        with:
+          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
+          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
+          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'JBrowser' }}
+          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
+          artifact-configuration-slug: installer
+          github-artifact-id: ${{ steps.unsigned-setup.outputs.artifact-id }}
+          wait-for-completion: true
+          wait-for-completion-timeout-in-seconds: 86400
+          output-artifact-directory: dist/installer
+          parameters: |
+            version: ${{ toJSON(steps.version.outputs.version) }}
+
+      - name: Check the signatures, checksum and package
+        id: package
+        run: |
+          $v = "${{ steps.version.outputs.version }}"
+          $setup = "dist\installer\JBrowser-Setup-$v.exe"
+          foreach ($f in @("dist\JBrowser\JBrowser.exe", $setup)) {
+            $s = Get-AuthenticodeSignature $f
+            Write-Host "$f : $($s.Status) $($s.SignerCertificate.Subject)"
+            if ($env:SIGNPATH -eq 'true' -and $s.Status -ne 'Valid') { throw "$f is not validly signed" }
+          }
+          # signing changed the installer: the checksum is written again
+          $hash = (Get-FileHash $setup -Algorithm SHA256).Hash.ToLower()
+          [System.IO.File]::WriteAllText("$setup.sha256", "$hash  JBrowser-Setup-$v.exe`n")
+          $zip = .\tools\package.ps1 -OutDir out | Select-Object -Last 1
+          Copy-Item $setup, "$setup.sha256" out
+          "zip=$zip" >> $env:GITHUB_OUTPUT
+
+      - name: Keep the release files
+        uses: actions/upload-artifact@v7
+        with:
+          name: JBrowser-${{ steps.version.outputs.version }}
+          path: out/*
+          if-no-files-found: error
+
+      - name: Publish the release
+        if: inputs.publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "${{ inputs.ref }}"
+          gh release upload $tag (Get-ChildItem out -File).FullName --clobber
+          if ($LASTEXITCODE -ne 0) { throw "gh release upload failed" }
+          $keep = Split-Path -Leaf "${{ steps.package.outputs.zip }}"
+          gh release view $tag --json assets --jq ".assets[].name" |
+            Where-Object { $_ -match '^JBrowser-.*\.zip(\.sha256)?$' -and $_ -notlike "$keep*" } |
+            ForEach-Object { gh release delete-asset $tag $_ --yes }
+          gh release edit $tag --draft=false --latest
+          if ($LASTEXITCODE -ne 0) { throw "Could not publish the release" }
+          gh workflow run pages.yml --ref main

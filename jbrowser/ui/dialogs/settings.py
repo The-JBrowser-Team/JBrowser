@@ -7,7 +7,6 @@ writes straight into the settings store, so changes apply immediately.
 from __future__ import annotations
 
 import platform
-import re
 import sys
 import time
 from typing import Any, Callable
@@ -938,11 +937,11 @@ class SettingsWindow(ChromeWindow):
 
     def _about(self) -> QWidget:
         self._current_page = "about"
-        chrome = ""
-        prof = self.ctx.profiles.all()[0] if self.ctx.profiles.all() else None
-        if prof is not None:
-            m = re.search(r"Chrome/([\d.]+)", prof.httpUserAgent())
-            chrome = m.group(1) if m else ""
+        from PyQt6.QtWebEngineCore import qWebEngineChromiumVersion
+
+        from jbrowser.engine.identity import chrome_version
+        # The engine's real Chromium, and the Chrome JBrowser presents itself as to websites.
+        chrome = f"{qWebEngineChromiumVersion()} (sites see Chrome {chrome_version().split('.')[0]})"
         logo = QLabel()
         logo.setPixmap(logo_pixmap(88))
         head = QWidget()
@@ -963,7 +962,7 @@ class SettingsWindow(ChromeWindow):
             "About JBrowser", "",
             head,
             SettingCard("info", "Components",
-                        f"Qt {QT_VERSION_STR}, PyQt {PYQT_VERSION_STR}, Chromium {chrome or 'not started yet'}, "
+                        f"Qt {QT_VERSION_STR}, PyQt {PYQT_VERSION_STR}, Chromium {chrome}, "
                         f"Python {platform.python_version()}, Windows build {build}."),
             SettingCard("shield", "Privacy",
                         "JBrowser has no accounts and no telemetry. The only network requests it makes on its own "

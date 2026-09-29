@@ -184,7 +184,7 @@ class CardHeader(QWidget):
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         if self.card.selected and self.card.multi_selected:
-            p.fillRect(self.rect(), th.accent_alpha(0.14))
+            p.fillRect(self.rect(), th.card_outline(0.14))
         r = QRectF(self.icon_slot.geometry())
         tab = self.card.tab
         if tab.loading and not tab.sleeping:
@@ -643,9 +643,9 @@ class WebCard(QFrame):
             p.end()
             return
         if self.active:
-            pen = QPen(th.c("accent"), 2)
+            pen = QPen(th.card_outline(), 2)
         elif self.selected and self.multi_selected:
-            pen = QPen(th.accent_alpha(0.75), 1.5)
+            pen = QPen(th.card_outline(0.6), 1.5)
         else:
             pen = QPen(th.c("card_border"), 1)
         p.setPen(pen)

@@ -28,7 +28,7 @@ empty stray folders again, so nothing is left in `QtWebEngine\` under the user's
 
 `_create()` configures each profile the same way:
 
-- **User agent:** Qt's default with the `QtWebEngine/x.y` token removed, so sites see a normal Chrome user agent.
+- **User agent:** <!-- if >= 1.5.2 -->`identity.apply()` presents the newest stable Chrome version (recorded at every release) in the user agent and the client hints, as a Chromium browser ([details](../privacy/fingerprinting.md#the-browser-jbrowser-presents)).<!-- else -->Qt's default with the `QtWebEngine/x.y` token removed, so sites see a normal Chrome user agent.<!-- endif -->
 <!-- if >= 1.5.0 -->
 - **`Accept-Language`:** built by `accept_language()` from the Windows display languages, like Chrome does
   (for example `en-AU,en;q=0.9`). Qt sends none by default, and a browser without one looks automated.

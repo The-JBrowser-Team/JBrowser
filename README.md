@@ -54,33 +54,25 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.5.1 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.1)
+### 1.5.2 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.2)
 
-- **Google sign-in works again**: no more *"Couldn't sign you in. This browser or app may not be secure"*.
-  Google's sign-in server sees a Firefox user agent; everything else still sees Chrome.
-- **Ready for code signing**: with a code-signing certificate configured, every build signs the app, the installer
-  and the uninstaller, which is what removes SmartScreen's *"Windows protected your PC"*
-  ([docs/SIGNING.md](docs/SIGNING.md)). Until then, the one-command install below avoids the warning.
-- **A website** with the download, the changelog, real screenshots and developer documentation for every version.
-
-### 1.5.0 · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.0)
-
-- **Gallery** (Ctrl+Shift+G, or the new *Gallery* button): every card of a space as a grid of live thumbnails. Filter,
-  open, close and reorder cards, and switch to **All spaces** to see every space at once and drag cards between them.
-- **Colour tints**: 10 colours and *No colour* in Settings → Appearance and the welcome setup. A light wash over
-  Acrylic or Mica, stronger with *Solid*; incognito spaces stay black.
-- **Drag cards anywhere**: by the card's ribbon (or Alt + drag on the page) along the canvas or onto a space in the
-  sidebar, and within the sidebar list.
-- **Ad and tracker blocking that works**: a real Adblock Plus filter engine for EasyList and EasyPrivacy, and ad
-  boxes are hidden before the page paints.
-- **Fewer CAPTCHAs** on Google and Cloudflare: JBrowser now looks like the Chrome it is built on, and leaves
-  sign-in and security-check sites untouched.
-- The clock is centred in the sidebar, and the *New card* button shows even in an empty space.
+- **Sites see the current Chrome** (Chrome 155) instead of JBrowser's year-old engine version, in the user agent and
+  every other browser detail; each release updates the numbers.
+- **Google sign-in, second round**: sign-in pages (Google, Microsoft, Apple) are no longer filtered by the ad and
+  tracker blocker, which blocked requests Google's security check needs.
+- **The active card's outline takes your colour tint** (grey with *No colour*) instead of blue.
+- **Security**: saved web pages can no longer read your other files, a stronger master-password key, and signed
+  copies will accept only signed updates.
+- Videos JBrowser can't play (H.264, AAC) now say so, and the loading spinner is lighter on the CPU.
+- **Ready for free code signing** by SignPath Foundation: releases can be built and signed on GitHub's own machines,
+  and the website has the code signing and privacy policies SignPath requires ([docs/SIGNING.md](docs/SIGNING.md)).
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.5.1 | Google sign-in fix (Firefox user agent for Google's sign-in server), code signing built into the release scripts, a website with real screenshots and versioned developer docs |
+| 1.5.0 | The Gallery, colour tints, drag cards anywhere, real ad blocking with EasyList and EasyPrivacy, fewer CAPTCHAs |
 | 1.4.1 | Setup closes a running JBrowser for you, a 30 MB smaller download, nothing lost when Windows closes JBrowser |
 | 1.4.0 | Automatic updates from GitHub, a proper Windows installer, a livelier welcome animation, open source under the GNU GPL v3 |
 | 1.2.0 | First-run welcome and guided tour, pull to add a card, favourites and pinned cards, the Archive (closed cards from the last 48 hours), an optional Home button |
@@ -177,7 +169,8 @@ it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RE
 | [`tools/`](tools/README.md) | Scripts for dependencies, versions, icons, builds and releases |
 | [`docs/`](docs/README.md) | Features, architecture, development, building, releasing and updates |
 | [`site/`](site/README.md) | The website: home page, download page, changelog and the versioned developer docs |
-| [`.github/`](.github/GITHUB_CONFIG.md) | Continuous integration, issue and pull-request templates |
+| [`.github/`](.github/GITHUB_CONFIG.md) | Continuous integration, the website and signed-release workflows, issue and pull-request templates |
+| `.signpath/` | SignPath artifact configurations for code signing ([docs/SIGNING.md](docs/SIGNING.md)) |
 | `master.ps1` | Builds, packages and publishes everything in one command |
 | `install.ps1` | Installs or updates JBrowser from the latest release zip (the one-command install) |
 | `distribution/` | Zips made by `master.ps1` (local only, not in git) |

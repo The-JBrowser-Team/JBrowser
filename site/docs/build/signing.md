@@ -1,7 +1,7 @@
 ---
 title: Code signing and SmartScreen
 nav_title: Code signing
-description: Why Windows says "Windows protected your PC", what removes the warning, and how the build signs JBrowser once a certificate is configured.
+description: Why Windows says "Windows protected your PC", what removes the warning, how the build signs JBrowser with a certificate, and the SignPath workflow.
 since: 1.5.1
 ---
 
@@ -33,6 +33,36 @@ Every option checks the publisher's identity first, so it has to be requested by
 made by CI), Certum Open Source Code Signing (from about €69, on a smart card), Azure Artifact Signing (US$9.99 a
 month; individuals in the USA and Canada only) and commercial OV certificates. A Microsoft Store listing (MSIX,
 signed by the Store) avoids SmartScreen entirely.
+<!-- if >= 1.5.2 -->
+
+## Signed builds on GitHub Actions (SignPath Foundation)
+
+[[new 1.5.2]] SignPath Foundation signs open-source releases for free, but only builds it can trace to the public
+repository: made by a workflow on GitHub-hosted runners, and approved by hand for each release. JBrowser is set up for
+it; the project owner applies and connects the accounts ([docs/SIGNING.md](repo:docs/SIGNING.md) lists the steps).
+
+```text
+master.ps1 -Publish ──► release.ps1 ──► draft release vX.Y.Z (notes only)
+                                   └──► release-build.yml on windows-latest (GitHub-hosted)
+                                          build JBrowser.exe ──► SignPath "app" ──► signed JBrowser.exe
+                                          build the installer ─► SignPath "installer" ─► signed Setup
+                                          check signatures, write .sha256, package the zip (tools/package.ps1)
+                                          attach the files, publish the release, rebuild the website
+```
+
+| Piece | Role |
+|---|---|
+| [release-build.yml](source:.github/workflows/release-build.yml) | The build. Inputs: `ref` (a tag) and `publish`. With the `SIGNPATH_ORGANIZATION_ID` variable and `SIGNPATH_API_TOKEN` secret it submits signing requests (`signpath/github-action-submit-signing-request@v3`, waiting up to a day for approval); without them it builds unsigned, which is how the workflow is tested. |
+| [.signpath/artifact-configurations](source:.signpath/artifact-configurations/app.xml) | `app.xml` and `installer.xml`, pasted into SignPath. They restrict signing to files whose product name is JBrowser and whose version is the release's. |
+| `Test-SignPath` in [tools/common.ps1](source:tools/common.ps1) | Asks GitHub whether the variable exists; `release.ps1` then creates a draft and starts the workflow instead of uploading a local build. |
+| [tools/package.ps1](source:tools/package.ps1) | Makes the zip, the same way on the PC and in the workflow. |
+| `Updater.signature_problem()` in [services/updater.py](source:jbrowser/services/updater.py) | Once the running JBrowser is signed, an update must be validly signed by the same publisher (`win.authenticode()`), on top of the SHA-256 check. |
+
+The installer's version resource carries the same product name and version as `JBrowser.exe`
+(`VersionInfoProductName`, `VersionInfoProductTextVersion` in the `.iss`), so both pass SignPath's metadata checks.
+SignPath signs the installer after Inno Setup has built it, so the uninstaller inside stays unsigned; Windows never
+checks an uninstaller's reputation.
+<!-- endif -->
 
 ## How the build signs
 

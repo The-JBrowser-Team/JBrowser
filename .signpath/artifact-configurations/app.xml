@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SignPath artifact configuration "app": signs JBrowser.exe before it goes into the installer.
+     The GitHub artifact is a zip (actions/upload-artifact) holding just JBrowser.exe. The product name and
+     version must match the release, as SignPath Foundation requires. Paste this into the SignPath project
+     (Artifact configurations → New → slug "app"); see docs/SIGNING.md. -->
+<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
+  <parameters>
+    <parameter name="version" required="true" />
+  </parameters>
+  <zip-file>
+    <pe-file path="JBrowser.exe" product-name="JBrowser" product-version="${version}">
+      <authenticode-sign />
+    </pe-file>
+  </zip-file>
+</artifact-configuration>

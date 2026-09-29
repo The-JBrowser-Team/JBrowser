@@ -33,6 +33,14 @@ _RTYPE = {
 # Sites that must never have JBrowser's page-level privacy changes (canvas noise) or third-party cookie
 # blocking get in the way: CAPTCHA / bot-check providers and the big sign-in pages. Bot checks look
 # for exactly the kind of changes privacy protection makes, and answer with "unusual traffic" pages.
+# Requests through which a page can read a file's contents. Qt lets local pages (file://) read any local
+# file (unlike Chrome), so ProfileInterceptor blocks these when a local page asks for a local file: a
+# downloaded HTML file opened in JBrowser could otherwise read the user's documents. Images, style
+# sheets, scripts, fonts and media still load, so saved web pages look right.
+_FILE_READ_TYPES = (RT.ResourceTypeXhr, RT.ResourceTypeJson, RT.ResourceTypeSubFrame, RT.ResourceTypeObject,
+                    RT.ResourceTypePluginResource, RT.ResourceTypeWorker, RT.ResourceTypeSharedWorker,
+                    RT.ResourceTypeServiceWorker, RT.ResourceTypePrefetch, RT.ResourceTypeUnknown)
+
 CHALLENGE_SITES = ("google.com", "gstatic.com", "recaptcha.net", "youtube.com", "hcaptcha.com", "cloudflare.com",
                    "arkoselabs.com", "funcaptcha.com", "microsoftonline.com", "live.com", "microsoft.com",
                    "apple.com", "icloud.com", "paypal.com")
@@ -44,6 +52,14 @@ CAPTCHA_COOKIE_SITES = ("recaptcha.net", "hcaptcha.com", "challenges.cloudflare.
 # Firefox user agent in the requests to Google's sign-in server only; everywhere else, and in
 # JavaScript, it stays Chrome.
 SIGNIN_UA_HOSTS = ("accounts.google.com",)
+
+# Sign-in pages get no ad or tracker blocking and no element hiding (dangerous sites are still
+# blocked). Their bot checks report to their own servers, and with those requests blocked (EasyPrivacy
+# blocks accounts.google.com/generate_204 and play.google.com/log, for example) Google refuses to sign
+# the user in. The pages carry no ads, so nothing is lost.
+SIGNIN_PAGE_HOSTS = ("accounts.google.com", "accounts.youtube.com", "login.microsoftonline.com", "login.live.com",
+                     "login.microsoft.com", "account.live.com", "appleid.apple.com", "idmsa.apple.com",
+                     "account.apple.com")
 
 
 def firefox_user_agent(today: date | None = None) -> str:
@@ -244,7 +260,7 @@ class PrivacyService(QObject):
         if not self.block_trackers:
             return False
         first = info.firstPartyUrl().host().lower()
-        if first and self.is_allowlisted(first):
+        if first and (first in SIGNIN_PAGE_HOSTS or self.is_allowlisted(first)):
             return False
         third = not first or registrable_domain(first) != registrable_domain(host)
         eng = self.filters
@@ -274,9 +290,10 @@ class PrivacyService(QObject):
         from jbrowser.engine.js import cosmetic_js
         if not self.block_trackers or self.filters is None:
             return ""
-        key = (id(self.filters), tuple(sorted(self.allowlist)))
+        allow = sorted(set(self.allowlist) | set(SIGNIN_PAGE_HOSTS))
+        key = (id(self.filters), tuple(allow))
         if self._cosmetic_cache[0] != key:
-            self._cosmetic_cache = (key, cosmetic_js(self.filters.cosmetic_data(), sorted(self.allowlist)))
+            self._cosmetic_cache = (key, cosmetic_js(self.filters.cosmetic_data(), allow))
         return self._cosmetic_cache[1]
 
     @staticmethod
@@ -443,6 +460,10 @@ class ProfileInterceptor(QWebEngineUrlRequestInterceptor):
 
     def interceptRequest(self, info: QWebEngineUrlRequestInfo) -> None:
         try:
+            if info.resourceType() in _FILE_READ_TYPES and info.requestUrl().isLocalFile() \
+                    and info.firstPartyUrl().isLocalFile():
+                info.block(True)        # a local page may show local images, but not read local files
+                return
             target = self._p.rewrite(info)
             if target is not None:
                 info.redirect(target)

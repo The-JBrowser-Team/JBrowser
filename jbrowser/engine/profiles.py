@@ -8,13 +8,13 @@ from __future__ import annotations
 
 import logging
 import os
-import re
 import secrets
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QObject, QStandardPaths, QTimer
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineScript, QWebEngineSettings
 
+from jbrowser.engine import identity
 from jbrowser.engine.js import AUTOFILL_JS, BRIDGE_WORLD, GUARD_JS, privacy_js, qwebchannel_js
 from jbrowser.models.space import Space
 from jbrowser.services.privacy import CHALLENGE_SITES, ProfileInterceptor
@@ -25,7 +25,6 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 WA = QWebEngineSettings.WebAttribute
-_QT_TOKEN = re.compile(r"\s*QtWebEngine/[\d.]+")
 
 
 def accept_language() -> str:
@@ -143,7 +142,7 @@ class ProfileManager(QObject):
             prof.setPersistentPermissionsPolicy(QWebEngineProfile.PersistentPermissionsPolicy.StoreOnDisk)
             for stray in self._default_dirs(prof.storageName()):
                 self._rmdir_empty(stray)
-        prof.setHttpUserAgent(_QT_TOKEN.sub("", prof.httpUserAgent()))
+        identity.apply(prof)                        # the current Chrome, in headers and JavaScript
         if not prof.httpAcceptLanguage():
             prof.setHttpAcceptLanguage(accept_language())
         interceptor = ProfileInterceptor(self.ctx.privacy, prof)
@@ -239,6 +238,11 @@ class ProfileManager(QObject):
         ws.setAttribute(WA.ForceDarkMode, bool(s.get("appearance.force_dark_web")))
         if hasattr(WA, "BackForwardCacheEnabled"):
             ws.setAttribute(WA.BackForwardCacheEnabled, True)
+        # Chrome's defaults for local files and mixed content. (Local pages keep loading their own images
+        # and style sheets; ProfileInterceptor stops them reading other local files, as Chrome does.)
+        ws.setAttribute(WA.LocalContentCanAccessRemoteUrls, False)
+        ws.setAttribute(WA.AllowRunningInsecureContent, False)
+        ws.setAttribute(WA.AllowGeolocationOnInsecureOrigins, False)
 
     def _apply_settings_all(self) -> None:
         for prof in self._profiles.values():

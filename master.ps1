@@ -5,7 +5,8 @@
 .DESCRIPTION
     Runs the whole process in order:
 
-      1. (-Version X.Y.Z) sets the new version everywhere (tools\version.py).
+      1. (-Version X.Y.Z) sets the new version everywhere (tools\version.py), and records the newest
+         stable Chrome version, which JBrowser presents to websites (tools\chrome_version.py).
       2. Creates or updates .venv and every package, and checks every module imports (tools\update_deps.py).
       3. Builds the app and the installer (tools\build_installer.ps1), and signs them when a
          code-signing certificate is configured (tools\sign.ps1, docs\SIGNING.md).
@@ -60,6 +61,10 @@ if ($Version) {
 }
 $ver = (& $Py tools\version.py).Trim()
 $tag = "v$ver"
+# Every update presents the Chrome that is current when it is built (jbrowser\engine\identity.py).
+Step "Recording the newest Chrome version"
+& $Py tools\chrome_version.py --update
+if ($LASTEXITCODE -ne 0) { Write-Warning "Keeping the recorded Chrome version (the app still estimates newer ones by date)." }
 if ($Publish) {
     $changelog = Get-Content CHANGELOG.md -Raw -Encoding utf8
     if ($changelog -notmatch "(?m)^## \[$([regex]::Escape($ver))\]") {
@@ -82,47 +87,9 @@ if (-not (Test-Path $setup) -or -not (Test-Path "$setup.sha256")) {
 }
 
 # --- 4. Package ------------------------------------------------------------------------------
-$date = Get-Date -Format "yyyy-MM-dd"
-$distribution = Join-Path $Root "distribution"
-$zipName = "JBrowser-$ver-$date.zip"
-$zip = Join-Path $distribution $zipName
-Step "Packaging distribution\$zipName"
-New-Item -ItemType Directory -Force $distribution | Out-Null
-$stage = Join-Path $WorkDir "package"
-if (Test-Path $stage) { Remove-Item $stage -Recurse -Force -Confirm:$false }
-New-Item -ItemType Directory -Force $stage | Out-Null
-Copy-Item $setup, "$setup.sha256", (Join-Path $Root "LICENSE") $stage
+$zip = & (Join-Path $Root "tools\package.ps1") | Select-Object -Last 1
+$zipName = Split-Path -Leaf $zip
 $setupSigned = (Get-AuthenticodeSignature $setup).Status -eq "Valid"
-$smartScreen = if ($setupSigned) {
-    "  2. If Windows SmartScreen still warns (a new version can take a little while to be recognised),`r`n" +
-    "     choose `"More info`", check the publisher, then `"Run anyway`"."
-} else {
-    "  2. If Windows SmartScreen warns about an unrecognised app, choose `"More info`", then `"Run anyway`"`r`n" +
-    "     (this installer is not code-signed)."
-}
-$installText = @"
-JBrowser $ver ($date)
-Welcome to the internet - again.
-
-To install or update:
-  1. Run JBrowser-Setup-$ver.exe.
-$smartScreen
-  3. Follow the steps. No administrator rights are needed. Your data is kept when updating.
-
-Check the installer (optional), in PowerShell in this folder:
-  (Get-FileHash .\JBrowser-Setup-$ver.exe -Algorithm SHA256).Hash
-It must match the first word in JBrowser-Setup-$ver.exe.sha256.
-
-Once installed, JBrowser updates itself from GitHub. Uninstall from Settings > Apps > Installed apps.
-Source, help and release notes: https://github.com/The-JBrowser-Team/JBrowser
-JBrowser is free software under the GNU General Public License v3 (see LICENSE).
-"@
-[System.IO.File]::WriteAllText((Join-Path $stage "INSTALL.txt"), ($installText -replace "`r?`n", "`r`n"))
-if (Test-Path $zip) { Remove-Item $zip -Force -Confirm:$false }
-Compress-Archive -Path (Join-Path $stage "*") -DestinationPath $zip -CompressionLevel Optimal
-$zipHash = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-[System.IO.File]::WriteAllText("$zip.sha256", "$zipHash  $zipName`n")
-Remove-Item $stage -Recurse -Force -Confirm:$false
 
 # --- 5. Publish ------------------------------------------------------------------------------
 if ($Publish) {

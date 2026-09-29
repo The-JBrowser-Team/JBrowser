@@ -390,6 +390,23 @@ def dpapi_unprotect(data: bytes, entropy: bytes = b"JBrowser") -> bytes:
         _kernel32.LocalFree(blob_out.pbData)
 
 
+def authenticode(path: str) -> tuple[str, str]:
+    """The Authenticode signature of a file: (status, signer subject), e.g. ("Valid", "CN=…") or
+    ("NotSigned", ""). ("Unknown", "") when it can't be checked. Takes about half a second."""
+    if not IS_WINDOWS or not os.path.exists(path):
+        return "Unknown", ""
+    script = ("$s = Get-AuthenticodeSignature -LiteralPath $env:JB_SIG_PATH; "
+              "[string]$s.Status + '|' + [string]$s.SignerCertificate.Subject")
+    try:
+        out = subprocess.run(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command", script],
+                             capture_output=True, text=True, timeout=30, env={**os.environ, "JB_SIG_PATH": path},
+                             creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+        status, _, subject = out.stdout.strip().partition("|")
+        return (status or "Unknown"), subject
+    except (OSError, subprocess.SubprocessError):
+        return "Unknown", ""
+
+
 def reveal_in_explorer(path: str) -> None:
     path = os.path.normpath(path)
     if IS_WINDOWS:

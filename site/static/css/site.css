@@ -169,6 +169,18 @@ h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; letter-spac
 .steps.compact { grid-template-columns: 1fr; }
 .download-logo { filter: drop-shadow(0 12px 30px rgba(120, 90, 255, .35)); }
 
+/* plain text pages (site/pages/*.md: code signing policy, privacy) */
+.text-prose { font-size: 16px; line-height: 1.7; }
+.text-prose h2 { font-size: 23px; margin: 38px 0 10px; }
+.text-prose h3 { font-size: 18px; margin: 26px 0 8px; }
+.text-prose p, .text-prose ul, .text-prose ol { margin: 0 0 14px; }
+.text-prose ul, .text-prose ol { padding-left: 22px; }
+.text-prose li { margin: 4px 0; }
+.text-prose table { width: 100%; border-collapse: collapse; margin: 6px 0 18px; font-size: 15px; }
+.text-prose th, .text-prose td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--border); }
+.text-prose th { color: var(--text-2); font-weight: 600; }
+.text-prose .note { padding: 14px 16px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); }
+
 /* a one-line command with a Copy button (home and download) */
 .code-copy {
   display: flex; align-items: center; gap: 8px; margin-top: 10px; padding: 6px 6px 6px 12px;

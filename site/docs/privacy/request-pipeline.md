@@ -50,6 +50,13 @@ If nothing redirects, the interceptor adds `DNT: 1` (`privacy.dnt`) and `Sec-GPC
 `User-Agent` header, so Google lets the user sign in. [Fingerprinting and bot checks](fingerprinting.md#google-sign-in)
 explains why.
 <!-- endif -->
+<!-- if >= 1.5.2 -->
+
+[[new 1.5.2]] **Local files.** Before anything else, a request from a local page (`file://`) for another local file
+is blocked when it could read the file's contents (fetch/XHR, frames, objects, workers: `_FILE_READ_TYPES`). Qt lets
+local pages read any local file, unlike Chrome, so a downloaded HTML file opened in JBrowser could otherwise read the
+user's documents. Images, style sheets, scripts, fonts and media still load, so saved web pages look right.
+<!-- endif -->
 
 ## `should_block()`: blocking
 
@@ -62,7 +69,7 @@ In order:
 3. **Threats**: a sub-resource or frame from a known phishing or malware host is always blocked, even with tracker
    blocking off.
 4. With `privacy.block_trackers` off, stop here.
-5. **The allowed list**: when the page's own site (the first party) is on `privacy.allowlist`, nothing is blocked.
+5. **The allowed list**: when the page's own site (the first party) is on `privacy.allowlist`<!-- if >= 1.5.2 -->, or is a sign-in page (`SIGNIN_PAGE_HOSTS`, [why](fingerprinting.md#google-sign-in))<!-- endif -->, nothing is blocked.
 6. **List exemptions**: `@@||site^$document` rules in the filter lists exempt a site completely.
 7. **Domain rules** (`Blocklist`: the built-in list plus the downloaded domain lists) block **third-party** requests
    to tracker and ad domains.

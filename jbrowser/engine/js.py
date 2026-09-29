@@ -247,6 +247,17 @@ AUTOFILL_JS = r"""
     var n = passwordFields().length;
     if (n !== reported) { reported = n; if (bridge) bridge.loginFormDetected(n); }
   }
+  // A video or sound in a format this engine can't decode (H.264, AAC: Qt WebEngine has no proprietary
+  // codecs). Errors don't bubble, so listen in the capture phase; a failing <source> reports on itself.
+  var mediaReported = false;
+  document.addEventListener('error', function (e) {
+    var t = e.target, m = t instanceof HTMLSourceElement ? t.parentElement : t;
+    if (mediaReported || !(m instanceof HTMLMediaElement)) return;
+    var unsupported = (m.error && m.error.code === 4) || (t !== m && m.networkState === 3);
+    if (!unsupported) return;
+    mediaReported = true;
+    if (bridge) bridge.mediaUnsupported(m instanceof HTMLVideoElement ? 'video' : 'audio');
+  }, true);
   new QWebChannel(qt.webChannelTransport, function (ch) { bridge = ch.objects.jbBridge; reported = -1; report(); });
   var timer = 0;
   new MutationObserver(function () { clearTimeout(timer); timer = setTimeout(report, 450); })

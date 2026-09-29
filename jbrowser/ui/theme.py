@@ -57,6 +57,8 @@ TINTS: dict[str, tuple[str, str]] = {
 _SOLID_MIX = {"window": (0.20, 0.15), "sidebar_solid": (0.24, 0.19), "canvas_solid": (0.15, 0.12),
               "dialog_solid": (0.09, 0.07), "layer_solid": (0.09, 0.07), "card_solid": (0.05, 0.03)}
 _WASH_ALPHA = (0.15, 0.10)          # the translucent wash (dark, light): a tint, never a paint job
+_OUTLINE_WASH = (0.30, 0.12)        # how far the active card's outline is washed towards white (dark, light)
+_OUTLINE_GREY = ("#8b9099", "#9aa0a8")   # the outline without a tint (dark, light)
 # Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
 _INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
               "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
@@ -171,6 +173,14 @@ class Theme(QObject):
 
     def accent_alpha(self, alpha: float) -> QColor:
         c = QColor(self.accent)
+        c.setAlphaF(alpha)
+        return c
+
+    def card_outline(self, alpha: float = 0.9) -> QColor:
+        """Outline of the active card: a washed (paler, slightly see-through) version of the colour
+        tint, or grey with *No colour* and in incognito spaces."""
+        base = QColor(self.tint) if self.tint is not None else QColor(_OUTLINE_GREY[0 if self.dark else 1])
+        c = mix(base, QColor("#ffffff"), _OUTLINE_WASH[0 if self.dark else 1])
         c.setAlphaF(alpha)
         return c
 
