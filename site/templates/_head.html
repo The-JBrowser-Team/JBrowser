@@ -1,0 +1,24 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{canonical}}">
+<link rel="icon" href="{{root}}favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="{{root}}static/img/logo.svg">
+<link rel="apple-touch-icon" href="{{root}}static/img/jbrowser.png">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{title}}">
+<meta property="og:description" content="{{description}}">
+<meta name="color-scheme" content="light dark">
+<meta name="jb-repo" content="{{repo}}">
+<meta name="jb-latest" content="{{latest_version}}">
+<script>
+  /* Theme before first paint: the saved choice, else the system's. */
+  (function () {
+    var t = null;
+    try { t = localStorage.getItem("jb-theme"); } catch (e) {}
+    if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    document.documentElement.setAttribute("data-theme", t);
+  })();
+</script>
+<link rel="stylesheet" href="{{root}}static/css/site.css">

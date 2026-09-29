@@ -12,6 +12,9 @@ dist_*/
 # Packaged releases made by master.ps1 (published on GitHub Releases instead)
 distribution/
 
+# The website built by tools/build_site.py (published by .github/workflows/pages.yml)
+_site/
+
 # Local test profiles and logs (use --profile-dir outside the repo when you can)
 profile*/
 jb-*/

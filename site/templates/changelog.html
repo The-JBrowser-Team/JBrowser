@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+{% include _head.html %}
+<link rel="stylesheet" href="{{root}}static/css/pygments.css">
+</head>
+<body class="changelog">
+{% include _topbar.html %}
+<main id="main" class="wrap page">
+  <header class="page-head">
+    <p class="kicker">Changelog</p>
+    <h1>Every change, release by release</h1>
+    <div class="page-intro">{{intro}}</div>
+    <p class="page-links"><a href="{{repo_url}}/blob/main/CHANGELOG.md">CHANGELOG.md on GitHub</a> · <a href="{{repo_url}}/releases">All releases</a> · <a href="{{repo_url}}/releases.atom">Releases feed (Atom)</a></p>
+  </header>
+  <div class="changelog-grid">
+    <nav class="release-nav" aria-label="Releases"><p>Versions</p><ul>{{release_nav}}</ul></nav>
+    <div class="releases">{{releases}}</div>
+  </div>
+</main>
+{% include _footer.html %}
+</body>
+</html>

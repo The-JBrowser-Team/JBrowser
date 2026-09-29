@@ -16,6 +16,7 @@ which can create `.venv` from any Python 3.14+.
 | `common.ps1` | Shared by the three `.ps1` scripts: paths, and where build output goes (outside OneDrive, see below) | dot-sourced, not run directly |
 | `make_icon.py` | Renders the vector logo into `assets\jbrowser.ico` and `jbrowser.png` | runs during every build |
 | `convert_sounds.py` | Converts an MP3 into the WAV format used for UI sounds, and prints its loudness envelope | `python tools\convert_sounds.py in.mp3 assets\sounds\x.wav` |
+| `build_site.py` | Builds the website (home page, download page, changelog and the versioned developer docs) from `site/`, `CHANGELOG.md` and every release tag. Needs `requirements-site.txt`. | `python tools\build_site.py --serve` · `--offline` · `--out DIR` |
 | `version_info.txt` | The exe's version resource (generated: don't edit by hand) | written by `version.py --sync` |
 
 `dist\` above is the build output folder. When the repository is inside OneDrive it is

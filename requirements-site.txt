@@ -1,0 +1,4 @@
+# The website builder (tools/build_site.py): Markdown for the documentation pages, Pygments for code colours.
+# Not needed to run or build JBrowser itself.
+markdown>=3.7
+pygments>=2.19

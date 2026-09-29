@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+{% include _head.html %}
+</head>
+<body class="download-page">
+{% include _topbar.html %}
+<main id="main" class="wrap page narrow">
+  <header class="page-head center">
+    <img src="{{root}}static/img/logo.svg" alt="" width="84" height="84" class="download-logo">
+    <p class="kicker">Download</p>
+    <h1>JBrowser <span data-latest-version>{{latest_version}}</span> for Windows</h1>
+    <p class="lead">This page always offers the newest release. Your download starts in a moment.</p>
+    <div class="cta center">
+      <a class="btn btn-primary btn-large" id="download-now" href="{{exe_url}}" data-latest-exe>Download <code data-latest-name>{{exe_name}}</code></a>
+    </div>
+    <p class="fineprint"><span data-latest-label>Version {{latest_version}}</span> · Windows 10 and 11, 64-bit · <a href="{{release_url}}" data-latest-release>Release notes and SHA-256</a></p>
+  </header>
+  <ol class="steps compact">
+    <li><span>1</span><h3>Run the installer</h3><p>No administrator rights are needed. Your cards, passwords and settings are kept when you update.</p></li>
+    <li><span>2</span><h3>If SmartScreen warns you</h3><p>Choose <em>More info</em>, then <em>Run anyway</em>. The installer isn't code-signed yet.</p></li>
+    <li><span>3</span><h3>Check it (optional)</h3><p>In PowerShell: <code>(Get-FileHash .\JBrowser-Setup-*.exe).Hash</code> must match the <code>.sha256</code> file on the release page.</p></li>
+  </ol>
+  <p class="center muted">Prefer the command line? <code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code></p>
+</main>
+{% include _footer.html %}
+<script>
+  /* Start the download once the newest release is known (site.js resolves it; the built-in link is the fallback). */
+  window.addEventListener("load", function () {
+    var go = function () { var a = document.getElementById("download-now"); if (a) window.location.href = a.href; };
+    if (window.JB && window.JB.latest) window.JB.latest.then(go, go); else setTimeout(go, 800);
+  });
+</script>
+</body>
+</html>

@@ -5,6 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [Unreleased]
+
+### Added
+- **A website** at [the-jbrowser-team.github.io/JBrowser](https://the-jbrowser-team.github.io/JBrowser/): a home page
+  with a direct download of the newest installer, a permanent download link, this changelog, and developer
+  documentation for every release (architecture, web engine, privacy, UI, building and releasing, and references
+  generated from each version's code), with a version switcher and search. It is built by `tools/build_site.py`
+  and published by GitHub Actions on every push and release.
+
 ## [1.5.0] - 2026-09-29
 
 ### Added
@@ -47,6 +56,8 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
 ### Fixed
 - A card that scrolled out of view or went to sleep before its page had drawn showed a blank white picture. It now
   shows the page's title until a real picture is taken.
+
+## [1.4.1] - 2026-09-29
 
 ### Fixed
 - **Setup no longer stops with "JBrowser is currently running".** If JBrowser is open, Setup now offers to close it

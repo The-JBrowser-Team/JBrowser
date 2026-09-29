@@ -10,6 +10,13 @@
 </p>
 
 <p align="center">
+  <a href="https://the-jbrowser-team.github.io/JBrowser/"><b>Website</b></a> ·
+  <a href="https://the-jbrowser-team.github.io/JBrowser/download/"><b>Download</b></a> ·
+  <a href="https://the-jbrowser-team.github.io/JBrowser/changelog/"><b>Changelog</b></a> ·
+  <a href="https://the-jbrowser-team.github.io/JBrowser/docs/"><b>Developer docs</b></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/The-JBrowser-Team/JBrowser/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/The-JBrowser-Team/JBrowser?label=download"></a>
   <a href="LICENSE"><img alt="Licence: GPL v3" src="https://img.shields.io/badge/licence-GPL%20v3-blue"></a>
   <img alt="Windows 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4">
@@ -113,7 +120,9 @@ py -3.14 tools\update_deps.py        # creates .venv, installs everything and ch
 ```
 
 Run `tools\update_deps.py` again at any time to update all packages. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
-covers the command-line options, test profiles, debugging and code conventions.
+covers the command-line options, test profiles, debugging and code conventions, and the
+**[developer documentation](https://the-jbrowser-team.github.io/JBrowser/docs/)** explains the architecture, the web
+engine, privacy, the UI and the release process for every version, with a generated Python API reference.
 
 ## Build and release
 
@@ -152,6 +161,7 @@ it. Guides: [docs/BUILDING.md](docs/BUILDING.md) and [docs/RELEASING.md](docs/RE
 | [`installer/`](installer/README.md) | The Inno Setup script for `JBrowser-Setup.exe` |
 | [`tools/`](tools/README.md) | Scripts for dependencies, versions, icons, builds and releases |
 | [`docs/`](docs/README.md) | Features, architecture, development, building, releasing and updates |
+| [`site/`](site/README.md) | The website: home page, download page, changelog and the versioned developer docs |
 | [`.github/`](.github/GITHUB_CONFIG.md) | Continuous integration, issue and pull-request templates |
 | `master.ps1` | Builds, packages and publishes everything in one command |
 | `install.ps1` | Installs or updates JBrowser from the latest release zip (the one-command install) |

@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+{% include _head.html %}
+<link rel="stylesheet" href="{{root}}static/css/docs.css">
+<link rel="stylesheet" href="{{root}}static/css/pygments.css">
+</head>
+<body class="docs" data-root="{{root}}" data-docs-root="{{docs_root}}" data-version="{{version_id}}" data-version-dir="{{version_dir}}" data-page="{{page_path}}">
+<a class="skip" href="#content">Skip to content</a>
+<header class="docs-top">
+  <button class="icon-btn menu-toggle" type="button" aria-label="Show the navigation" aria-controls="sidebar" aria-expanded="false">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <a class="brand" href="{{home_link}}"><img src="{{root}}static/img/logo.svg" alt="" width="28" height="28"><span>JBrowser <em>Source Docs</em></span></a>
+  <div class="version-switch">
+    <button type="button" class="version-btn" id="version-btn" aria-haspopup="true" aria-expanded="false" title="Documentation for another version">
+      <span class="v-label">{{version_short}}</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10l5 5 5-5"/></svg>
+    </button>
+    <div class="version-menu" id="version-menu" hidden>
+      <p class="vm-title">Documentation version</p>
+      <ul class="vm-list"></ul>
+      <a class="vm-all" href="{{root}}changelog/index.html">What changed in each version</a>
+    </div>
+  </div>
+  <div class="search" role="search">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4.5 4.5"/></svg>
+    <input type="search" id="search" placeholder="Search {{version_short}} docs" aria-label="Search the documentation" autocomplete="off" spellcheck="false">
+    <kbd class="search-key">/</kbd>
+    <div class="search-results" id="search-results" hidden></div>
+  </div>
+  <nav class="docs-links" aria-label="Site">
+    <a href="{{root}}index.html">Home</a>
+    <a href="{{root}}changelog/index.html">Changelog</a>
+    <a href="{{repo_url}}">GitHub</a>
+  </nav>
+  <button class="icon-btn theme-toggle" type="button" aria-label="Switch between light and dark mode" title="Light or dark">
+    <svg class="i-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6"/></svg>
+    <svg class="i-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 14.6A8.5 8.5 0 0 1 9.4 3.8a8.5 8.5 0 1 0 10.8 10.8z"/></svg>
+  </button>
+</header>
+<div class="docs-layout">
+  <nav class="sidebar" id="sidebar" aria-label="Documentation">
+    {{sidebar}}
+  </nav>
+  <div class="sidebar-scrim" hidden></div>
+  <main id="content" class="docs-main">
+    {{banner}}
+    <nav class="crumbs" aria-label="Breadcrumbs">{{breadcrumbs}}</nav>
+    <article class="prose">
+      <h1>{{page_title}}</h1>
+      {{generated}}
+      {{body}}
+    </article>
+    <footer class="page-foot">
+      <div class="page-meta">{{edit_link}}<span>JBrowser {{version_label}}</span></div>
+      <nav class="pager" aria-label="Previous and next page">{{pager}}</nav>
+    </footer>
+  </main>
+  <aside class="page-toc" aria-label="On this page">
+    <p>On this page</p>
+    {{toc}}
+  </aside>
+</div>
+<script src="{{root}}static/js/site.js" defer></script>
+<script src="{{root}}static/js/docs.js" defer></script>
+</body>
+</html>

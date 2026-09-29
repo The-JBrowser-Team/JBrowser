@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en">
+<head>
+{% include _head.html %}
+</head>
+<body class="notfound">
+{% include _topbar.html %}
+<main id="main" class="wrap page narrow center">
+  <p class="big-404" aria-hidden="true">404</p>
+  <h1>This page wandered off the canvas.</h1>
+  <p class="lead">It may have moved, or it belongs to a documentation version that doesn't have it.</p>
+  <div class="cta center">
+    <a class="btn btn-primary" href="{{root}}">Home</a>
+    <a class="btn btn-ghost" href="{{docs_home}}">Documentation</a>
+    <a class="btn btn-ghost" href="{{root}}changelog/">Changelog</a>
+  </div>
+</main>
+{% include _footer.html %}
+</body>
+</html>

@@ -1,0 +1,66 @@
+{
+  "sections": [
+    {"title": "Getting started", "pages": [
+      "index",
+      "getting-started/setup",
+      "getting-started/quick-reference",
+      "getting-started/contributing",
+      "getting-started/repository-tour"
+    ]},
+    {"title": "Architecture", "pages": [
+      "architecture/overview",
+      "architecture/startup-shutdown",
+      "architecture/state",
+      "architecture/settings",
+      "architecture/commands",
+      "architecture/persistence"
+    ]},
+    {"title": "Web engine", "pages": [
+      "engine/profiles",
+      "engine/tab-controller",
+      "engine/page-scripts",
+      "engine/lifecycle",
+      "engine/networking"
+    ]},
+    {"title": "Privacy and security", "pages": [
+      "privacy/request-pipeline",
+      "privacy/content-blocking",
+      "privacy/fingerprinting",
+      "privacy/safe-browsing",
+      "privacy/password-vault"
+    ]},
+    {"title": "User interface", "pages": [
+      "ui/overview",
+      "ui/theming",
+      "ui/canvas-and-cards",
+      "ui/sidebar",
+      "ui/lazy-toolbar",
+      "ui/gallery",
+      "ui/onboarding",
+      "ui/motion",
+      "ui/dialogs"
+    ]},
+    {"title": "Build and release", "pages": [
+      "build/dependencies",
+      "build/building",
+      "build/installer",
+      "build/releasing",
+      "build/auto-update",
+      "build/website"
+    ]},
+    {"title": "Testing and quality", "pages": [
+      "testing/code-quality",
+      "testing/testing-changes",
+      "testing/debugging"
+    ]},
+    {"title": "Reference", "pages": [
+      "reference/settings",
+      "reference/commands",
+      "reference/shortcuts",
+      "reference/command-line",
+      "reference/data-files",
+      "api/index",
+      "reference/glossary"
+    ]}
+  ]
+}
