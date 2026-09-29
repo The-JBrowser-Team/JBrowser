@@ -1034,6 +1034,8 @@ class Site:
         self.nav = json.loads((DOCS_SRC / "nav.json").read_text(encoding="utf-8"))
         self.search_entries: dict[str, list] = {}
         self.sitemap: list[str] = []
+        self.missing: set[str] = set()     # navigation pages without a Markdown file
+        self.broken = 0                    # broken links found by check_links()
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         self.changelog_intro, self.changelog = parse_changelog(changelog)
         for v in self.versions:
@@ -1074,7 +1076,7 @@ class Site:
         self.build_404()
         self.build_sitemap()
         write(self.out / ".nojekyll", "")
-        self.check_links()
+        self.broken = self.check_links()
 
     def check_links(self) -> int:
         """Every relative link and #anchor in the built site must point at something that exists."""
@@ -1305,6 +1307,9 @@ class Site:
 
     def load_page(self, slug: str, v: Version, gen: Generators, modules: list[ApiModule], prefix: str) -> dict | None:
         path = DOCS_SRC / f"{slug}.md"
+        if not path.exists() and slug not in self.missing:
+            self.missing.add(slug)
+            print(f"  ! site/docs/{slug}.md is listed in nav.json but missing")
         meta, text = front_matter(path.read_text(encoding="utf-8")) if path.exists() else ({}, "")
         if not available(meta, v):
             return None
@@ -1493,9 +1498,12 @@ def main() -> int:
     site.build()
     count = sum(1 for _ in out.rglob("*.html"))
     print(f"Done: {count} pages. Latest release: {site.latest.id}")
+    failed = bool(site.missing or site.broken)
+    if failed:
+        print("The site has problems (see ! above); the Pages workflow will not publish it.")
     if a.serve:
         serve(out, a.serve)
-    return 0
+    return 1 if failed else 0
 
 
 if __name__ == "__main__":

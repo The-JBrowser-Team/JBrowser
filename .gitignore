@@ -3,10 +3,11 @@
 __pycache__/
 *.py[cod]
 
-# Build output (tools/build_app.ps1, tools/build_installer.ps1)
-build/
-dist/
-dist_*/
+# Build output (tools/build_app.ps1, tools/build_installer.ps1), at the top level only:
+# site/docs/build/ holds documentation pages
+/build/
+/dist/
+/dist_*/
 *.part
 
 # Packaged releases made by master.ps1 (published on GitHub Releases instead)
