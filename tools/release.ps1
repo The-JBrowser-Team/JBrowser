@@ -58,7 +58,8 @@ $signer = Get-AuthenticodeSignature $setup
 $smartScreen = if ($signer.Status -eq "Valid") {
     "The installer is signed by *$($signer.SignerCertificate.GetNameInfo('SimpleName', $false))*. "
 } else {
-    "The installer is not code-signed, so Windows SmartScreen may warn about it: choose *More info* → *Run anyway*. " +
+    # ASCII only: Windows PowerShell reads this BOM-less script as ANSI, which would garble an arrow.
+    "The installer is not code-signed, so Windows SmartScreen may warn about it: choose *More info*, then *Run anyway*. " +
     "The one-command install in the README avoids the warning. "
 }
 $notesFile = Join-Path $env:TEMP "jbrowser-release-notes-$version.md"
