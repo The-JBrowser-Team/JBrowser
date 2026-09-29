@@ -2,245 +2,214 @@
 <html lang="en">
 <head>
 {% include _head.html %}
+<meta property="og:image" content="{{og_image}}">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preload" as="image" href="{{root}}static/img/shots/hero-dark-1920.webp" imagesrcset="{{root}}static/img/shots/hero-dark-1280.webp 1280w, {{root}}static/img/shots/hero-dark-1920.webp 1920w" imagesizes="(max-width: 1240px) 100vw, 1200px">
 <link rel="stylesheet" href="{{root}}static/css/home.css">
 </head>
 <body class="home">
 {% include _topbar.html %}
 <main id="main">
 
+<!-- ================================================================ hero -->
 <section class="hero">
   <div class="hero-glow" aria-hidden="true"></div>
-  <div class="wrap hero-grid">
-    <div class="hero-copy">
-      <a class="eyebrow" href="{{root}}changelog/index.html">New in {{latest_version}}: the Gallery, colour tints and real ad blocking <span aria-hidden="true">→</span></a>
-      <h1>Welcome to the internet <span class="grad">- again.</span></h1>
-      <p class="lead">JBrowser is a spatial, privacy-focused web browser for Windows&nbsp;11. Pages sit side by side on an
-        endless canvas, grouped into isolated Spaces, with ads and trackers stopped before they load.</p>
-      <div class="cta">
-        <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
-          Download for Windows
-        </a>
-        <a class="btn btn-ghost btn-large" href="{{repo_url}}">
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 0 0-3.2 19.5c.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.3-3.4-1.3-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.5 2.4 1.1 3 .8.1-.6.3-1.1.6-1.3-2.2-.3-4.6-1.1-4.6-5a3.9 3.9 0 0 1 1-2.7c-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.8 1a9.6 9.6 0 0 1 5 0c1.9-1.3 2.8-1 2.8-1 .5 1.4.2 2.4.1 2.7a3.9 3.9 0 0 1 1 2.7c0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9V21c0 .3.2.6.7.5A10 10 0 0 0 12 2z"/></svg>
-          Source on GitHub
-        </a>
+  <div class="wrap hero-copy">
+    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: the Gallery <span aria-hidden="true">→</span></a>
+    <h1 class="reveal">Welcome to the internet <span class="grad">- again.</span></h1>
+    <p class="lead reveal">Your pages side by side on one calm canvas. Private by default. Made for Windows&nbsp;11.</p>
+    <div class="cta reveal">
+      <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+        Download for Windows
+      </a>
+      <a class="btn btn-ghost btn-large" href="#tour">See it in action</a>
+    </div>
+    <p class="fineprint reveal"><span data-latest-label>Version {{latest_version}}{{size_note}}</span> · Windows 10 &amp; 11 · Free and open source</p>
+  </div>
+  <div class="wrap hero-shot-wrap">
+    <button class="shot-button hero-shot reveal" type="button" data-zoom aria-label="Enlarge the screenshot of JBrowser">
+      <img class="shot" data-themed="hero" src="{{root}}static/img/shots/hero-dark-1920.webp"
+           srcset="{{root}}static/img/shots/hero-dark-1280.webp 1280w, {{root}}static/img/shots/hero-dark-1920.webp 1920w, {{root}}static/img/shots/hero-dark-full.webp 2595w"
+           sizes="(max-width: 1240px) 100vw, 1200px" width="2595" height="1706" fetchpriority="high"
+           alt="JBrowser on Windows 11: the sidebar with favourites and three spaces, and two web pages side by side on the canvas">
+    </button>
+    <ul class="glance" aria-label="At a glance">
+      <li><b>Spaces</b><span>separate logins</span></li>
+      <li><b>EasyList</b><span>ad &amp; tracker blocking</span></li>
+      <li><b>Chromium</b><span>every site works</span></li>
+      <li><b>Updates</b><span>itself, verified</span></li>
+    </ul>
+  </div>
+</section>
+
+<!-- ================================================================ tour -->
+<section class="section tour" id="tour">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="kicker">A closer look</p>
+      <h2 class="section-title">Everything in its place.</h2>
+    </div>
+    <div class="tour-tabs reveal" role="tablist" aria-label="Features">
+      <button role="tab" aria-selected="true" aria-controls="tour-panel" id="tab-canvas" data-shot="split-dark"
+              data-title="An endless canvas" data-text="Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters."
+              data-chips="Alt+Shift+D splits 50/50|Scroll past the end for a new card|Drag cards to reorder"
+              data-alt="Three web pages side by side, each a third of the window"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="6" width="7" height="12" rx="1.5"/><rect x="18.5" y="6" width="3" height="12" rx="1.2"/></svg>Canvas</button>
+      <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-gallery" data-shot="gallery-all-dark" data-themed="gallery-all"
+              data-title="The Gallery" data-text="Every card at a glance, in one space or all of them. Click to jump in, drag to move a card to another space."
+              data-chips="Ctrl+Shift+G|Type to filter|Works with a keyboard and screen readers"
+              data-alt="The Gallery showing the cards of three spaces as a grid of pictures"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg>Gallery</button>
+      <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-lazy" data-shot="lazy-toolbar-dark"
+              data-title="The Lazy Toolbar" data-text="One box for addresses, searches, your open cards, history, bookmarks and over a hundred commands."
+              data-chips="Ctrl+T or Ctrl+K|Finds cards in every space|Type yt, gh or w to search a site"
+              data-alt="The Lazy Toolbar open over the canvas, listing open cards and search suggestions"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10l3 2-3 2M12 14h5"/></svg>Lazy Toolbar</button>
+      <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-privacy" data-shot="site-info-dark"
+              data-title="Private by default" data-text="Ads and trackers are blocked before they load, and the empty boxes they leave are hidden. Click the lock to see what was stopped."
+              data-chips="EasyList and EasyPrivacy|Phishing and malware protection|Secure DNS (Quad9)"
+              data-alt="The site information panel for github.com showing six trackers blocked"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/></svg>Privacy</button>
+      <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-spaces" data-shot="work-dark"
+              data-title="Spaces" data-text="Home, Work or your own. Every space has its own cookies and sign-ins, so they never mix."
+              data-chips="Alt+↑ / Alt+↓ to switch|Favourites work in every space|Separate proxy per space"
+              data-alt="The Work space with Python documentation and python.org side by side"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="5" rx="2"/><rect x="3" y="10.5" width="18" height="5" rx="2"/><rect x="3" y="17" width="18" height="3.5" rx="1.75"/></svg>Spaces</button>
+      <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-incognito" data-shot="incognito"
+              data-title="Incognito spaces" data-text="Open a space that keeps nothing. The whole window turns black so you always know where you are."
+              data-chips="Ctrl+Shift+N|Nothing written to disk|Gone when you close it"
+              data-alt="An incognito space: the window is black, with two pages open"><span class="tt-bar"></span>
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12c2.5-4 5.6-6 9-6s6.5 2 9 6c-2.5 4-5.6 6-9 6s-6.5-2-9-6z"/><circle cx="12" cy="12" r="2.8"/><path d="M4 20L20 4"/></svg>Incognito</button>
+    </div>
+    <div class="tour-panel" id="tour-panel" role="tabpanel" aria-labelledby="tab-canvas">
+      <div class="tour-caption">
+        <h3 id="tour-title">An endless canvas</h3>
+        <p id="tour-text">Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters.</p>
+        <ul class="chips" id="tour-chips"><li>Alt+Shift+D splits 50/50</li><li>Scroll past the end for a new card</li><li>Drag cards to reorder</li></ul>
       </div>
-      <p class="fineprint"><span data-latest-label>Version {{latest_version}}{{size_note}}</span> · Windows 10 and 11, 64-bit · Free and open source (GPL v3)</p>
+      <button class="shot-button tour-shot" type="button" data-zoom aria-label="Enlarge this screenshot">
+        <img class="shot" id="tour-img" src="{{root}}static/img/shots/split-dark-1920.webp"
+             srcset="{{root}}static/img/shots/split-dark-1280.webp 1280w, {{root}}static/img/shots/split-dark-1920.webp 1920w, {{root}}static/img/shots/split-dark-full.webp 2595w"
+             sizes="(max-width: 1240px) 100vw, 1180px" width="2595" height="1706" loading="lazy"
+             alt="Three web pages side by side, each a third of the window">
+      </button>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ colours -->
+<section class="section colours" id="colours">
+  <div class="wrap colours-grid">
+    <div class="colours-copy reveal">
+      <p class="kicker">Make it yours</p>
+      <h2 class="section-title">Ten gentle tints.</h2>
+      <p class="muted">A soft wash over the frosted glass, never a paint job. Pick one below: these are real screenshots.</p>
+      <div class="swatches" role="radiogroup" aria-label="Colour tint">
+        <button type="button" role="radio" aria-checked="true" class="sw none" data-tint="none" title="No colour"><span class="sr">No colour</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#e8577a" data-tint="rose" title="Rose"><span class="sr">Rose</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#ff7a59" data-tint="coral" title="Coral"><span class="sr">Coral</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#f0a830" data-tint="amber" title="Amber"><span class="sr">Amber</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#98c950" data-tint="lime" title="Lime"><span class="sr">Lime</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#3ecf9b" data-tint="mint" title="Mint"><span class="sr">Mint</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#23b0ad" data-tint="teal" title="Teal"><span class="sr">Teal</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#3fa7f5" data-tint="sky" title="Sky"><span class="sr">Sky</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#6c72ff" data-tint="indigo" title="Indigo"><span class="sr">Indigo</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#a063ff" data-tint="violet" title="Violet"><span class="sr">Violet</span></button>
+        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#7d8594" data-tint="slate" title="Slate"><span class="sr">Slate</span></button>
+      </div>
+      <p class="tint-name" aria-live="polite"><span id="tint-name">No colour</span></p>
+      <p class="fineprint">Also: dark or light, Acrylic, Mica or Solid, and your Windows accent colour.</p>
+    </div>
+    <div class="colours-shot reveal">
+      <img class="shot" id="tint-img" src="{{root}}static/img/shots/tint-none-1280.webp"
+           srcset="{{root}}static/img/shots/tint-none-1280.webp 1280w, {{root}}static/img/shots/tint-none-full.webp 1640w"
+           sizes="(max-width: 1000px) 100vw, 700px" width="1640" height="1120" loading="lazy"
+           alt="The corner of the JBrowser window with no colour tint">
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ features -->
+<section class="section features" id="features">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <p class="kicker">Why JBrowser</p>
+      <h2 class="section-title">Calm by design.</h2>
+    </div>
+    <div class="feature-grid">
+      <article class="feature reveal"><div class="f-icon" style="--c:#5b8cff"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="6" width="7" height="12" rx="1.5"/><rect x="18.5" y="6" width="3" height="12" rx="1.2"/></svg></div>
+        <div><h3>Endless canvas</h3><p>Pages side by side, not hidden in tabs.</p></div></article>
+      <article class="feature reveal"><div class="f-icon" style="--c:#a66bff"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="2"/><rect x="3" y="10.5" width="18" height="5" rx="2"/><rect x="3" y="17" width="18" height="3.5" rx="1.75"/></svg></div>
+        <div><h3>Isolated spaces</h3><p>Separate logins for work, home and everything else.</p></div></article>
+      <article class="feature reveal"><div class="f-icon" style="--c:#ff5c9d"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></div>
+        <div><h3>The Gallery</h3><p>Every card at a glance, across every space.</p></div></article>
+      <article class="feature reveal"><div class="f-icon" style="--c:#ff9f43"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10l3 2-3 2M12 14h5"/></svg></div>
+        <div><h3>Keyboard first</h3><p>One box for sites, searches and commands.</p></div></article>
+      <article class="feature reveal"><div class="f-icon" style="--c:#2ecc71"><svg viewBox="0 0 24 24"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/></svg></div>
+        <div><h3>Private by default</h3><p>Ads, trackers and scam sites blocked.</p></div></article>
+      <article class="feature reveal"><div class="f-icon" style="--c:#1abc9c"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/></svg></div>
+        <div><h3>Light on memory</h3><p>Idle cards sleep. Music and calls never do.</p></div></article>
+    </div>
+  </div>
+</section>
+
+<!-- ================================================================ install -->
+<section class="section install" id="install">
+  <div class="wrap install-grid">
+    <div class="install-copy reveal">
+      <p class="kicker">Get started</p>
+      <h2 class="section-title">Ready in a minute.</h2>
+      <ol class="steps-mini">
+        <li><span>1</span><div><b>Download</b><p>No administrator rights needed.</p></div></li>
+        <li><span>2</span><div><b>Run the installer</b><p>SmartScreen warning? <em>More info → Run anyway</em>.</p></div></li>
+        <li><span>3</span><div><b>Make it yours</b><p>A short welcome sets the look, search and protection.</p></div></li>
+      </ol>
+      <div class="cta">
+        <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
+      </div>
       <details class="ps-install">
-        <summary>Or install with one PowerShell command</summary>
+        <summary>Prefer PowerShell?</summary>
         <div class="code-copy"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
           <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
-        <p>It downloads the newest release, checks its SHA-256 fingerprint and starts the installer. Run it again any time to update.</p>
       </details>
     </div>
-
-    <div class="hero-visual">
-      <div class="mock" id="mock" style="--tint: transparent" aria-label="An illustration of the JBrowser window" role="img">
-        <div class="mock-side">
-          <div class="mock-head"><i class="mock-logo"></i><span class="mock-clock">12:02 PM</span><i class="mock-dot"></i></div>
-          <p class="mock-label">SPACES</p>
-          <div class="mock-space on"><i style="--c:#4c8dff"></i>Home<b>4</b></div>
-          <div class="mock-space"><i style="--c:#a66bff"></i>Work<b>2</b></div>
-          <div class="mock-space"><i style="--c:#2ecc71"></i>Other</div>
-          <div class="mock-sep"></div>
-          <div class="mock-tab on"><i style="--c:#ff9f43"></i><span></span></div>
-          <div class="mock-tab"><i style="--c:#4c8dff"></i><span style="width:62%"></span></div>
-          <div class="mock-tab"><i style="--c:#ff6b9a"></i><span style="width:74%"></span></div>
-          <div class="mock-tab"><i style="--c:#1abc9c"></i><span style="width:50%"></span></div>
-          <div class="mock-tab add"><i></i><span style="width:40%"></span></div>
-        </div>
-        <div class="mock-main">
-          <div class="mock-ribbon">
-            <span class="mock-nav"><i></i><i></i><i></i></span>
-            <span class="mock-pill"><i class="lock"></i><span></span></span>
-            <span class="mock-gallery">Gallery</span>
-          </div>
-          <div class="mock-canvas">
-            <div class="mock-track">
-              <div class="mcard"><div class="mcard-bar"></div><div class="mcard-hero" style="--a:#ff9f43;--b:#ff5c9d"></div><p></p><p style="width:70%"></p><p style="width:85%"></p></div>
-              <div class="mcard focus"><div class="mcard-bar"></div><div class="mcard-hero" style="--a:#5b8cff;--b:#8a5cff"></div><p></p><p style="width:60%"></p><div class="mcard-row"><i></i><i></i><i></i></div></div>
-              <div class="mcard"><div class="mcard-bar"></div><div class="mcard-hero" style="--a:#1abc9c;--b:#5b8cff"></div><p style="width:80%"></p><p></p><p style="width:55%"></p></div>
-              <div class="mcard"><div class="mcard-bar"></div><div class="mcard-hero" style="--a:#a66bff;--b:#ff6b9a"></div><p></p><p style="width:66%"></p></div>
-            </div>
-            <div class="mock-minimap"><i></i><i class="on"></i><i></i><i></i></div>
-          </div>
-        </div>
-      </div>
-      <div class="tints" role="radiogroup" aria-label="Try a colour tint">
-        <span class="tints-label">Try a colour tint</span>
-        <button type="button" role="radio" aria-checked="true" class="sw none" data-tint="transparent" title="No colour"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#e8577a" data-tint="#e8577a" title="Rose"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#ff7a59" data-tint="#ff7a59" title="Coral"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#f0a830" data-tint="#f0a830" title="Amber"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#98c950" data-tint="#98c950" title="Lime"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#3ecf9b" data-tint="#3ecf9b" title="Mint"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#23b0ad" data-tint="#23b0ad" title="Teal"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#3fa7f5" data-tint="#3fa7f5" title="Sky"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#6c72ff" data-tint="#6c72ff" title="Indigo"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#a063ff" data-tint="#a063ff" title="Violet"></button>
-        <button type="button" role="radio" aria-checked="false" class="sw" style="--s:#7d8594" data-tint="#7d8594" title="Slate"></button>
-      </div>
-    </div>
+    <button class="shot-button install-shot reveal" type="button" data-zoom aria-label="Enlarge the welcome screenshot">
+      <img class="shot" src="{{root}}static/img/shots/welcome-look-1280.webp"
+           srcset="{{root}}static/img/shots/welcome-look-1280.webp 1280w, {{root}}static/img/shots/welcome-look-1920.webp 1920w, {{root}}static/img/shots/welcome-look-full.webp 2595w"
+           sizes="(max-width: 900px) 100vw, 680px" width="2595" height="1706" loading="lazy"
+           alt="The JBrowser welcome: choosing the theme, the window material and a colour">
+    </button>
   </div>
 </section>
 
-<section class="section" id="features">
-  <div class="wrap">
-    <p class="kicker">Why JBrowser</p>
-    <h2 class="section-title">A calmer way to keep a lot of the web open.</h2>
-    <div class="feature-grid">
-      <article class="feature"><div class="f-icon" style="--c:#5b8cff"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="6" width="7" height="12" rx="1.5"/><rect x="18.5" y="6" width="3" height="12" rx="1.2"/></svg></div>
-        <h3>An endless canvas</h3><p>Cards sit side by side instead of hiding behind tabs. Resize them, split the screen 50/50 or into thirds, and scroll past either end to pull in a new one.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#a66bff"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="2"/><rect x="3" y="10.5" width="18" height="5" rx="2"/><rect x="3" y="17" width="18" height="3.5" rx="1.75"/></svg></div>
-        <h3>Isolated Spaces</h3><p>Home, Work, or your own. Every space has its own cookies, storage and sign-ins, so work never leaks into home. Incognito spaces leave nothing behind.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#ff5c9d"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></div>
-        <h3>The Gallery</h3><p>Every card in a space, or in all of them, as a grid of live pictures. Filter, open, close and drag cards between spaces, all from the keyboard if you like.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#ff9f43"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10l3 2-3 2M12 14h5"/></svg></div>
-        <h3>The Lazy Toolbar</h3><p>One box for addresses, searches, open cards, bookmarks, history, passwords and more than a hundred commands. Press Ctrl+T or Ctrl+K and type.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#2ecc71"><svg viewBox="0 0 24 24"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/></svg></div>
-        <h3>Private by default</h3><p>EasyList and EasyPrivacy block ads and trackers and hide the empty boxes they leave. Phishing and malware protection, secure DNS and link cleaning are on from the start.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#1abc9c"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.2 2"/></svg></div>
-        <h3>Light on memory</h3><p>Cards you can't see stop drawing after five seconds, and idle ones go to sleep. Calls, music, downloads and unsaved forms are never interrupted.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#6c72ff"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 3.5a8.5 8.5 0 0 0 0 17z" /></svg></div>
-        <h3>Made for Windows 11</h3><p>Acrylic or Mica glass, Snap Layouts, rounded corners and Segoe UI, plus ten gentle colour tints. Incognito spaces turn the whole window black.</p></article>
-      <article class="feature"><div class="f-icon" style="--c:#e8577a"><svg viewBox="0 0 24 24"><path d="M12 3v11M7.5 9.5 12 14l4.5-4.5M4 16.5V19a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2.5"/></svg></div>
-        <h3>Updates itself</h3><p>New versions come straight from GitHub Releases. JBrowser checks each download's SHA-256 fingerprint before it installs anything.</p></article>
+<!-- ================================================================ news + developers -->
+<section class="section closing">
+  <div class="wrap closing-grid">
+    <div class="news-card reveal">
+      <p class="kicker">What's new in {{latest_version}}</p>
+      <ul class="chips big">{{news}}</ul>
+      <a class="more" href="{{root}}changelog/index.html">Full changelog <span aria-hidden="true">→</span></a>
     </div>
-  </div>
-</section>
-
-<section class="section split">
-  <div class="wrap split-grid">
-    <div class="split-copy">
-      <p class="kicker">New in {{latest_version}}</p>
-      <h2 class="section-title">See everything at once.</h2>
-      <p>Press <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>G</kbd> or the <strong>Gallery</strong> button and every card of the
-        space spreads out as a live grid. Switch to <strong>All spaces</strong> to see every space at once, grouped by
-        its colour, and drag a card from one space to another.</p>
-      <ul class="ticks">
-        <li>Type to filter by title or address</li>
-        <li>Arrow keys, Enter to open, Delete to close</li>
-        <li>Works with screen readers and without animations</li>
-      </ul>
-    </div>
-    <div class="gallery-demo" aria-hidden="true">
-      <div class="gd-head"><span class="gd-title"><i></i>Gallery</span><span class="gd-scope"><b>This space</b><b class="on">All spaces</b></span></div>
-      <p class="gd-section" style="--c:#4c8dff"><i></i>Home <span>4 cards</span></p>
-      <div class="gd-grid">
-        <div class="gd-tile" style="--i:0;--a:#ff9f43;--b:#ff5c9d"></div>
-        <div class="gd-tile current" style="--i:1;--a:#5b8cff;--b:#8a5cff"></div>
-        <div class="gd-tile" style="--i:2;--a:#1abc9c;--b:#5b8cff"></div>
-        <div class="gd-tile new" style="--i:3"></div>
-      </div>
-      <p class="gd-section" style="--c:#a66bff"><i></i>Work <span>2 cards</span></p>
-      <div class="gd-grid">
-        <div class="gd-tile" style="--i:4;--a:#a66bff;--b:#ff6b9a"></div>
-        <div class="gd-tile current" style="--i:5;--a:#23b0ad;--b:#98c950"></div>
-        <div class="gd-tile new" style="--i:6"></div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<section class="section split reverse">
-  <div class="wrap split-grid">
-    <div class="split-copy">
-      <p class="kicker">Keyboard first</p>
-      <h2 class="section-title">One box for everything.</h2>
-      <p>The Lazy Toolbar replaces the new-tab page and the address bar. Type an address, a search, or a keyword like
-        <code>yt</code>, <code>gh</code> or <code>w</code>. It fuzzy-finds your open cards in every space, bookmarks,
-        history and saved passwords, and runs any command: switch DNS, toggle a proxy, split the screen.</p>
-      <p class="muted">Prefixes narrow it down: <code>&gt;</code> commands, <code>@</code> cards, <code>*</code> bookmarks,
-        <code>#</code> history, <code>$</code> passwords.</p>
-    </div>
-    <div class="palette-demo" aria-hidden="true">
-      <div class="pd-input"><i></i><span class="pd-typed">gallery</span><span class="pd-caret"></span></div>
-      <p class="pd-group">Commands</p>
-      <div class="pd-row on"><i style="--c:#ff5c9d"></i>Gallery: every card at a glance<kbd>Ctrl+Shift+G</kbd></div>
-      <div class="pd-row"><i style="--c:#a66bff"></i>Gallery of all spaces</div>
-      <p class="pd-group">Open cards</p>
-      <div class="pd-row"><i style="--c:#4c8dff"></i>Photo gallery · Home</div>
-      <div class="pd-row"><i style="--c:#1abc9c"></i>Gallery design notes · Work</div>
-    </div>
-  </div>
-</section>
-
-<section class="section split">
-  <div class="wrap split-grid">
-    <div class="split-copy">
-      <p class="kicker">Privacy</p>
-      <h2 class="section-title">Ads and trackers stop at the door.</h2>
-      <p>JBrowser reads the full EasyList and EasyPrivacy filter lists with its own Adblock Plus engine, so it blocks the
-        same things the big blockers do, and hides the empty ad boxes before the page first appears. It still looks like
-        ordinary Chrome to the sites you visit, so you see fewer "unusual traffic" checks.</p>
-      <ul class="ticks">
-        <li>Phishing and malware sites stopped before they load</li>
-        <li>Secure DNS (Quad9) and optional HTTPS-first</li>
-        <li>Tracking codes removed from links, like <code>utm_source</code> and <code>fbclid</code></li>
-        <li>An encrypted password manager, locked to your Windows account</li>
-      </ul>
-    </div>
-    <div class="shield-demo" aria-hidden="true">
-      <div class="sd-card">
-        <div class="sd-top"><i class="sd-lock"></i><span>news.example</span><b class="sd-badge">14 blocked</b></div>
-        <div class="sd-body"><div class="sd-hero"></div><p></p><p style="width:80%"></p><div class="sd-gap"><span>Ad hidden</span></div><p style="width:65%"></p></div>
-      </div>
-      <ul class="sd-list">
-        <li><s>doubleclick.net</s><span>ads</span></li>
-        <li><s>google-analytics.com</s><span>tracker</span></li>
-        <li><s>connect.facebook.net</s><span>tracker</span></li>
-        <li><s>coinhive.com</s><span>miner</span></li>
-      </ul>
-    </div>
-  </div>
-</section>
-
-<section class="section news">
-  <div class="wrap news-grid">
-    <div>
-      <p class="kicker">Latest release</p>
-      <h2 class="section-title">What's new in {{latest_version}}</h2>
-      <p class="muted">{{release_date}}</p>
-      <a class="btn btn-ghost" href="{{root}}changelog/index.html">Read the full changelog</a>
-    </div>
-    <ul class="news-list">{{news}}</ul>
-  </div>
-</section>
-
-<section class="section install" id="install">
-  <div class="wrap">
-    <p class="kicker">Get started</p>
-    <h2 class="section-title">Install in a minute.</h2>
-    <ol class="steps">
-      <li><span>1</span><h3>Download</h3><p>Get <a href="{{exe_url}}" data-latest-exe><code data-latest-name>{{exe_name}}</code></a> from the latest release. No administrator rights needed.</p></li>
-      <li><span>2</span><h3>Run the installer</h3><p>If SmartScreen says it doesn't recognise the app, choose <em>More info</em>, then <em>Run anyway</em>. The installer isn't code-signed yet.</p></li>
-      <li><span>3</span><h3>That's it</h3><p>JBrowser keeps itself up to date. Uninstall any time from <em>Settings → Apps → Installed apps</em>.</p></li>
-    </ol>
-    <div class="install-cta">
-      <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
-      <a class="btn btn-ghost btn-large" href="{{release_url}}" data-latest-release>Release notes and checksums</a>
-    </div>
-  </div>
-</section>
-
-<section class="section devs">
-  <div class="wrap devs-grid">
-    <div>
+    <div class="dev-card-big reveal">
       <p class="kicker">For developers</p>
-      <h2 class="section-title">Built in the open, with Python.</h2>
-      <p>JBrowser is PyQt6 and Qt WebEngine, about 20,000 lines of Python you can read in an afternoon. The source docs
-        explain the architecture, the web engine, the filter engine and the release process, for every version.</p>
-    </div>
-    <div class="devs-links">
-      <a class="dev-card" href="{{docs_home}}"><strong>Source Docs</strong><span>Architecture, guides and the Python API</span></a>
-      <a class="dev-card" href="{{root}}docs/latest/getting-started/setup.html"><strong>Set up in 3 commands</strong><span>Clone, create the environment, run</span></a>
-      <a class="dev-card" href="{{repo_url}}"><strong>GitHub</strong><span>Issues, pull requests and releases</span></a>
+      <h3>Open source, in Python.</h3>
+      <p>PyQt6 and Chromium. Guides and an API reference for every version.</p>
+      <div class="dev-links">
+        <a class="btn btn-ghost" href="{{docs_home}}">Read the docs</a>
+        <a class="btn btn-ghost" href="{{repo_url}}">GitHub</a>
+      </div>
     </div>
   </div>
 </section>
 
 </main>
+
+<dialog class="lightbox" id="lightbox" aria-label="Screenshot">
+  <form method="dialog"><button class="lightbox-close" aria-label="Close">×</button></form>
+  <img id="lightbox-img" alt="">
+</dialog>
+
 {% include _footer.html %}
 <script src="{{root}}static/js/home.js" defer></script>
 </body>

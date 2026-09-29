@@ -18,12 +18,28 @@ This website (home page, download page, changelog and these docs) is generated f
 `--offline` skips the GitHub API, which the builder otherwise asks for release sizes and dates. `_site\` is ignored
 by git.
 
+## Screenshots
+
+The home page uses real screenshots of the app, in `site/static/img/shots/`. Refresh them after a visible change:
+
+```powershell
+.\.venv\Scripts\python.exe tools\site_screenshots.py
+```
+
+[tools/site_screenshots.py](source:tools/site_screenshots.py) runs JBrowser from source with a throw-away profile,
+downloads the filter lists if needed, opens a few real sites, puts a full-screen gradient behind a 1600 × 1000 window
+and captures it from the screen, so Acrylic shows the gradient through the glass. It shoots the canvas, the Gallery,
+the Lazy Toolbar, a split view, the site information panel, all ten colour tints (over a neutral backdrop), light
+mode, an incognito space and the welcome, then writes WebP files at 1280 px, 1920 px and full size, plus
+`og-image.jpg` for link previews. It takes about two and a half minutes; leave the mouse and keyboard alone while it
+runs, because the window is kept in front of everything.
+
 ## Where things live
 
 | Path | What |
 |---|---|
 | `site/templates/` | HTML templates: `home.html`, `changelog.html`, `download.html`, `docs.html`, `404.html` and shared parts (`_head.html`, `_topbar.html`, `_footer.html`) with `{{ value }}` placeholders and `{% include %}` |
-| `site/static/` | CSS, JavaScript and images, copied as they are |
+| `site/static/` | CSS, JavaScript and images, copied as they are; `img/shots/` holds the screenshots |
 | `site/docs/` | the documentation pages in Markdown, and `nav.json` (the navigation order) |
 | `CHANGELOG.md` | the changelog page, one section per release |
 | `.github/workflows/pages.yml` | builds and deploys the site |

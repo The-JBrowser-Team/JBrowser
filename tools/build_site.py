@@ -1140,7 +1140,8 @@ class Site:
         values = self.common(page, "JBrowser: a spatial, privacy-focused browser for Windows 11",
                              "JBrowser replaces the tab strip with an infinite canvas of web cards, organised into "
                              "isolated Spaces, with built-in ad and tracker blocking. Free and open source.")
-        values.update({"news": news, "size_note": f" · {self.download()['size']}" if self.download()["size"] else ""})
+        values.update({"news": news, "size_note": f" · {self.download()['size']}" if self.download()["size"] else "",
+                       "og_image": self.site_url + "static/img/shots/og-image.jpg"})
         write(self.out / page, render("home.html", values))
         self.sitemap.append("")
 

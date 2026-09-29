@@ -13,6 +13,9 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
   documentation for every release (architecture, web engine, privacy, UI, building and releasing, and references
   generated from each version's code), with a version switcher and search. It is built by `tools/build_site.py`
   and published by GitHub Actions on every push and release.
+- The home page shows real, high-resolution screenshots of JBrowser, with a feature tour to click through, a colour
+  picker that shows each tint on the real window, and screenshots that follow the site's light or dark mode.
+  `tools/site_screenshots.py` retakes them all in one command.
 
 ## [1.5.0] - 2026-09-29
 

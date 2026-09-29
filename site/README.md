@@ -12,7 +12,7 @@ publishes it on every push to `main` that touches it and on every release.
 | `templates/` | The HTML pages (`home.html`, `download.html`, `changelog.html`, `docs.html`, `404.html`, `redirect.html`) and shared parts (`_head.html`, `_topbar.html`, `_footer.html`). `{{ value }}` placeholders, `{% include file %}`. |
 | `static/css/` | `site.css` (shared), `home.css`, `docs.css`. `pygments.css` (code colours) is generated at build time. |
 | `static/js/` | `site.js` (light/dark, copy buttons, the newest release from the GitHub API), `home.js` (the tint picker, animations), `docs.js` (version switcher, search, "On this page") |
-| `static/img/` | `logo.svg` (the app's logo, as drawn by `paint_logo()` in `jbrowser/ui/icons.py`) |
+| `static/img/` | `logo.svg` (the app's logo, as drawn by `paint_logo()` in `jbrowser/ui/icons.py`) and `shots/`, real screenshots of the app made by [`tools/site_screenshots.py`](../tools/site_screenshots.py) (WebP in three sizes, plus `og-image.jpg` for link previews) |
 | `docs/` | The documentation pages in Markdown, and `nav.json`, the order of the navigation |
 
 ## Build and preview

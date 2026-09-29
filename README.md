@@ -28,6 +28,10 @@ JBrowser replaces the tab strip with an **infinite horizontal canvas of web card
 native-feeling Windows 11 window with an Acrylic or Mica backdrop, and it is built with Python and
 PyQt6 / Qt WebEngine (Chromium).
 
+<p align="center">
+  <img src="site/static/img/shots/hero-dark-1920.webp" width="900" alt="JBrowser on Windows 11: the sidebar with favourites and spaces, and two pages side by side on the canvas">
+</p>
+
 Made with ❤️ by the JBrowser Company. © 2026 The JBrowser Company.
 
 ## Highlights
