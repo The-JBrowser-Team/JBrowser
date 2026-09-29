@@ -5,7 +5,7 @@ The JBrowser website, published with GitHub Pages at
 newest download, a permanent download link, the changelog, and the developer documentation for every release.
 
 [`tools/build_site.py`](../tools/build_site.py) builds it; [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
-publishes it on every push to `main` that touches it and on every release.
+publishes it on every push to `main` that touches it, and `tools/release.ps1` starts it after every release.
 
 | Path | What's inside |
 |---|---|

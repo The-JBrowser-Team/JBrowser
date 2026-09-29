@@ -24,7 +24,8 @@ Usage, from the repository folder::
     python tools/build_site.py --offline    # don't ask the GitHub API for release sizes and dates
 
 It needs ``pip install -r requirements-site.txt`` (Markdown and Pygments). The GitHub Pages
-workflow (.github/workflows/pages.yml) runs it on every push to main and every release.
+workflow (.github/workflows/pages.yml) runs it on pushes to main, and tools/release.ps1 starts it
+after every release.
 """
 from __future__ import annotations
 

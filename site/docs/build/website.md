@@ -93,8 +93,10 @@ between them and stays on the same page when it exists in the other version.
 ## Publishing
 
 `.github/workflows/pages.yml` runs on every push to `main` that touches the site, the docs, `CHANGELOG.md` or the
-code, on every published release, and by hand. It checks out the full history (for the tags), installs
-`requirements-site.txt`, runs `tools/build_site.py` and deploys `_site/` with GitHub's Pages actions.
+code, and by hand. <!-- if >= 1.5.1 -->After publishing a release, `tools/release.ps1` starts it on `main` (`Update-Website` in `tools/common.ps1` runs `gh workflow run pages.yml --ref main`). There is no release trigger: a release event runs on its tag, and the `github-pages` environment only deploys from `main`.<!-- else -->It also runs for every published release.<!-- endif -->
+
+It checks out the full history (for the tags), installs `requirements-site.txt`, runs `tools/build_site.py` and
+deploys `_site/` with GitHub's Pages actions.
 
 The download buttons are baked in at build time and refreshed in the browser from the GitHub API, so they point at a
 new release even before the site is rebuilt. `download/` is a permanent link that always offers the newest installer.

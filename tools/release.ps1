@@ -11,7 +11,8 @@
       2. builds the installer (tools\build_installer.ps1) unless -SkipBuild,
       3. tags the commit vX.Y.Z and pushes the branch and the tag,
       4. creates the GitHub release with the CHANGELOG section as its notes and uploads
-         JBrowser-Setup-X.Y.Z.exe and its .sha256 checksum.
+         JBrowser-Setup-X.Y.Z.exe and its .sha256 checksum,
+      5. starts the website rebuild (.github/workflows/pages.yml on main), unless -Draft.
 
     Installed copies of JBrowser find the new release within a day (or at once with
     Settings > About > Check now) and update themselves.
@@ -92,3 +93,4 @@ if ($Draft) { $ghArgs += "--draft" }
 & $gh @ghArgs
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 Write-Host "Released JBrowser $version" -ForegroundColor Green
+if (-not $Draft) { Update-Website }

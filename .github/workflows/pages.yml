@@ -1,6 +1,8 @@
 # Builds the website with tools/build_site.py and publishes it with GitHub Pages:
-# on pushes to main that touch the site, the docs, the changelog or the code, on every published release
-# (so the download buttons and the documentation versions follow at once), and by hand.
+# on pushes to main that touch the site, the docs, the changelog or the code, and when started by hand or
+# by tools/release.ps1 after publishing a release (so the download buttons and the documentation versions
+# follow at once). There is no release trigger: a release event runs on its tag, and the github-pages
+# environment only deploys from main.
 name: Website
 
 on:
@@ -13,8 +15,6 @@ on:
       - "CHANGELOG.md"
       - "jbrowser/**"
       - ".github/workflows/pages.yml"
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:
@@ -32,7 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: main              # the newest site and docs, also when a release triggers the build
+          ref: main              # the newest site and docs
           fetch-depth: 0         # every tag: each release gets its own documentation
 
       - uses: actions/setup-python@v7

@@ -144,6 +144,7 @@ if ($Publish) {
         $old = & $Gh release view $tag --json assets --jq ".assets[].name" |
             Where-Object { $_ -match '^JBrowser-.*\.zip(\.sha256)?$' -and $_ -notlike "$zipName*" }
         foreach ($name in $old) { & $Gh release delete-asset $tag $name --yes | Out-Null }
+        Update-Website
     } else {
         & (Join-Path $Root "tools\release.ps1") -SkipBuild -Draft:$Draft -ExtraAssets @($zip, "$zip.sha256")
     }

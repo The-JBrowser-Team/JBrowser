@@ -63,6 +63,19 @@ function Test-GitHubRelease($tag) {
     return $exists
 }
 
+# Rebuilds the website (.github/workflows/pages.yml) from main, so its download buttons and documentation
+# versions follow a new release at once. A release event can't do it: the github-pages environment only
+# deploys from main, and a release runs on its tag. Not fatal: the next push to main rebuilds it too.
+function Update-Website {
+    $saved = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    & $script:Gh workflow run pages.yml --ref main 2>&1 | Out-Null
+    $ok = $LASTEXITCODE -eq 0
+    $ErrorActionPreference = $saved
+    if ($ok) { Write-Host "Website rebuild started: https://the-jbrowser-team.github.io/JBrowser/" -ForegroundColor Green }
+    else { Write-Warning "Could not start the website rebuild. Run: gh workflow run pages.yml --ref main" }
+}
+
 $BuildRoot = Get-BuildRoot
 $DistDir = Join-Path $BuildRoot "dist"
 $WorkDir = Join-Path $BuildRoot "build"
