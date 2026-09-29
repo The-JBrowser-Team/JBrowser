@@ -1143,7 +1143,7 @@ class Site:
         root = root_of(page)
         d = self.download()
         return {"root": root, "title": esc(title), "description": esc(description), "repo_url": self.repo_url,
-                "year": str(datetime.now().year), "company": esc(self.ident.get("COMPANY", "The JBrowser Company")),
+                "year": str(datetime.now().year), "company": esc(self.ident.get("COMPANY", "The JBrowser Team")),
                 "latest_version": d["version"], "exe_url": esc(d["exe_url"]), "exe_name": esc(d["exe_name"]),
                 "exe_size": d["size"], "release_date": d["date"], "release_url": esc(d["release_url"]),
                 "repo": self.repo, "docs_home": f"{root}docs/latest/index.html",

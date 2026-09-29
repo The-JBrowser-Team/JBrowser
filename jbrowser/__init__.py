@@ -8,7 +8,7 @@ auto-updater, so a release only ever needs this one line changed.
 APP_NAME = "JBrowser"
 APP_ID = "JBrowser.Browser.1"             # Windows AppUserModelID (taskbar grouping)
 ORG_NAME = "JBrowser"                     # Qt organisation name (do not change: it names data folders)
-COMPANY = "The JBrowser Company"
+COMPANY = "The JBrowser Team"
 __version__ = "1.5.2"
 
 # Where releases are published. The auto-updater asks the GitHub Releases API for the

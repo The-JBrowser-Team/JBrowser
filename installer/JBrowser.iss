@@ -32,7 +32,7 @@
 
 #define AppName "JBrowser"
 #define AppExe "JBrowser.exe"
-#define AppPublisher "The JBrowser Company"
+#define AppPublisher "The JBrowser Team"
 #define AppURL "https://github.com/The-JBrowser-Team/JBrowser"
 ; Held by a running JBrowser for its whole life (jbrowser/app.py).
 #define AppMutex "JBrowser.AppMutex"

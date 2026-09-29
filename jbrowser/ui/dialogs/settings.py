@@ -952,7 +952,7 @@ class SettingsWindow(ChromeWindow):
                       "<div style='margin-top:6px; font-size:11pt'>Welcome to the internet - again.</div>")
         info.setTextFormat(Qt.TextFormat.RichText)
         hl.addWidget(info, 1)
-        made = QLabel("Made with \u2764\ufe0f by the JBrowser Company\n\u00a9 2026 The JBrowser Company. "
+        made = QLabel("Made with \u2764\ufe0f by the JBrowser Team\n\u00a9 2026 The JBrowser Team. "
                       "All rights reserved.")
         made.setAlignment(Qt.AlignmentFlag.AlignCenter)
         made.setProperty("carddesc", True)

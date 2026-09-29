@@ -14,11 +14,11 @@ VSVersionInfo(
   kids=[
     StringFileInfo([
       StringTable('040904B0', [
-        StringStruct('CompanyName', 'The JBrowser Company'),
+        StringStruct('CompanyName', 'The JBrowser Team'),
         StringStruct('FileDescription', 'JBrowser - welcome to the internet, again'),
         StringStruct('FileVersion', '1.5.2'),
         StringStruct('InternalName', 'JBrowser'),
-        StringStruct('LegalCopyright', '\u00a9 2026 The JBrowser Company. GNU GPL v3.'),
+        StringStruct('LegalCopyright', '\u00a9 2026 The JBrowser Team. GNU GPL v3.'),
         StringStruct('OriginalFilename', 'JBrowser.exe'),
         StringStruct('ProductName', 'JBrowser'),
         StringStruct('ProductVersion', '1.5.2')

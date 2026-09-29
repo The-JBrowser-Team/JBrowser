@@ -59,8 +59,8 @@ runners, approved by hand for every release. Programs signed this way show **Sig
 
 These steps need the owner's identity and accounts, so they can't be automated:
 
-1. **Turn on two-factor authentication** on GitHub for everyone in The-JBrowser-Team (SignPath Foundation requires it;
-   *Organization settings → Authentication security → Require two-factor authentication*).
+1. **Turn on two-factor authentication** for the The-JBrowser-Team GitHub account, and for any other account with
+   write access to the repository (SignPath Foundation requires it; *Settings → Password and authentication*).
 2. **Apply** at [signpath.org/apply](https://signpath.org/apply). Give the project name (JBrowser), the repository
    (`https://github.com/The-JBrowser-Team/JBrowser`), the website, the licence (GPL-3.0), and the code signing policy
    page. Mention that releases are built by `release-build.yml` on GitHub-hosted runners.

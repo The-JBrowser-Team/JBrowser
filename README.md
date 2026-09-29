@@ -32,7 +32,7 @@ PyQt6 / Qt WebEngine (Chromium).
   <img src="site/static/img/shots/hero-dark-1920.webp" width="900" alt="JBrowser on Windows 11: the sidebar with favourites and spaces, and two pages side by side on the canvas">
 </p>
 
-Made with ❤️ by the JBrowser Company. © 2026 The JBrowser Company.
+Made with ❤️ by the JBrowser Team. © 2026 The JBrowser Team.
 
 ## Highlights
 
