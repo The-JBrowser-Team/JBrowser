@@ -161,19 +161,14 @@
       <p class="kicker">Get started</p>
       <h2 class="section-title">Ready in a minute.</h2>
       <ol class="steps-mini">
-        <li><span>1</span><div><b>Download</b><p>No administrator rights needed.</p></div></li>
-        <li><span>2</span><div><b>Run the installer</b><p>SmartScreen warning? <em>More info → Run anyway</em>.</p></div></li>
+        <li><span>1</span><div><b>Click Download</b><p>You get a one-line install command, already copied.</p></div></li>
+        <li><span>2</span><div><b>Paste it into PowerShell</b><p>It downloads, checks and installs JBrowser. No administrator rights needed.</p></div></li>
         <li><span>3</span><div><b>Make it yours</b><p>A short welcome sets the look, search and protection.</p></div></li>
       </ol>
       <div class="cta">
         <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
       </div>
-      <details class="ps-install">
-        <summary>Prefer PowerShell? (no SmartScreen warning)</summary>
-        <p>Downloads the newest release, checks it and starts the installer.</p>
-        <div class="code-copy"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
-          <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
-      </details>
+      <p class="ps-install">Prefer a normal download? <a href="{{exe_url}}" data-latest-exe data-direct>Get the installer file</a>.</p>
     </div>
     <button class="shot-button install-shot reveal" type="button" data-zoom aria-label="Enlarge the welcome screenshot">
       <img class="shot" src="{{root}}static/img/shots/welcome-look-1280.webp"

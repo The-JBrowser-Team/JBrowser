@@ -38,6 +38,31 @@
   });
   window.JB = { copy: copy };
 
+  // ------------------------------------------------------------------ install window
+  // Download buttons open the install window: the one-line PowerShell install (copied when the visitor
+  // clicks Download, and shown in full), with the installer file as the alternative. Links marked
+  // data-direct download the file itself. Without JavaScript every button is a plain download link.
+  var dialog = document.getElementById("install-dialog");
+  var onWindows = /Windows/i.test(navigator.userAgent);
+  document.querySelectorAll(".install-notwin").forEach(function (p) { p.hidden = onWindows; });
+  if (dialog && typeof dialog.showModal === "function") {
+    document.addEventListener("click", function (e) {
+      var a = e.target.closest && e.target.closest("a[data-latest-exe]");
+      if (!a || a.hasAttribute("data-direct") || e.button !== 0 || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      var button = dialog.querySelector(".install-cmd .copy");
+      var note = dialog.querySelector(".copied-note");
+      if (note) note.hidden = true;
+      if (button && navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(button.getAttribute("data-copy")).then(function () {
+          if (note) note.hidden = false;
+        }, function () {});
+      }
+      dialog.showModal();
+    });
+    dialog.addEventListener("click", function (e) { if (e.target === dialog) dialog.close(); });   // the backdrop
+  }
+
   // ------------------------------------------------------------------ newest release
   var repo = (document.querySelector('meta[name="jb-repo"]') || {}).content;
   var baked = (document.querySelector('meta[name="jb-latest"]') || {}).content || "0.0.0";

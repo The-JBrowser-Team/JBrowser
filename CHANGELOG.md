@@ -5,6 +5,15 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [Unreleased]
+
+### Changed
+- **Simpler installing.** The website's *Download* buttons open a short guide: the one-line install command (copied
+  for you and shown in full), three plain steps (open PowerShell, paste, press Enter) and what the command does, with
+  the installer file as the alternative. The README starts with the same steps. The install script says what it is
+  doing in plain words and when it's done.
+- The website and the app credit **The JBrowser Team**.
+
 ## [1.5.2] - 2026-09-29
 
 ### Changed

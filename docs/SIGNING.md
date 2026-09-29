@@ -16,7 +16,7 @@ people have run it, or it is signed with a certificate that has.
 | Unsigned installer, downloaded with a browser | **Yes**, until that exact file has been run by enough people. Every release is a new file and starts again. |
 | Signed with a code-signing certificate from a trusted certificate authority | At first, sometimes. The reputation belongs to the **certificate**, so it builds up over releases and new versions inherit it. |
 | Signed with a self-signed certificate | **Yes.** Windows doesn't trust it, so it counts as unsigned (or worse). |
-| Installed with the [one-command install](../README.md#one-command-recommended) (`install.ps1`) | **No**: PowerShell's download has no Mark-of-the-Web, and the script removes it anyway after checking the SHA-256. |
+| Installed with the [one-line install](../README.md#download) (`install.ps1`) | **No**: PowerShell's download has no Mark-of-the-Web, and the script removes it anyway after checking the SHA-256. |
 | Updated by JBrowser's own updater | **No**: the updater checks the installer's SHA-256 and runs it without the Mark-of-the-Web. |
 
 Since 2024, EV (extended validation) certificates no longer skip the reputation stage either; they build it the same

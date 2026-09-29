@@ -270,7 +270,8 @@ _VAR = re.compile(r"\{\{\s*([\w.]+)\s*\}\}")
 
 def render(template: str, values: dict) -> str:
     text = (TEMPLATES / template).read_text(encoding="utf-8")
-    text = _INCLUDE.sub(lambda m: (TEMPLATES / m[1]).read_text(encoding="utf-8"), text)
+    for _ in range(3):                         # included templates may include others
+        text = _INCLUDE.sub(lambda m: (TEMPLATES / m[1]).read_text(encoding="utf-8"), text)
     return _VAR.sub(lambda m: str(values.get(m[1], "")), text)
 
 

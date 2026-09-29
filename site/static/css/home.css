@@ -130,9 +130,7 @@
 .steps-mini b { font-size: 17px; }
 .steps-mini p { margin: 2px 0 0; color: var(--text-2); font-size: 15px; }
 .install-shot { box-shadow: 0 30px 80px rgba(20, 10, 70, .35), 0 0 0 1px var(--border); }
-.ps-install { margin-top: 18px; color: var(--text-2); font-size: 14px; }
-.ps-install summary { cursor: pointer; color: var(--link); width: fit-content; }
-.ps-install p { margin: 8px 0 0; }
+.ps-install { margin-top: 16px; color: var(--text-2); font-size: 14px; }
 
 /* ---------------------------------------------------------------- closing */
 .closing-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: 20px; }

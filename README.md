@@ -34,6 +34,30 @@ PyQt6 / Qt WebEngine (Chromium).
 
 Made with ❤️ by the JBrowser Team. © 2026 The JBrowser Team.
 
+## Download
+
+JBrowser is free for **Windows 10 and 11**. The easiest way to install it takes about a minute:
+
+1. **Open PowerShell**: press the **Windows** key, type `PowerShell`, and press **Enter**.
+2. **Copy this line, paste it into the PowerShell window** (right-click, or <kbd>Ctrl</kbd>+<kbd>V</kbd>) **and press
+   Enter**:
+
+   ```powershell
+   irm https://raw.githubusercontent.com/The-JBrowser-Team/JBrowser/main/install.ps1 | iex
+   ```
+
+3. The JBrowser installer opens. Click through it like any other app.
+
+The command downloads the newest JBrowser from this repository's
+[releases](https://github.com/The-JBrowser-Team/JBrowser/releases/latest), checks that the file is exactly the one
+published (its SHA-256 fingerprint), and opens the installer. It needs no administrator rights and changes nothing else.
+[install.ps1](install.ps1) is short, so you can read it first. Run the same line again at any time to update.
+
+Prefer a normal download? Get **`JBrowser-Setup-<version>.exe`** from the
+[latest release](https://github.com/The-JBrowser-Team/JBrowser/releases/latest) and open it. Because JBrowser is new and
+not code-signed yet, Windows may say "Windows protected your PC": click *More info*, then *Run anyway*
+([why](docs/SIGNING.md)).
+
 ## Highlights
 
 - **Spatial canvas.** Cards sit side by side and can be resized, split and reordered. Keep scrolling past either end
@@ -82,19 +106,10 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 Every change is listed in **[CHANGELOG.md](CHANGELOG.md)**, and each release's notes are on the
 [Releases page](https://github.com/The-JBrowser-Team/JBrowser/releases).
 
-## Install the latest version
+## More ways to install
 
-### One command (recommended)
-
-Open **PowerShell** and paste:
-
-```powershell
-irm https://raw.githubusercontent.com/The-JBrowser-Team/JBrowser/main/install.ps1 | iex
-```
-
-This downloads the latest release zip, checks its SHA-256 fingerprint, and starts the installer, without Windows
-SmartScreen's "Windows protected your PC" warning. Run the same command again at any time to update.
-[install.ps1](install.ps1) is short, so you can read it first.
+The [one-line install](#download) above is the easiest. It downloads the release zip, checks its SHA-256
+fingerprint, and starts the installer, without Windows SmartScreen's "Windows protected your PC" warning.
 
 ### Download the zip yourself
 

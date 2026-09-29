@@ -99,4 +99,13 @@ It checks out the full history (for the tags), installs `requirements-site.txt`,
 deploys `_site/` with GitHub's Pages actions.
 
 The download buttons are baked in at build time and refreshed in the browser from the GitHub API, so they point at a
-new release even before the site is rebuilt. `download/` is a permanent link that always offers the newest installer.
+new release even before the site is rebuilt. `download/` is a permanent link that always offers the newest version.
+
+**How visitors install.** Every *Download* button opens the install window (`<dialog id="install-dialog">` in
+`_footer.html`; `site.js` opens it): the one-line PowerShell install, copied when the visitor clicks and always shown
+in full, three plain steps (open PowerShell, paste, press Enter), a "What does this command do?" explanation linking
+to `install.ps1`, and the installer file as the alternative, with the SmartScreen note. The download page shows the
+same steps (`_install_steps.html`, shared by both). Links with `data-direct` download the file itself, and without
+JavaScript every button is a plain download link. The window is deliberately transparent, so it can't be mistaken for
+"paste this command" scams: nothing is copied without a click, the command is visible, it names what it does, and it
+never suggests the Win+R box.

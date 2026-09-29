@@ -14,6 +14,10 @@ function Install-JBrowser {
     $repo = "The-JBrowser-Team/JBrowser"
     $headers = @{ "User-Agent" = "JBrowser-install"; "Accept" = "application/vnd.github+json" }
 
+    Write-Host ""
+    Write-Host "JBrowser installer" -ForegroundColor Cyan
+    Write-Host "This downloads the newest JBrowser from github.com/$repo, checks it, and opens its installer."
+    Write-Host ""
     Write-Host "Looking for the latest JBrowser release..." -ForegroundColor Cyan
     $release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest" -Headers $headers
     $zip = $release.assets | Where-Object { $_.name -match '^JBrowser-\d+\.\d+\.\d+-\d{4}-\d{2}-\d{2}\.zip$' } |
@@ -50,15 +54,17 @@ function Install-JBrowser {
     if ((Get-FileHash $setup.FullName -Algorithm SHA256).Hash -ne $expected) { throw "The installer failed its SHA-256 check. Nothing was installed." }
 
     $action = if ($installed) { "Updating JBrowser $installed to $version" } else { "Installing JBrowser $version" }
-    Write-Host "$action..." -ForegroundColor Cyan
+    Write-Host "Checked: the download matches the published fingerprint." -ForegroundColor Green
+    Write-Host "${action}: the installer window is opening (it may appear behind this one)..." -ForegroundColor Cyan
     Unblock-File $setup.FullName
     $arguments = if ($env:JBROWSER_SILENT) { @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-") } else { @() }
     $p = Start-Process $setup.FullName -ArgumentList $arguments -PassThru -Wait
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
     if ($p.ExitCode -eq 0) {
         Write-Host "Done. JBrowser $version is installed and will keep itself up to date." -ForegroundColor Green
+        Write-Host "You can close this window now."
     } else {
-        Write-Host "Setup ended with code $($p.ExitCode) (cancelled or failed)." -ForegroundColor Yellow
+        Write-Host "Setup ended with code $($p.ExitCode) (cancelled or failed). Run the command again to retry." -ForegroundColor Yellow
     }
 }
 
