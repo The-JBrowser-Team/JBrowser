@@ -35,6 +35,9 @@ GLYPHS = {
     "developer": "", "blocked": "", "people2": "", "heart": "",
     "archive": "", "unpin": "",
 }
+# Newer glyphs, written as code points (Segoe Fluent Icons).
+GLYPHS.update({"colour": "", "gallery": "", "drag": "", "layers": "", "expand": "",
+               "collapse": ""})
 
 _font_family: str | None = None
 

@@ -1,0 +1,24 @@
+# Exact versions from the last successful `python tools/update_deps.py --lock`.
+# Install them with: pip install -r requirements.lock.txt
+altgraph==0.17.5
+certifi==2026.7.22
+cffi==2.1.1
+charset-normalizer==3.5.1
+cryptography==50.0.1
+idna==3.20
+packaging==26.3
+pefile==2024.8.26
+pycparser==3.0
+pyflakes==4.0.0
+pyinstaller==6.22.3
+pyinstaller-hooks-contrib==2026.7
+PyQt6==6.11.0
+PyQt6-Qt6==6.11.2
+PyQt6-WebEngine==6.11.0
+PyQt6-WebEngine-Qt6==6.11.2
+PyQt6_sip==13.12.0
+pywin32-ctypes==0.2.3
+pywinstyles==1.8
+requests==2.34.2
+setuptools==84.0.0
+urllib3==2.8.0

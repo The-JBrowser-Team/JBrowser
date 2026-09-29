@@ -29,12 +29,13 @@ from jbrowser.services.search import ENGINES
 from jbrowser.ui.icons import draw_glyph, paint_logo
 from jbrowser.ui.sounds import Sounds
 from jbrowser.ui.theme import DARK, LIGHT, theme
-from jbrowser.ui.widgets import IconButton, ToggleSwitch
+from jbrowser.ui.widgets import IconButton, TintPicker, ToggleSwitch
 
 if TYPE_CHECKING:
     from jbrowser.ui.window import MainWindow
 
-ONBOARDING_VERSION = 1
+# Raise this to show the welcome again after an update that it introduces (2: colours and the Gallery).
+ONBOARDING_VERSION = 2
 BRAND = ("#5b8cff", "#8a5cff", "#ff5c9d")
 
 # Intro timeline, matched to the intro sound (silence until 0.8 s, main hits at 1.75 s and
@@ -42,7 +43,8 @@ BRAND = ("#5b8cff", "#8a5cff", "#ff5c9d")
 # the logo at T_LOGO.
 T_FORM, T_LOGO, T_WORD, T_END = 0.80, 2.55, 2.95, 4.35
 
-STEPS = ["story0", "story1", "story2", "look", "search", "shield", "spaces", "touches", "ready"]
+STEPS = ["story0", "story1", "story2", "story3", "look", "search", "shield", "spaces", "touches", "ready"]
+LAST_STORY = "story3"
 STORY = {
     "story0": ("Welcome to the internet - again.", {"again."},
                "JBrowser rethinks the browser from the ground up: calmer, faster and entirely yours."),
@@ -52,6 +54,9 @@ STORY = {
     "story2": ("Private by design.", {"design."},
                "Trackers, fingerprinting and dangerous sites are stopped before they reach you. "
                "No accounts. No telemetry. Nothing to sell."),
+    "story3": ("See everything at once.", {"everything", "at", "once."},
+               "The Gallery lays out every card as a live picture, in one space or across all of them. "
+               "Click one and you're back in it. Drag cards to rearrange them."),
 }
 HEADERS = {
     "look": ("Make it yours.", {"yours."}, "Pick how JBrowser looks. Everything here can be changed later in Settings."),
@@ -706,6 +711,19 @@ class Onboarding(QWidget):
             group2.addButton(t)
             tiles.append(t)
         pg.row_of(tiles)
+        pg.section("Colour")
+        tint = TintPicker(s.get("appearance.tint") or "none", pg, swatch=32, gap=12)
+        tint.changed.connect(lambda key: s.set("appearance.tint", key))
+        tint_row = QHBoxLayout()
+        tint_row.setContentsMargins(0, 0, 0, 0)
+        tint_row.addWidget(tint)
+        tint_row.addStretch(1)
+        pg.lay.addLayout(tint_row)
+        tint_hint = QLabel("A gentle tint for the window: soft over Acrylic and Mica, a little stronger with Solid. "
+                           "Incognito spaces always stay black.", pg)
+        tint_hint.setProperty("hint", True)
+        tint_hint.setWordWrap(True)
+        pg.lay.addWidget(tint_hint)
         self.pages["look"] = pg
         # Search ----------------------------------------------------------------
         pg = SetupPage("search", self)
@@ -869,7 +887,7 @@ class Onboarding(QWidget):
         self.phase = "steps"
         key = self.key_of(step)
         self.back_btn.setVisible(step > 0)
-        self.next_btn.setText("Set up JBrowser" if key == "story2" else "Next")
+        self.next_btn.setText("Set up JBrowser" if key == LAST_STORY else "Next")
         self.nav_box.setVisible(key != "ready")
         self.skip_btn.setVisible(key != "ready")
         self._layout_chrome()
@@ -1006,10 +1024,14 @@ class Onboarding(QWidget):
                                      "above your spaces. It works in every space."),
         ("pill", "The Lazy Toolbar", "Click the address bar or press Ctrl+T for a new card. Ctrl+K searches your "
                                      "cards, history, bookmarks and commands."),
-        ("canvas", "Your canvas", "Cards sit side by side. Hold Alt and scroll to slide, press Alt+1 to Alt+9 to "
-                                  "resize, and keep scrolling past either end to add a card there."),
-        ("list", "Cards in this space", "Pinned cards stay on top. The New card row waits under the last card. "
-                                        "Right-click a card to pin it or add it to favourites."),
+        ("canvas", "Your canvas", "Cards sit side by side. Drag a card by its title bar (or hold Alt and drag "
+                                  "anywhere on it) to move it. Hold Alt and scroll to slide, and keep scrolling past "
+                                  "either end to add a card there."),
+        ("gallery", "The Gallery", "See every card at a glance, in this space or all of them (Ctrl+Shift+G). Click "
+                                   "a card to jump to it, or drag it to another space."),
+        ("list", "Cards in this space", "Pinned cards stay on top, and the New card row is always there. Drag a card "
+                                        "to reorder it, or onto a space to move it. Right-click to pin it or add it to "
+                                        "favourites."),
         ("archive", "The Archive", "Closed a card by mistake? It waits here for 48 hours. Ctrl+Shift+T brings "
                                    "back the most recent one."),
         ("shield", "Protection", "Trackers, fingerprinting and dangerous sites are blocked. Click the shield to "
@@ -1021,7 +1043,8 @@ class Onboarding(QWidget):
         w = self.win
         sb = w.sidebar
         return {"section": sb.section, "favourites": sb.favourites if sb.favourites.isVisible() else sb.spaces_label,
-                "pill": w.titlebar.pill, "canvas": w.stack, "list": sb.list, "archive": sb.archive_btn,
+                "pill": w.titlebar.pill, "canvas": w.stack, "gallery": w.titlebar.gallery_btn,
+                "list": sb.list, "archive": sb.archive_btn,
                 "shield": w.titlebar.shield, "logo": sb.header.logo}.get(name)
 
     def _target_rect(self, name: str) -> QRectF:
@@ -1577,7 +1600,73 @@ class Onboarding(QWidget):
                     p.setPen(QPen(with_alpha(col, 0.5 * (1 - k) * draw), 1.2))
                     p.setBrush(Qt.BrushStyle.NoBrush)
                     p.drawEllipse(QPointF(x, y), 4 + 10 * k, 4 + 10 * k)
+        elif key == "story3":
+            self._paint_gallery_visual(p, area, t, now, alpha)
         p.restore()
+
+    def _paint_gallery_visual(self, p: QPainter, area: QRectF, t: float, now: float, alpha: float) -> None:
+        """A miniature Gallery: cards pop into a grid one by one, a focus ring hops between them,
+        and every few seconds one card lifts as if it were being opened."""
+        from jbrowser.ui.theme import TINTS
+        th = theme()
+        cols, rows = 4, 2
+        gap = 16.0
+        cw = min(170.0, (area.width() - gap * (cols - 1)) / cols)
+        ch = min((area.height() - gap) / rows, cw * 0.72)
+        gw = cols * cw + (cols - 1) * gap
+        gh = rows * ch + (rows - 1) * gap
+        x0 = area.center().x() - gw / 2
+        y0 = area.center().y() - gh / 2
+        palette = [QColor(c) for _n, c in TINTS.values()]
+        focus = int(now / 0.9) % (cols * rows)
+        lift_phase = (now % 3.6) / 3.6
+        for i in range(cols * rows):
+            c, r = i % cols, i // cols
+            pop = seg(t, 0.15 + i * 0.07, 0.65 + i * 0.07)
+            if pop <= 0:
+                continue
+            e = out_back(pop)
+            rect = QRectF(x0 + c * (cw + gap), y0 + r * (ch + gap), cw, ch)
+            focused = i == focus and pop >= 1
+            lift = 0.0
+            if focused and 0.55 < lift_phase < 0.85:
+                lift = math.sin((lift_phase - 0.55) / 0.3 * math.pi)
+            scale = (0.7 + 0.3 * e) * (1 + 0.08 * lift)
+            p.save()
+            p.setOpacity(alpha * min(1.0, pop * 1.6))
+            cen = rect.center()
+            p.translate(cen.x(), cen.y() - 6 * lift)
+            p.scale(scale, scale)
+            p.translate(-cen.x(), -cen.y())
+            path = QPainterPath()
+            path.addRoundedRect(rect, 10, 10)
+            fill = QColor(255, 255, 255, 30) if th.dark else QColor(255, 255, 255, 200)
+            p.fillPath(path, fill)
+            thumb = QRectF(rect.left(), rect.top(), rect.width(), rect.height() * 0.64)
+            tp = QPainterPath()
+            tp.addRoundedRect(thumb, 10, 10)
+            g = QLinearGradient(thumb.topLeft(), thumb.bottomRight())
+            col = palette[i % len(palette)]
+            g.setColorAt(0, with_alpha(col, 0.55))
+            g.setColorAt(1, with_alpha(col, 0.18))
+            p.fillPath(tp, QBrush(g))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(with_alpha(QColor(BRAND[i % 3]), 0.9))
+            p.drawEllipse(QPointF(rect.left() + 13, thumb.bottom() + (rect.bottom() - thumb.bottom()) / 2), 4.5, 4.5)
+            line = QColor(255, 255, 255, 60) if th.dark else QColor(0, 0, 0, 40)
+            p.fillRect(QRectF(rect.left() + 24, thumb.bottom() + 10, rect.width() * 0.55, 5), line)
+            if focused:
+                ring = QPainterPath()
+                ring.addRoundedRect(rect.adjusted(-4, -4, 4, 4), 13, 13)
+                pen = QPen(QBrush(brand_gradient(rect.left(), rect.right(), 0.2 * math.sin(now * 2))), 2.4)
+                p.setPen(pen)
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawPath(ring)
+            else:
+                p.setPen(QPen(QColor(255, 255, 255, 38) if th.dark else QColor(0, 0, 0, 26), 1))
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.drawPath(path)
+            p.restore()
 
     def _paint_dots(self, p: QPainter, now: float) -> None:
         if self.phase != "steps" or self.key_of(self.step) == "ready":

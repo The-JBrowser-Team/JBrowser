@@ -25,7 +25,7 @@ from jbrowser.services.search import ENGINES
 from jbrowser.ui.chrome_window import ChromeWindow
 from jbrowser.ui.icons import draw_glyph, icon, logo_pixmap
 from jbrowser.ui.theme import theme
-from jbrowser.ui.widgets import ToggleSwitch
+from jbrowser.ui.widgets import TintPicker, ToggleSwitch
 
 NAV_W = 250
 
@@ -347,10 +347,14 @@ class SettingsWindow(ChromeWindow):
                         "stronger tint. Solid turns transparency off and uses the least graphics power.",
                         self._combo("appearance.material", [("acrylic", "Acrylic (default)"), ("mica", "Mica"),
                                                             ("mica_alt", "Mica Alt"), ("solid", "Solid")])),
+            self._tint_card(),
             self._toggle_card("appearance.use_accent", "heart", "Use my Windows accent colour",
                               "Highlights, buttons and the active card border use the accent colour you chose in "
                               "Windows. Turn off to use JBrowser's blue."),
             self._sidebar_card(),
+            self._toggle_card("sidebar.new_card_always", "add", "Always show the “New card” button",
+                              "The “New card” row under the cards in the sidebar. When this is off, it only appears "
+                              "once a space has at least one card."),
             self._toggle_card("appearance.favorites_bar", "bookmarks", "Show the bookmarks bar",
                               "A row of your bookmarked sites under the ribbon, one click away. Bookmark the current "
                               "page with Ctrl+D. You can also toggle the bar with Ctrl+Shift+B or by right-clicking "
@@ -363,6 +367,15 @@ class SettingsWindow(ChromeWindow):
                               "Asks every website to render with dark colours, even sites that have no dark theme "
                               "of their own. Some pages may look odd; switch it off again if so."),
         )
+
+    def _tint_card(self) -> SettingCard:
+        picker = TintPicker(self.s.get("appearance.tint") or "none")
+        picker.changed.connect(lambda key: self.s.set("appearance.tint", key))
+        self._listen(self.s.changed, lambda k, v: picker.set_value(v or "none") if k == "appearance.tint" else None)
+        return SettingCard("colour", "Colour tint",
+                           "Gives the window a gentle colour. With Acrylic or Mica it is a light tint over the "
+                           "see-through background; with the Solid material the colour is a little stronger. "
+                           "Incognito spaces always stay black.", extra=picker)
 
     def _sidebar_card(self) -> SettingCard:
         sw = ToggleSwitch(not self.s.get("appearance.sidebar_collapsed"))
@@ -504,8 +517,10 @@ class SettingsWindow(ChromeWindow):
             "JBrowser blocks tracking and dangerous sites by default. These switches let you fine-tune that.",
             SettingCard("shield", "Block trackers, ads, cryptominers and telemetry",
                         "Stops websites from loading hidden scripts that follow you from site to site, show ads, "
-                        "secretly use your computer to mine cryptocurrency, or report what you do. Pages usually "
-                        "load faster too. The shield in the title bar shows how many were blocked.",
+                        "secretly use your computer to mine cryptocurrency, or report what you do, and hides the "
+                        "empty ad boxes they leave behind. Pages usually load faster too. The shield in the title "
+                        "bar shows how many were blocked. Uses the EasyList, EasyPrivacy, Peter Lowe and NoCoin "
+                        "lists.",
                         self._toggle("privacy.block_trackers"), extra=lists_box),
             SettingCard("warning", "Phishing and malware protection",
                         "Warns you and stops the page before it loads if a site is on public lists of fake login "
@@ -513,9 +528,10 @@ class SettingsWindow(ChromeWindow):
                         "refreshed about once a week; the addresses you visit are checked locally and never sent "
                         "anywhere.", self._toggle("privacy.threat_protection"), token="warning"),
             SettingCard("fingerprint", "Fingerprinting protection",
-                        "Websites can recognise your computer by quietly measuring details such as how it draws "
-                        "images and what graphics chip it has. JBrowser gives each site slightly different, "
-                        "harmless answers so those measurements cannot be used to follow you.",
+                        "Websites can recognise your computer by quietly measuring how it draws images. JBrowser "
+                        "gives each site slightly different, harmless answers so that measurement cannot be used to "
+                        "follow you. Sign-in and security-check pages (Google, Microsoft, Cloudflare and similar) "
+                        "are left alone, so they don't mistake you for a robot.",
                         self._toggle("privacy.fingerprint_protection")),
             SettingCard("link", "Remove tracking codes from links",
                         "Many links carry extra codes (like “utm_source” or “fbclid”) that tell companies where you "
@@ -562,8 +578,12 @@ class SettingsWindow(ChromeWindow):
         ts = self.s.get("privacy.blocklist_updated") or 0
         when = time.strftime("%d %b %Y %H:%M", time.localtime(ts)) if ts else "never (built-in list only)"
         st = self.ctx.stats
+        eng = self.ctx.privacy.filters
+        extra = (f" plus {eng.network_count:,} address patterns and {eng.cosmetic_count:,} ad-box hiding rules"
+                 if eng is not None else "")
         self.blocklist_label.setText(
-            f"{len(self.ctx.privacy.blocklist):,} tracker rules and {len(self.ctx.threats):,} dangerous sites known. "
+            f"{len(self.ctx.privacy.blocklist):,} tracker domains{extra}, and {len(self.ctx.threats):,} dangerous sites "
+            "known. "
             f"Tracker lists last updated: {when}. This session: {st.get('blocked', 0):,} requests blocked, "
             f"{self.ctx.privacy.stripped:,} tracking codes removed, {st.get('threats', 0):,} dangerous pages stopped.")
 

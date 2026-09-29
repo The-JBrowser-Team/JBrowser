@@ -45,6 +45,32 @@ LIGHT = {
 }
 
 
+# Colour tints (Settings → Appearance, and the welcome's look page). Over Acrylic / Mica they are a
+# light wash over the backdrop; with the Solid material they are blended into the surfaces.
+TINTS: dict[str, tuple[str, str]] = {
+    "rose": ("Rose", "#e8577a"), "coral": ("Coral", "#ff7a59"), "amber": ("Amber", "#f0a830"),
+    "lime": ("Lime", "#98c950"), "mint": ("Mint", "#3ecf9b"), "teal": ("Teal", "#23b0ad"),
+    "sky": ("Sky", "#3fa7f5"), "indigo": ("Indigo", "#6c72ff"), "violet": ("Violet", "#a063ff"),
+    "slate": ("Slate", "#7d8594"),
+}
+# How strongly the tint colours each solid surface (dark theme, light theme).
+_SOLID_MIX = {"window": (0.20, 0.15), "sidebar_solid": (0.24, 0.19), "canvas_solid": (0.15, 0.12),
+              "dialog_solid": (0.09, 0.07), "layer_solid": (0.09, 0.07), "card_solid": (0.05, 0.03)}
+_WASH_ALPHA = (0.15, 0.10)          # the translucent wash (dark, light): a tint, never a paint job
+# Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
+_INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
+              "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
+              "canvas": "rgba(0,0,0,0.42)", "window_tint": "rgba(0,0,0,0.62)"}
+
+
+def mix(base: QColor, other: QColor, amount: float) -> QColor:
+    """``base`` moved ``amount`` (0…1) of the way towards ``other``; keeps ``base``'s alpha."""
+    a = max(0.0, min(1.0, amount))
+    return QColor.fromRgbF(base.redF() + (other.redF() - base.redF()) * a,
+                           base.greenF() + (other.greenF() - base.greenF()) * a,
+                           base.blueF() + (other.blueF() - base.blueF()) * a, base.alphaF())
+
+
 def parse_color(value: str) -> QColor:
     value = value.strip()
     if value.startswith("rgba"):
@@ -67,6 +93,8 @@ class Theme(QObject):
         self.accent = QColor("#4c8dff")
         self.tokens: dict[str, str] = dict(DARK)
         self.translucent = True
+        self.tint: QColor | None = None
+        self.incognito = False
         self._colors: dict[str, QColor] = {}
         hints = QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
@@ -75,7 +103,13 @@ class Theme(QObject):
         self.refresh()
 
     def _on_setting(self, key: str, _v) -> None:
-        if key in ("appearance.theme", "appearance.use_accent", "appearance.material"):
+        if key in ("appearance.theme", "appearance.use_accent", "appearance.material", "appearance.tint"):
+            self.refresh()
+
+    def set_incognito(self, on: bool) -> None:
+        """The active space is incognito: switch to the black look (and back)."""
+        if bool(on) != self.incognito:
+            self.incognito = bool(on)
             self.refresh()
 
     # ------------------------------------------------------------ resolution
@@ -99,8 +133,20 @@ class Theme(QObject):
 
     def refresh(self) -> None:
         mode = self.settings.get("appearance.theme")
-        self.dark = self._system_dark() if mode == "system" else mode == "dark"
+        self.dark = self.incognito or (self._system_dark() if mode == "system" else mode == "dark")
         self.tokens = dict(DARK if self.dark else LIGHT)
+        tint = TINTS.get(self.settings.get("appearance.tint") or "")
+        self.tint = QColor(tint[1]) if tint and not self.incognito else None
+        if self.incognito:
+            self.tokens.update(_INCOGNITO)
+        elif self.tint is not None:
+            i = 0 if self.dark else 1
+            for key, amounts in _SOLID_MIX.items():
+                self.tokens[key] = mix(parse_color(self.tokens[key]), self.tint, amounts[i]).name()
+            wash = QColor(self.tint)
+            wash.setAlphaF(_WASH_ALPHA[i])
+            self.tokens["window_tint"] = (f"rgba({wash.red()},{wash.green()},{wash.blue()},"
+                                          f"{wash.alphaF():.3f})")
         accent = self._system_accent() if self.settings.get("appearance.use_accent") else QColor("#4c8dff")
         if self.dark and accent.lightness() < 120:
             accent = accent.lighter(135)
@@ -127,6 +173,13 @@ class Theme(QObject):
         c = QColor(self.accent)
         c.setAlphaF(alpha)
         return c
+
+    def backdrop_wash(self) -> QColor | None:
+        """Colour laid over the Acrylic / Mica backdrop of the main window: the tint, black for
+        incognito, or None for the plain material."""
+        if self.incognito or self.tint is not None:
+            return self.c("window_tint")
+        return None
 
     def surface(self, token: str) -> QColor:
         """Surface color honoring the solid (no Mica) material."""

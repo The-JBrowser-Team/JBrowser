@@ -7,6 +7,7 @@ from PyQt6.QtWidgets import QApplication
 
 from jbrowser.core.settings import SLEEP_PRESETS
 from jbrowser.services.network import DEV_PORTS, DNS_MODES
+from jbrowser.ui.theme import TINTS
 
 if TYPE_CHECKING:
     from jbrowser.context import AppContext
@@ -35,6 +36,10 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
           keywords="undo close restore tab archive")
     c.add("archive.show", "Archive (cards closed in the last 48 hours)", CARDS, lambda: ui.show_archive(),
           shortcuts=["Ctrl+Shift+Y"], icon="archive", keywords="closed recently reopen history")
+    c.add("gallery.toggle", "Gallery: every card at a glance", CARDS, lambda: ui.toggle_gallery(),
+          shortcuts=["Ctrl+Shift+G"], icon="gallery", keywords="overview grid thumbnails expose all tabs")
+    c.add("gallery.all", "Gallery of all spaces", CARDS, lambda: ui.toggle_gallery(True), icon="layers",
+          keywords="overview every space grid thumbnails")
     c.add("card.pin", "Pin / unpin card", CARDS, lambda: ui.toggle_pin(), icon="pin",
           keywords="pinned keep sticky tab")
     c.add("card.favourite", "Add card to favourites / remove", CARDS, lambda: ui.toggle_favourite(), icon="star",
@@ -159,6 +164,13 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
     for mat, label in (("mica", "Mica"), ("mica_alt", "Mica Alt"), ("acrylic", "Acrylic"), ("solid", "Solid")):
         c.add(f"view.material_{mat}", f"Window material: {label}", VIEW, lambda m=mat: ui.set_material(m),
               icon="tiles", keywords="backdrop glass transparency blur")
+    for key, label in [("none", "No colour"), *((k, v[0]) for k, v in TINTS.items())]:
+        c.add(f"view.tint_{key}", f"Colour tint: {label}", VIEW, lambda k=key: s.set("appearance.tint", k),
+              icon="colour", keywords="color theme accent tint wash",
+              state=lambda k=key: "Active" if (s.get("appearance.tint") or "none") == k else None)
+    c.add("view.new_card_always", "Always show the “New card” button", VIEW,
+          lambda: s.toggle("sidebar.new_card_always"), icon="add", state=on_off("sidebar.new_card_always"),
+          keywords="sidebar add tab empty space")
     c.add("view.fullscreen", "Full screen", VIEW, ui.toggle_window_fullscreen, shortcuts=["F11"], icon="fullscreen")
     c.add("view.hotkeys", "Keyboard shortcuts", VIEW, ui.open_hotkeys, shortcuts=["Ctrl+/", "F1"], icon="keyboard",
           keywords="help cheat sheet hotkeys")
@@ -214,7 +226,7 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
           keywords="safe browsing dangerous scam")
     c.add("privacy.toggle_fingerprint", "Fingerprinting protection", PRIV,
           lambda: s.toggle("privacy.fingerprint_protection"), icon="fingerprint",
-          state=on_off("privacy.fingerprint_protection"), keywords="canvas webgl anti tracking")
+          state=on_off("privacy.fingerprint_protection"), keywords="canvas anti tracking")
     c.add("privacy.toggle_strip", "Remove tracking codes from links", PRIV, lambda: s.toggle("privacy.strip_tracking"),
           icon="link", state=on_off("privacy.strip_tracking"), keywords="utm fbclid gclid query parameters")
     c.add("privacy.site_info", "Site information and permissions", PRIV, ui.show_site_info_anchored, icon="info",

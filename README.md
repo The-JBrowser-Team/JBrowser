@@ -29,10 +29,11 @@ Made with ❤️ by the JBrowser Company. © 2026 The JBrowser Company.
   to pull in a new card.
 - **Spaces.** *Home*, *Work*, *Other*, or your own spaces. Each has its own cookies and storage, and you can open
   incognito spaces too. Favourites and pinned cards sit above them.
+- **Gallery.** See every card of a space, or of all spaces, at a glance; filter, open, close and move them.
 - **Lazy Toolbar** (Ctrl+T / Ctrl+K). One box for addresses, searches, open cards, bookmarks, history, passwords and
   100+ commands.
-- **Private by default.** Tracker blocking, phishing and malware protection, fingerprinting protection, secure DNS
-  (Quad9), HTTPS-first and link cleaning.
+- **Private by default.** Ad and tracker blocking (EasyList and EasyPrivacy), phishing and malware protection,
+  fingerprinting protection, secure DNS (Quad9), HTTPS-first and link cleaning.
 - **Built in.** An encrypted password manager, downloads, history, the Archive of recently closed cards, DevTools,
   user scripts and per-space proxies.
 - **Light on memory.** Out-of-sight cards stop rendering, and idle cards hibernate.
@@ -42,19 +43,25 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.4.1 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.4.1)
+### 1.5.0 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.0)
 
-- **Setup closes JBrowser for you.** Setup no longer stops with "JBrowser is currently running". It offers to close
-  JBrowser, which saves your cards first, and it no longer asks "install for me or for all users?".
-- **30 MB smaller download** (108 MB), and 180 MB less on disk, by leaving out parts of Qt that JBrowser never uses.
-- **Nothing lost when Windows closes JBrowser** (signing out, or an installer), and saves no longer fail when an
-  antivirus scan briefly holds a file.
-- Update window fixes: no second download after closing it mid-download, and no stray messages.
+- **Gallery** (Ctrl+Shift+G, or the new *Gallery* button): every card of a space as a grid of live thumbnails. Filter,
+  open, close and reorder cards, and switch to **All spaces** to see every space at once and drag cards between them.
+- **Colour tints**: 10 colours and *No colour* in Settings → Appearance and the welcome setup. A light wash over
+  Acrylic or Mica, stronger with *Solid*; incognito spaces stay black.
+- **Drag cards anywhere**: by the card's ribbon (or Alt + drag on the page) along the canvas or onto a space in the
+  sidebar, and within the sidebar list.
+- **Ad and tracker blocking that works**: a real Adblock Plus filter engine for EasyList and EasyPrivacy, and ad
+  boxes are hidden before the page paints.
+- **Fewer CAPTCHAs** on Google and Cloudflare: JBrowser now looks like the Chrome it is built on, and leaves
+  sign-in and security-check sites untouched.
+- The clock is centred in the sidebar, and the *New card* button shows even in an empty space.
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.4.1 | Setup closes a running JBrowser for you, a 30 MB smaller download, nothing lost when Windows closes JBrowser |
 | 1.4.0 | Automatic updates from GitHub, a proper Windows installer, a livelier welcome animation, open source under the GNU GPL v3 |
 | 1.2.0 | First-run welcome and guided tour, pull to add a card, favourites and pinned cards, the Archive (closed cards from the last 48 hours), an optional Home button |
 | 1.1.0 | Rebuilt Settings, phishing and malware protection, fingerprinting protection, HTTPS-first, download protection, *Clear browsing data* and *Reset* |

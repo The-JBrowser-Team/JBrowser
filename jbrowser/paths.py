@@ -28,7 +28,7 @@ class AppPaths:
     OWNED = ("Profiles", "Logs", "Cache", "JBrowser", "settings.json", "session.json", "history.sqlite3",
              "history.sqlite3-wal", "history.sqlite3-shm", "history.sqlite3-journal", "bookmarks.json",
              "vault.bin", "downloads.json", "userscripts.json", "blocklist.txt", "threats.txt", ".factory-reset",
-             "archive.json", "favourites.json")
+             "archive.json", "favourites.json", "filters.txt")
 
     def __init__(self, root: str | os.PathLike | None = None):
         self.portable = bool(root)

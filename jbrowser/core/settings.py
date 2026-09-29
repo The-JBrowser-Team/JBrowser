@@ -45,6 +45,9 @@ DEFAULTS: dict[str, Any] = {
     "appearance.favorites_bar": True,
     "appearance.force_dark_web": False,
     "appearance.sounds": True,               # welcome-screen sound effects
+    "appearance.tint": "none",               # a colour tint from ui/theme.py TINTS, or "none"
+    "sidebar.new_card_always": True,         # "New card" row even when a space has no cards
+    "gallery.all_spaces": False,             # the Gallery shows every space, not just the current one
     # Ribbon (title bar)
     "toolbar.home_button": False,
     "toolbar.home_mode": "lazy",             # lazy (open the Lazy Toolbar) | url

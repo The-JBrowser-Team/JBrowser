@@ -13,7 +13,8 @@ None of them imports `jbrowser.ui`.
 | `archive.py` | The Archive: cards closed in the last 48 hours |
 | `downloads.py` | Accepts downloads, tracks progress, adds Mark-of-the-Web, keeps the list |
 | `vault.py` | The encrypted password vault (AES-256-GCM; key protected by DPAPI or a master password) |
-| `privacy.py` | Tracker blocking, Global Privacy Control / Do Not Track, link cleaning, HTTPS-first, dev-host routing |
+| `privacy.py` | Tracker and ad blocking (the request interceptor, list updates, element hiding), Global Privacy Control / Do Not Track, link cleaning, HTTPS-first, dev-host routing, the bot-check site exemptions |
+| `adfilter.py` | `FilterEngine`: a token-indexed **Adblock Plus filter engine** for EasyList / EasyPrivacy (network filters, `@@` exceptions, `$options`, `##` element hiding) |
 | `blocklist_data.py` | The built-in tracker and ad domain list |
 | `threats.py` | Phishing and malware protection (local URLhaus / Phishing Army lists) |
 | `network.py` | Secure DNS (DoH), proxies and the localhost developer toolkit |

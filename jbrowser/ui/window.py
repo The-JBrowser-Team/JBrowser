@@ -15,6 +15,7 @@ from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
 from jbrowser.ui.favorites_bar import FavoritesBar
+from jbrowser.ui.gallery import Gallery
 from jbrowser.ui.hotkeys import HotkeySheet
 from jbrowser.ui.icons import app_icon
 from jbrowser.ui.lazy_toolbar import LazyToolbar
@@ -33,6 +34,10 @@ class RootWidget(QWidget):
         if th.translucent:
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
             p.fillRect(self.rect(), Qt.GlobalColor.transparent)
+            wash = th.backdrop_wash()          # colour tint or incognito black over the backdrop
+            if wash is not None:
+                p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+                p.fillRect(self.rect(), wash)
         else:
             p.fillRect(self.rect(), th.c("window"))
         p.end()
@@ -136,6 +141,8 @@ class MainWindow(QMainWindow):
         h.addWidget(right, 1)
         self.right = right
 
+        self.gallery = Gallery(ctx, self.ui, self.stack)
+        self.gallery.visibilityChanged.connect(self.titlebar.gallery_btn.setChecked)
         self.lazy = LazyToolbar(ctx, self.ui, root)
         self.hotkeys = HotkeySheet(ctx, root)
         self.toasts = ToastManager(root)
@@ -149,6 +156,7 @@ class MainWindow(QMainWindow):
         self.native.resizable = lambda: not self.isFullScreen() and self._immersive is None
         self.native.on_caption_menu = self._on_caption_menu
         self._onboarding = None
+        self._alt_drag: dict | None = None     # Alt + drag on a card (see eventFilter)
         self._peek_timer = QTimer(self)
         self._peek_timer.setSingleShot(True)
         self._peek_timer.setInterval(140)
@@ -156,6 +164,11 @@ class MainWindow(QMainWindow):
 
         th = theme()
         th.changed.connect(self.apply_backdrop)
+        th.changed.connect(self.update)
+        # Incognito spaces are always black; everything else follows the chosen theme and tint.
+        ctx.state.activeSpaceChanged.connect(lambda sp, _prev: th.set_incognito(bool(sp and sp.incognito)))
+        active = ctx.state.active_space
+        th.set_incognito(bool(active and active.incognito))
         lc = ctx.lifecycle
         lc.aboutToThrottle.connect(self._on_about_to_throttle)
         lc.aboutToSleep.connect(self._on_about_to_sleep)
@@ -330,6 +343,8 @@ class MainWindow(QMainWindow):
 
     def eventFilter(self, obj, ev) -> bool:
         t = ev.type()
+        if self._alt_drag is not None and t in (QEvent.Type.MouseMove, QEvent.Type.MouseButtonRelease):
+            return self._alt_drag_event(t, ev)
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip):
             # Native Windows 11 rounded corners + border for menus, combo popups and tooltips.
@@ -352,6 +367,11 @@ class MainWindow(QMainWindow):
         elif t == QEvent.Type.MouseButtonPress and isinstance(obj, QWidget) and obj.window() is self:
             btn = ev.button()
             card = self._card_of(obj)
+            if card is not None and btn == Qt.MouseButton.LeftButton and \
+                    ev.modifiers() & Qt.KeyboardModifier.AltModifier and card.stack.isAncestorOf(obj):
+                # Alt + drag anywhere on a card moves it (the page never sees this click).
+                self._alt_drag = {"tab": card.tab.id, "start": ev.globalPosition().toPoint(), "active": False}
+                return True
             if card is not None and btn in (Qt.MouseButton.BackButton, Qt.MouseButton.ForwardButton):
                 card.ctrl.back() if btn == Qt.MouseButton.BackButton else card.ctrl.forward()
                 return True
@@ -360,6 +380,24 @@ class MainWindow(QMainWindow):
                         self.ctx.state.active_space.active_tab_id != card.tab.id:
                     self.ctx.state.set_active_tab(card.tab.id)
         return False
+
+    def _alt_drag_event(self, t, ev) -> bool:
+        drag = self._alt_drag
+        canvas = self.stack.current()
+        pos = ev.globalPosition().toPoint()
+        if t == QEvent.Type.MouseMove:
+            if not drag["active"] and (pos - drag["start"]).manhattanLength() > 8:
+                drag["active"] = True
+                QApplication.setOverrideCursor(Qt.CursorShape.ClosedHandCursor)
+            if drag["active"] and canvas is not None:
+                canvas._on_drag(drag["tab"], pos)
+            return True
+        self._alt_drag = None                          # button released
+        if drag["active"]:
+            QApplication.restoreOverrideCursor()
+            if canvas is not None:
+                canvas._on_drag_end()
+        return True
 
     def _on_focus_changed(self, _old, new) -> None:
         if new is None or not isinstance(new, QWidget) or new.window() is not self:

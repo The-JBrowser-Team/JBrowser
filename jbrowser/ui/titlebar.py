@@ -240,6 +240,49 @@ class UpdateChip(QAbstractButton):
         p.end()
 
 
+class GalleryButton(QAbstractButton):
+    """Labelled "Gallery" pill on the ribbon; highlighted while the Gallery is open."""
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.setCheckable(True)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setToolTip("Gallery: see every card at a glance (Ctrl+Shift+G)")
+        self.setAccessibleName("Gallery")
+        self._hover = False
+        self.setFixedSize(QFontMetrics(self.font()).horizontalAdvance("Gallery") + 42, BTN)
+
+    def enterEvent(self, e) -> None:
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, e) -> None:
+        self._hover = False
+        self.update()
+
+    def nextCheckState(self) -> None:
+        pass                               # the Gallery itself reports whether it is open
+
+    def paintEvent(self, _e) -> None:
+        th = theme()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(2, 4, -2, -4)
+        path = QPainterPath()
+        path.addRoundedRect(r, r.height() / 2, r.height() / 2)
+        if self.isChecked():
+            p.fillPath(path, th.c("accent"))
+            fg = th.accent_text()
+        else:
+            if self._hover or self.isDown():
+                p.fillPath(path, th.c("pressed" if self.isDown() else "hover"))
+            fg = th.c("text")
+        draw_glyph(p, QRectF(r.left() + 8, r.top(), 16, r.height()), "gallery", fg, 12)
+        p.setPen(fg)
+        p.drawText(QRectF(r.left() + 28, r.top(), r.width() - 32, r.height()), Qt.AlignmentFlag.AlignVCenter, "Gallery")
+        p.end()
+
+
 def _group(parent: QWidget, *buttons: QWidget) -> QWidget:
     """A tight cluster of related buttons (like Chrome's toolbar sections)."""
     box = QWidget(parent)
@@ -280,8 +323,10 @@ class TitleBar(QWidget):
         self.menu_btn = IconButton("more", "Menu", self, size=BTN, glyph_px=14)
         self.update_chip = UpdateChip(self)
         self.update_chip.clicked.connect(ui.show_update_dialog)
-        self.tool_group = _group(self, self.update_chip, self.layout_btn, self.shield, self.downloads,
-                                 self.menu_btn)
+        self.gallery_btn = GalleryButton(self)
+        self.gallery_btn.clicked.connect(lambda: ui.toggle_gallery())
+        self.tool_group = _group(self, self.update_chip, self.gallery_btn, self.layout_btn, self.shield,
+                                 self.downloads, self.menu_btn)
         lay.addWidget(self.tool_group)
         lay.addSpacing(12)
         self.min_btn = IconButton("min", "Minimize", self, size=TITLE_H, glyph_px=9, width=46)

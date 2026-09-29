@@ -14,11 +14,28 @@ from jbrowser.core.jsonstore import atomic_write_bytes
 from jbrowser.core.settings import Settings
 from jbrowser.core.urls import is_local_host, registrable_domain, strip_www
 from jbrowser.core.workers import fetch_text
+from jbrowser.services.adfilter import FilterEngine, split_list
 from jbrowser.services.blocklist_data import builtin_rules
 
 log = logging.getLogger(__name__)
 
 RT = QWebEngineUrlRequestInfo.ResourceType
+# Qt resource types → the request types Adblock Plus filters talk about.
+_RTYPE = {
+    RT.ResourceTypeScript: "script", RT.ResourceTypeImage: "image", RT.ResourceTypeFavicon: "image",
+    RT.ResourceTypeStylesheet: "stylesheet", RT.ResourceTypeFontResource: "font",
+    RT.ResourceTypeSubFrame: "subdocument", RT.ResourceTypeXhr: "xmlhttprequest", RT.ResourceTypeJson: "xmlhttprequest",
+    RT.ResourceTypeMedia: "media", RT.ResourceTypePing: "ping", RT.ResourceTypeCspReport: "ping",
+    RT.ResourceTypeObject: "object", RT.ResourceTypePluginResource: "object", RT.ResourceTypeWebSocket: "websocket",
+}
+
+# Sites that must never have JBrowser's page-level privacy changes (canvas noise) or third-party cookie
+# blocking get in the way: CAPTCHA / bot-check providers and the big sign-in pages. Bot checks look
+# for exactly the kind of changes privacy protection makes, and answer with "unusual traffic" pages.
+CHALLENGE_SITES = ("google.com", "gstatic.com", "recaptcha.net", "youtube.com", "hcaptcha.com", "cloudflare.com",
+                   "arkoselabs.com", "funcaptcha.com", "microsoftonline.com", "live.com", "microsoft.com",
+                   "apple.com", "icloud.com", "paypal.com")
+CAPTCHA_COOKIE_SITES = ("recaptcha.net", "hcaptcha.com", "challenges.cloudflare.com", "arkoselabs.com")
 
 BLOCKLIST_SOURCES = [
     ("EasyPrivacy (trackers & telemetry)", "https://easylist.to/easylist/easyprivacy.txt"),
@@ -139,6 +156,8 @@ class PrivacyService(QObject):
         super().__init__(parent)
         self.settings = settings
         self.blocklist = Blocklist(blocklist_file)
+        self.filters_file = blocklist_file.with_name("filters.txt")
+        self.filters: FilterEngine | None = FilterEngine.load(self.filters_file)
         self._dev_map: dict[str, tuple[str, int]] = {}
         self._upgraded: dict[str, float] = {}
         self._no_upgrade: set[str] = set()
@@ -155,6 +174,7 @@ class PrivacyService(QObject):
             self._reload()
 
     def _reload(self) -> None:
+        self._cosmetic_cache: tuple = (None, "")
         s = self.settings
         self.block_trackers = bool(s.get("privacy.block_trackers"))
         self.gpc = bool(s.get("privacy.gpc"))
@@ -195,7 +215,8 @@ class PrivacyService(QObject):
         self.settings.set("privacy.allowlist", items)
 
     def should_block(self, info: QWebEngineUrlRequestInfo) -> bool:
-        if info.resourceType() == RT.ResourceTypeMainFrame:
+        rt = info.resourceType()
+        if rt == RT.ResourceTypeMainFrame:
             return False
         url = info.requestUrl()
         host = url.host().lower()
@@ -207,12 +228,46 @@ class PrivacyService(QObject):
         if not self.block_trackers:
             return False
         first = info.firstPartyUrl().host().lower()
-        if first:
-            if self.is_allowlisted(first):
+        if first and self.is_allowlisted(first):
+            return False
+        third = not first or registrable_domain(first) != registrable_domain(host)
+        eng = self.filters
+        if eng is not None and eng.site_allowed(first):
+            return False
+        rtype = _RTYPE.get(rt, "other")
+        text = ""
+        important = False
+        # Tracker and ad domains (hosts lists and ||domain^ rules) are blocked on other sites only.
+        blocked = third and self.blocklist.match(host, url.path() or "/")
+        if not blocked and eng is not None:
+            text = url.toString(QUrl.ComponentFormattingOption.FullyEncoded).lower()
+            f = eng.blocking_filter(text, first or host, rtype, third)
+            blocked = f is not None
+            important = bool(f and f.important)
+        if not blocked:
+            return False
+        if eng is not None and not important:
+            text = text or url.toString(QUrl.ComponentFormattingOption.FullyEncoded).lower()
+            if eng.excepted(text, first or host, rtype, third):
                 return False
-            if registrable_domain(first) == registrable_domain(host):
-                return False
-        return self.blocklist.match(host, url.path() or "/")
+        return True
+
+    def cosmetic_script(self) -> str:
+        """Profile script that hides ad boxes and "Advertisement" frames, or "" when tracker blocking
+        is off or no lists have been downloaded yet (see engine/js.py cosmetic_js)."""
+        from jbrowser.engine.js import cosmetic_js
+        if not self.block_trackers or self.filters is None:
+            return ""
+        key = (id(self.filters), tuple(sorted(self.allowlist)))
+        if self._cosmetic_cache[0] != key:
+            self._cosmetic_cache = (key, cosmetic_js(self.filters.cosmetic_data(), sorted(self.allowlist)))
+        return self._cosmetic_cache[1]
+
+    @staticmethod
+    def is_challenge_site(host: str) -> bool:
+        host = strip_www(host.lower())
+        return any(host == d or host.endswith("." + d) for d in CHALLENGE_SITES) or \
+            bool(re.match(r"^(?:[\w-]+\.)*google\.[a-z]{2,3}(?:\.[a-z]{2})?$", host))
 
     def rewrite(self, info: QWebEngineUrlRequestInfo) -> QUrl | None:
         """Dev-host routing and HTTPS upgrades. Returns a redirect target or None."""
@@ -271,6 +326,11 @@ class PrivacyService(QObject):
     def allow_cookie(self, request) -> bool:
         if not self.block_3p_cookies or not request.thirdParty:
             return True
+        # CAPTCHA widgets keep their "this person already passed" state in their own cookies; without
+        # them every site shows a harder challenge.
+        origin = request.origin.host().lower()
+        if origin and any(origin == d or origin.endswith("." + d) for d in CAPTCHA_COOKIE_SITES):
+            return True
         first = request.firstPartyUrl.host()
         return bool(first) and self.is_allowlisted(first)
 
@@ -280,7 +340,8 @@ class PrivacyService(QObject):
         if not self.block_trackers or not self.settings.get("privacy.blocklist_auto"):
             return
         last = float(self.settings.get("privacy.blocklist_updated") or 0)
-        if time.time() - last > 7 * 24 * 3600:
+        # filters.txt is new in 1.5: fetch it now rather than at the next weekly refresh.
+        if time.time() - last > 7 * 24 * 3600 or not self.filters_file.exists():
             self.update_blocklist(manual=False)
 
     def update_blocklist(self, proxies: dict | None = None, manual: bool = True) -> bool:
@@ -290,23 +351,29 @@ class PrivacyService(QObject):
         if manual:
             self.settings.set("privacy.blocklist_auto", True)
         self._updater = BlocklistUpdater([u for _, u in BLOCKLIST_SOURCES], self.blocklist.extra_file,
-                                         proxies if proxies is not None else self.proxy_provider(), self)
+                                         self.filters_file, proxies if proxies is not None else self.proxy_provider(),
+                                         self)
         self._updater.done.connect(self._on_updated)
         self._updater.start()
         return True
 
     def _on_updated(self, count: int, error: str) -> None:
         self.blocklist.load_extra()
+        self.filters = FilterEngine.load(self.filters_file)
+        self._reload()
         if count:
             self.settings.set("privacy.blocklist_updated", time.time())
-        self.blocklistUpdated.emit(len(self.blocklist), error)
+        self.blocklistUpdated.emit(len(self.blocklist) + (self.filters.network_count if self.filters else 0), error)
 
     def reset_blocklist(self) -> None:
-        try:
-            self.blocklist.extra_file.unlink()
-        except OSError:
-            pass
+        for f in (self.blocklist.extra_file, self.filters_file):
+            try:
+                f.unlink()
+            except OSError:
+                pass
         self.blocklist.load_extra()
+        self.filters = None
+        self._reload()
         self.settings.set("privacy.blocklist_updated", 0)
         self.settings.set("privacy.blocklist_auto", False)
         self.last_update_manual = True
@@ -316,21 +383,26 @@ class PrivacyService(QObject):
 class BlocklistUpdater(QThread):
     done = pyqtSignal(int, str)
 
-    def __init__(self, urls: list[str], out_file: Path, proxies: dict, parent: QObject | None = None):
+    def __init__(self, urls: list[str], out_file: Path, filters_file: Path, proxies: dict,
+                 parent: QObject | None = None):
         super().__init__(parent)
         self._urls = urls
         self._out = out_file
+        self._filters_out = filters_file
         self._proxies = proxies
 
     def run(self) -> None:  # worker thread
         domains: set[str] = set()
+        rest: list[str] = []
         errors = []
         headers = {"User-Agent": "JBrowser blocklist updater", "DNT": "1"}
         for url in self._urls:
             if self.isInterruptionRequested():
                 return
             try:
-                domains |= parse_filter_list(fetch_text(url, headers, self._proxies, self.isInterruptionRequested))
+                d, r = split_list(fetch_text(url, headers, self._proxies, self.isInterruptionRequested))
+                domains |= d
+                rest += r
             except InterruptedError:
                 return
             except Exception as exc:  # network errors are reported, not fatal
@@ -339,6 +411,9 @@ class BlocklistUpdater(QThread):
             return
         if domains:
             atomic_write_bytes(self._out, "\n".join(sorted(domains)).encode("utf-8"))
+        if rest:
+            header = "! JBrowser: URL-pattern, exception and element-hiding rules from the lists in Settings\n"
+            atomic_write_bytes(self._filters_out, (header + "\n".join(dict.fromkeys(rest))).encode("utf-8"))
         self.done.emit(len(domains), "\n".join(errors))
 
 
@@ -366,15 +441,19 @@ class ProfileInterceptor(QWebEngineUrlRequestInterceptor):
 class PageInterceptor(QWebEngineUrlRequestInterceptor):
     """Per-card interceptor so blocked requests can be attributed and counted per card."""
 
-    def __init__(self, privacy: PrivacyService, on_blocked: Callable[[str], None], parent: QObject | None = None):
+    def __init__(self, privacy: PrivacyService, on_blocked: Callable[[str], None], parent: QObject | None = None,
+                 on_websocket: Callable[[], None] | None = None):
         super().__init__(parent)
         self._p = privacy
         self._on_blocked = on_blocked
+        self._on_websocket = on_websocket
 
     def interceptRequest(self, info: QWebEngineUrlRequestInfo) -> None:
         try:
             if self._p.should_block(info):
                 info.block(True)
                 self._on_blocked(info.requestUrl().host())
+            elif self._on_websocket is not None and info.resourceType() == RT.ResourceTypeWebSocket:
+                self._on_websocket()
         except Exception:
             log.exception("PageInterceptor failed")

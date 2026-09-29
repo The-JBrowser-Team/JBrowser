@@ -28,6 +28,7 @@ LAYOUT_MS = 230
 ADD_BTN = 44
 PULL_DIST = 440.0   # wheel / trackpad travel past an end of the canvas that opens a new card there
 REVEAL = 88.0       # how far the cards slide aside while being pulled
+DRAG_LIFT = 6       # px a card rises while it is being dragged
 
 
 class EdgePullIndicator(QWidget):
@@ -164,6 +165,9 @@ class Canvas(QWidget):
         self._first_show = True
         self._layout_pending = False
         self._drag_tab: str | None = None
+        self._drag_grab = 0.0          # pointer's distance from the dragged card's left edge
+        self._drag_x = 0.0             # dragged card's left edge, in canvas content coordinates
+        self._drop_space: str | None = None   # a space in the sidebar the card would move to
         self._empty_hover = False
         self._solo: str | None = None
         self.minimap = Minimap(self)
@@ -298,6 +302,11 @@ class Canvas(QWidget):
             if g is None:
                 continue
             x, w = g
+            if tid == self._drag_tab:
+                # The dragged card follows the pointer, lifted slightly above the others.
+                card.setGeometry(int(round(self._drag_x - off)), TOP - DRAG_LIFT, max(1, int(round(w))), h)
+                card.raise_()
+                continue
             card.setGeometry(int(round(x - off)), TOP, max(1, int(round(w))), h)
         self._place_pull_indicator(h, off)
         self._update_visibility()
@@ -651,35 +660,65 @@ class Canvas(QWidget):
             self._apply()
 
     # ----------------------------------------------------------- reordering
+    # Dragging a card: by its header, or with Alt held anywhere on it (routed here by the window).
+    # The card follows the pointer, the others slide aside to show where it will land, and letting go
+    # over a space in the sidebar moves the card to that space.
     def _on_drag(self, tab_id: str, global_pos: QPoint) -> None:
-        self._drag_tab = tab_id
         local = self.mapFromGlobal(global_pos)
         content_x = local.x() + self._offset
+        g = self._geo.get(tab_id)
+        if g is None:
+            return
+        if self._drag_tab != tab_id:                       # the drag just started
+            self._drag_tab = tab_id
+            self._drag_grab = content_x - g[0]
+        w = g[1]
+        self._drag_x = content_x - self._drag_grab
+        centre = self._drag_x + w / 2
         targets = self.targets()
         order = [t.id for t in self.space.tabs]
         cur = order.index(tab_id) if tab_id in order else -1
         new_index = cur
         for i, tid in enumerate(order):
-            x, w = targets[tid]
             if tid == tab_id:
                 continue
-            mid = x + w / 2
-            if i < cur and content_x < mid:
+            x, tw = targets[tid]
+            mid = x + tw / 2
+            if i < cur and centre < mid:
                 new_index = min(new_index, i)
-            elif i > cur and content_x > mid:
+            elif i > cur and centre > mid:
                 new_index = max(new_index, i)
         if new_index != cur and new_index >= 0:
             self.ctx.state.move_tab(tab_id, new_index)
+        sidebar = self.ui.window.sidebar
+        self._drop_space = sidebar.drop_target_at(global_pos, exclude=self.space.id)
         edge = 48
-        if local.x() < edge:
-            self.scroll_by(-24, animated=False)
-        elif local.x() > self.width() - edge:
-            self.scroll_by(24, animated=False)
+        if 0 <= local.y() <= self.height():
+            if local.x() < edge:
+                self.scroll_by(-24, animated=False)
+            elif local.x() > self.width() - edge:
+                self.scroll_by(24, animated=False)
+        self._apply()
 
     def _on_drag_end(self) -> None:
+        tab_id, self._drag_tab = self._drag_tab, None
+        target, self._drop_space = self._drop_space, None
+        self.ui.window.sidebar.clear_drop_target()
+        if not tab_id:
+            return
+        if target:
+            self.ui.move_tab_to_space(tab_id, target)
+            return
+        g = self._geo.get(tab_id)
+        if g is not None:
+            self._geo[tab_id] = (self._drag_x, g[1])      # settle into its slot from where it was dropped
+        self.request_layout(animated=True)
+        self.ensure_visible(tab_id)
+
+    def cancel_drag(self) -> None:
         if self._drag_tab:
-            self.ensure_visible(self._drag_tab)
-        self._drag_tab = None
+            self._drop_space = None
+            self._on_drag_end()
 
     # ---------------------------------------------------------------- paint
     def _empty_rect(self) -> QRect:
@@ -728,13 +767,15 @@ class Canvas(QWidget):
         p.fillRect(self.rect(), th.surface("canvas"))
         view = QRectF(self.rect())
         base = th.c("shadow")
-        for card in self.cards.values():
+        for tid, card in self.cards.items():
             if not card.isVisible():
                 continue
             g = QRectF(card.geometry())
             if not g.intersects(view):
                 continue
-            for spread, alpha in ((9, 0.10), (5, 0.16), (2, 0.24)):
+            lifted = tid == self._drag_tab
+            layers = ((22, 0.10), (13, 0.18), (6, 0.26)) if lifted else ((9, 0.10), (5, 0.16), (2, 0.24))
+            for spread, alpha in layers:
                 c = QColor(base)
                 c.setAlphaF(base.alphaF() * alpha)
                 path = QPainterPath()
@@ -816,10 +857,17 @@ class SpaceStack(QWidget):
             c.setGeometry(self.rect())
             c.show()
         self.current_id = space_id
+        self._raise_overlays()
 
     def _on_active_space(self, space: Space, previous: Space | None) -> None:
         new = self.canvases.get(space.id)
         old = self.canvases.get(self.current_id)
+        if old is not None and old is not new and old.isVisible():
+            # A last picture of the cards being left, for the Gallery's all-spaces view.
+            for tid in old.visible_tab_ids():
+                card = old.cards.get(tid)
+                if card is not None and not card.tab.loading:   # a half-drawn page makes a blank picture
+                    card.take_snapshot()
         if new is None or new is old:
             self._show_immediately(space.id)
             return
@@ -842,6 +890,7 @@ class SpaceStack(QWidget):
         new.setGeometry(0, direction * h, self.width(), h)
         new.show()
         new.raise_()
+        self._raise_overlays()
 
         def frame(t):
             t = float(t)
@@ -864,6 +913,12 @@ class SpaceStack(QWidget):
         anim.finished.connect(done)
         self._anim = anim
         anim.start()
+
+    def _raise_overlays(self) -> None:
+        """Overlays that live in the stack (the Gallery) stay above the canvases."""
+        for w in self.children():
+            if getattr(w, "stays_on_top", False) and isinstance(w, QWidget) and w.isVisible():
+                w.raise_()
 
     def resizeEvent(self, e) -> None:
         if self._anim is None:

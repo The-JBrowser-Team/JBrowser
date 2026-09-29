@@ -4,7 +4,11 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 
 ### Windows 11 look & feel
 - **Acrylic** by default, or **Mica, Mica Alt** or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
-- Segoe UI throughout, with restrained weights; a 12-hour clock next to the logo, which doubles as the Settings button.
+- **Colour tints**: rose, coral, amber, lime, mint, teal, sky, indigo, violet, slate or *No colour* (Settings →
+  Appearance, the welcome setup, or "colour" in the Lazy Toolbar). Over Acrylic or Mica it is a light wash; with
+  *Solid* the surfaces take on the colour. Incognito spaces are always black.
+- Segoe UI throughout, with restrained weights; a 12-hour clock centred in the sidebar header, and the logo doubles
+  as the Settings button.
 - Custom title bar that keeps native behaviour: drag, double-click maximise, Aero Snap, **Snap Layouts flyout** on the maximise button, rounded corners, shadow, resize edges.
   Buttons are grouped like Chrome: navigation · address pill · tools · window controls.
 - Alpha-layered surfaces over the backdrop; natively rounded menus and tooltips; Segoe Fluent Icons throughout.
@@ -21,7 +25,18 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**.
 - Multi-select with **Ctrl + Click / Shift + Click** on card headers (or in the sidebar list), **Ctrl + Shift + A** selects all.
 - Split presets: **50 / 50** (Alt+Shift+D), **33 / 33 / 33** (Alt+Shift+T), **25 % × 4** (Alt+Shift+Q), focus 80 %.
-- Drag a card header to reorder, double-click it to toggle full width, middle-click to close.
+- **Drag a card by its ribbon** to reorder it (the card lifts and the others make room), or drop it onto a space in
+  the sidebar to move it there. **Alt + drag** anywhere on a card does the same. Double-click a ribbon to toggle full
+  width, middle-click to close.
+- Cards in the sidebar list can be dragged too: a line shows where the card lands, and dropping it on a space moves it.
+
+### Gallery (Ctrl+Shift+G, or the Gallery button on the ribbon)
+- Every card of the space as a grid of live thumbnails that pop in one after another; the current card is marked.
+- **This space / All spaces** switch: all spaces at once, grouped under each space's name, icon and colour.
+- Type to filter by title or address; arrow keys, Home/End and Enter to open; Delete or × to close a card; Esc to
+  go back. Drag tiles to reorder, or into another space's group to move them. *New card* tiles add a card.
+- Built for the keyboard and screen readers (every tile has an accessible name and description), and it follows
+  *Fluid Animations*.
 
 ### Spaces & isolation
 - **Home / Work / Other** by default; create, rename, recolour, re-icon, reorder and delete spaces.
@@ -34,6 +49,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   current space or opens it. Add or remove them from the card menu or the Lazy Toolbar.
 - The sidebar can be **hidden completely** (Ctrl+B, its hide button, or right-click → Hide sidebar); point at the left
   edge of the window to peek at it.
+- The **New card** button sits at the end of the sidebar's card list, even in an empty space (Settings → Appearance →
+  *Always show the "New card" button*).
 
 ### Performance & tab lifecycle
 - **Coalescing update pipeline**: engine events (title, favicon, progress, audio…) are written to state models and
@@ -63,15 +80,19 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   proxies applied at start-up; system proxy; credentials protected with DPAPI; connection test.
 - **Localhost developer toolkit**: map hosts such as `app.test → 127.0.0.1:3000` (requests are transparently routed),
   one-click launchers for common dev ports with live "something is listening" indicators.
-- **Privacy sandbox**: built-in blocklist of third-party trackers, ad networks, cryptominers and telemetry
-  (updatable from EasyPrivacy / EasyList / Peter Lowe / NoCoin), per-card blocked counter, per-site protection toggle,
-  third-party-cookie blocking, **Global Privacy Control** and **Do Not Track** headers + JS signals,
-  pop-up blocking, WebRTC IP-leak protection. The tracker lists refresh weekly in the background.
+- **Tracker and ad blocking** with a built-in **Adblock Plus filter engine**: the full EasyList and EasyPrivacy rules
+  (address patterns, `@@` exceptions, `$third-party`, `$domain=`, resource types, `$important`) plus the Peter Lowe and
+  NoCoin domain lists. **Element hiding** (`##` rules) removes the empty ad boxes left behind, before the page first
+  paints. Per-card blocked counter, per-site protection toggle (an allowed site is left completely alone),
+  third-party-cookie blocking (CAPTCHA providers excepted), **Global Privacy Control** and **Do Not Track** headers +
+  JS signals, pop-up blocking, WebRTC IP-leak protection. The lists refresh weekly in the background.
 - **Phishing and malware protection**: pages on the URLhaus and Phishing Army lists are stopped before they load and
   replaced by a warning page ("Go back to safety" / "Continue anyway"). Lists are stored locally and refreshed weekly;
   the addresses you visit are never sent anywhere.
-- **Fingerprinting protection**: per-site, per-session noise for canvas read-backs and a generic WebGL renderer,
-  CPU core count and memory size, so sites cannot build a stable device fingerprint.
+- **Fingerprinting protection**: per-site, per-session noise in canvas read-backs, so sites cannot build a stable
+  canvas fingerprint. Everything else reports what Chrome reports: JBrowser sends Chrome's headers (including a real
+  `Accept-Language`), changes no hardware values, and leaves sign-in and security-check sites (Google, Cloudflare,
+  Microsoft, Apple, PayPal, CAPTCHA providers) untouched, so it doesn't look like a bot.
 - **Tracking codes removed from links** (`utm_*`, `fbclid`, `gclid`, `mc_eid`, …) before the page opens, plus
   "Copy link without trackers" for sharing.
 - **HTTPS-first (optional)**: http links try the encrypted version first; if it fails, the page opens over http with
@@ -129,4 +150,5 @@ Highlights only: press **Ctrl+/** (or F1) in JBrowser for the full, always-curre
 | Clear browsing data | Ctrl+Shift+Del | Full screen | F11 |
 | Keyboard shortcuts | Ctrl+/, F1 | Quit | Ctrl+Shift+Q |
 | Archive | Ctrl+Shift+Y | Home | Alt+Home |
+| Gallery | Ctrl+Shift+G | Move a card | Alt + drag anywhere on it |
 | Add a card at an end | Alt+← on the first card / Alt+→ on the last, twice | Next / previous card (wraps) | Ctrl+Tab / Ctrl+Shift+Tab |

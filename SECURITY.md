@@ -33,5 +33,7 @@ Examples that are in scope:
 - The auto-updater accepting an installer that was not published on this repository's Releases page, or skipping its
   SHA-256 check.
 - Bypassing the phishing, malware or download-protection features.
+- A filter-list rule (EasyList, EasyPrivacy or any other list JBrowser downloads) that can hang or crash JBrowser, or
+  whose element-hiding CSS can break out of its `<style>` into the page (`jbrowser/services/adfilter.py`).
 
 Bugs in Chromium itself should also go to the [Chromium project](https://www.chromium.org/Home/chromium-security/reporting-security-bugs/).

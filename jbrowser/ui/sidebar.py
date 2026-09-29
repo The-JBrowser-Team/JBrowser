@@ -41,6 +41,7 @@ class SpaceRow(QWidget):
         self.space = space
         self.sidebar = sidebar
         self._hover = False
+        self.drop = False            # a dragged card would move to this space
         self.setFixedHeight(38)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
         self.setMouseTracking(True)
@@ -68,7 +69,13 @@ class SpaceRow(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         active = self.space.id == self.sidebar.ctx.state.active_space_id
         r = QRectF(self.rect()).adjusted(6, 2, -6, -2)
-        if active or self._hover:
+        if self.drop:
+            path = QPainterPath()
+            path.addRoundedRect(r, 8, 8)
+            p.fillPath(path, th.accent_alpha(0.20))
+            p.setPen(QPen(th.c("accent"), 1.5, Qt.PenStyle.DashLine))
+            p.drawPath(path)
+        elif active or self._hover:
             path = QPainterPath()
             path.addRoundedRect(r, 8, 8)
             p.fillPath(path, th.c("selected") if active else th.c("hover"))
@@ -270,7 +277,9 @@ class TabListModel(QAbstractListModel):
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()) -> int:
-        if parent.isValid() or self.space is None or not self.space.tabs:
+        if parent.isValid() or self.space is None:
+            return 0
+        if not self.space.tabs and not self.ctx.settings.get("sidebar.new_card_always"):
             return 0
         return len(self.space.tabs) + 1           # + the "New card" row
 
@@ -421,11 +430,19 @@ class TabDelegate(QStyledItemDelegate):
 
 
 class TabListView(QListView):
+    """The current space's cards. Drag a card to reorder it, or onto a space above to move it there."""
+
+    DRAG_START = 6
+
     def __init__(self, sidebar: "Sidebar"):
         super().__init__(sidebar)
         self.sidebar = sidebar
         self.hover_row = -1
         self.hover_close = False
+        self._press: tuple[str, QPoint] | None = None    # (tab id, press position)
+        self._dragging = False
+        self._drop_row = -1                               # insert before this row (-1: none)
+        self._drop_space: str | None = None
         self.setMouseTracking(True)
         self.setSelectionMode(QAbstractItemView.SelectionMode.NoSelection)
         self.setVerticalScrollMode(QAbstractItemView.ScrollMode.ScrollPerPixel)
@@ -446,6 +463,13 @@ class TabListView(QListView):
 
     def mouseMoveEvent(self, e) -> None:
         pos = e.position().toPoint()
+        if self._press is not None and e.buttons() & Qt.MouseButton.LeftButton:
+            if not self._dragging and (pos - self._press[1]).manhattanLength() > self.DRAG_START:
+                self._dragging = True
+                self.setCursor(Qt.CursorShape.ClosedHandCursor)
+            if self._dragging:
+                self._drag_to(pos, e.globalPosition().toPoint())
+                return
         idx = self.indexAt(pos)
         row = idx.row() if idx.isValid() and self._row_rect(idx).contains(pos) else -1
         tab = idx.data(TabRole) if row >= 0 else None
@@ -482,9 +506,78 @@ class TabListView(QListView):
             if not tab.pinned and self.itemDelegate().close_rect(self._row_rect(idx)).contains(pos):
                 ui.close_tab(tab.id)
             else:
+                self._press = (tab.id, pos)
                 ui.activate_card(tab.id, e.modifiers(), wake=True, center=True)
         elif e.button() == Qt.MouseButton.RightButton:
             ui.show_card_menu(tab.id, e.globalPosition().toPoint())
+
+    def mouseReleaseEvent(self, e) -> None:
+        press, self._press = self._press, None
+        if self._dragging and press is not None:
+            self._finish_drag(press[0])
+        super().mouseReleaseEvent(e)
+
+    # ------------------------------------------------------------------ dragging
+    def _drag_to(self, pos: QPoint, global_pos: QPoint) -> None:
+        model = self.model()
+        space = model.space if model else None
+        if space is None or self._press is None:
+            return
+        self._drop_space = self.sidebar.drop_target_at(global_pos, exclude=space.id)
+        row = -1
+        if self._drop_space is None and self.viewport().rect().adjusted(0, -30, 0, 30).contains(pos):
+            row = len(space.tabs)
+            for r in range(len(space.tabs)):
+                rect = self._row_rect(model.index(r))
+                if pos.y() < rect.center().y():
+                    row = r
+                    break
+        if row != self._drop_row:
+            self._drop_row = row
+            self.viewport().update()
+        bar = self.verticalScrollBar()
+        if pos.y() < 20:
+            bar.setValue(bar.value() - 8)
+        elif pos.y() > self.viewport().height() - 20:
+            bar.setValue(bar.value() + 8)
+
+    def _finish_drag(self, tab_id: str) -> None:
+        space = self.model().space
+        target, row = self._drop_space, self._drop_row
+        self._dragging = False
+        self._drop_row = -1
+        self._drop_space = None
+        self.unsetCursor()
+        self.sidebar.clear_drop_target()
+        self.viewport().update()
+        if space is None:
+            return
+        if target:
+            self.sidebar.ui.move_tab_to_space(tab_id, target)
+        elif row >= 0:
+            old = space.index_of(tab_id)
+            new = row - 1 if row > old else row
+            self.sidebar.ctx.state.move_tab(tab_id, new)
+
+    def paintEvent(self, e) -> None:
+        super().paintEvent(e)
+        if self._dragging and self._drop_row >= 0:
+            model = self.model()
+            space = model.space
+            if space is None:
+                return
+            if self._drop_row < len(space.tabs):
+                y = self._row_rect(model.index(self._drop_row)).top()
+            else:
+                y = self._row_rect(model.index(len(space.tabs) - 1)).bottom() + 1 if space.tabs else 0
+            p = QPainter(self.viewport())
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            th = theme()
+            p.setPen(QPen(th.c("accent"), 2.5, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+            p.drawLine(14, y, self.viewport().width() - 14, y)
+            p.setBrush(th.c("accent"))
+            p.drawEllipse(QRectF(9, y - 3.5, 7, 7))
+            p.end()
 
     def keyPressEvent(self, e) -> None:
         model = self.model()
@@ -574,11 +667,12 @@ class LogoButton(QAbstractButton):
 
 
 class ClockLabel(QLabel):
-    """12-hour clock beside the logo; re-aligns itself to every minute boundary."""
+    """12-hour clock in the middle of the sidebar header; re-aligns itself to every minute boundary."""
 
     def __init__(self, parent: QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+        self.setAlignment(Qt.AlignmentFlag.AlignCenter)
         f = self.font()
         f.setPointSizeF(10.5)
         f.setWeight(QFont.Weight.Normal)
@@ -596,6 +690,8 @@ class ClockLabel(QLabel):
 
 
 class SidebarHeader(QWidget):
+    """Logo (Settings) on the left, hide button on the right, and the clock centred between them."""
+
     def __init__(self, sidebar: "Sidebar"):
         super().__init__(sidebar)
         self.sidebar = sidebar
@@ -606,12 +702,18 @@ class SidebarHeader(QWidget):
         lay.setSpacing(8)
         self.logo = LogoButton(self)
         self.logo.clicked.connect(lambda: sidebar.ui.open_settings())
-        self.clock = ClockLabel(self)
         self.toggle = IconButton("closepane", "Hide sidebar (Ctrl+B)", self, size=30, glyph_px=14)
         lay.addWidget(self.logo)
-        lay.addWidget(self.clock)
         lay.addStretch(1)
         lay.addWidget(self.toggle)
+        # Positioned by hand so it sits in the true centre of the sidebar, not between two
+        # buttons of different widths.
+        self.clock = ClockLabel(self)
+
+    def resizeEvent(self, e) -> None:
+        super().resizeEvent(e)
+        top = self.layout().contentsMargins().top()
+        self.clock.setGeometry(44, top, max(0, self.width() - 88), self.height() - top)
 
 
 class Sidebar(QWidget):
@@ -717,6 +819,7 @@ class Sidebar(QWidget):
         ctx.downloads.activeCountChanged.connect(self._on_downloads)
         ctx.downloads.updated.connect(lambda *_: self._on_downloads())
         ctx.archive.changed.connect(self._on_archive)
+        ctx.settings.changed.connect(lambda k, _v: self._on_tabs_changed() if k == "sidebar.new_card_always" else None)
         self.rebuild()
         self._on_archive()
 
@@ -778,6 +881,27 @@ class Sidebar(QWidget):
         y = self.divider.height() // 2
         p.drawLine(18, y, self.divider.width() - 18, y)
         p.end()
+
+    # --------------------------------------------------- drag and drop target
+    def drop_target_at(self, global_pos: QPoint, exclude: str = "") -> str | None:
+        """The space whose row is under ``global_pos`` (a card being dragged there would move to
+        it), highlighting that row. None, and no highlight, anywhere else."""
+        found = None
+        for sid, row in self._rows.items():
+            over = (sid != exclude and row.isVisible() and self.isVisible()
+                    and row.rect().contains(row.mapFromGlobal(global_pos)))
+            if over:
+                found = sid
+            if row.drop != over:
+                row.drop = over
+                row.update()
+        return found
+
+    def clear_drop_target(self) -> None:
+        for row in self._rows.values():
+            if row.drop:
+                row.drop = False
+                row.update()
 
     def focus_spaces(self) -> None:
         if self.hidden_mode and not self.floating:

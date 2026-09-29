@@ -758,6 +758,7 @@ class BrowserController(QObject):
                     shortcut="Ctrl+Shift+N")
         menu_action(m, "Reopen closed card", lambda: run("card.reopen"), "history", shortcut="Ctrl+Shift+T")
         m.addSeparator()
+        menu_action(m, "Gallery", lambda: run("gallery.toggle"), "gallery", shortcut="Ctrl+Shift+G")
         menu_action(m, "Archive", lambda: run("archive.show"), "archive", shortcut="Ctrl+Shift+Y")
         menu_action(m, "History", lambda: run("history.show"), "history", shortcut="Ctrl+H")
         menu_action(m, "Bookmarks", lambda: run("bookmarks.show"), "bookmarks", shortcut="Ctrl+Shift+O")
@@ -844,6 +845,7 @@ class BrowserController(QObject):
         menu_action(m, "New card", lambda: self.open_lazy_toolbar("new"), "add", shortcut="Ctrl+T")
         menu_action(m, "New space…", lambda: self.new_space(False), "people", shortcut="Ctrl+N")
         menu_action(m, "New incognito space", lambda: self.new_space(True), "incognito", shortcut="Ctrl+Shift+N")
+        menu_action(m, "Gallery of all spaces", lambda: self.toggle_gallery(True), "layers")
         menu_action(m, "Archive", lambda: self.show_archive(), "archive", shortcut="Ctrl+Shift+Y")
         m.addSeparator()
         menu_action(m, "Settings", lambda: self.open_settings(), "settings", shortcut="Ctrl+,")
@@ -1068,6 +1070,14 @@ class BrowserController(QObject):
         return ask_master_password(self.ctx, self.window)
 
     # ------------------------------------------------------------- dialogs
+    def toggle_gallery(self, all_spaces: bool | None = None) -> None:
+        """Open or close the Gallery (``all_spaces`` forces the scope when opening)."""
+        if getattr(self.window, "_onboarding", None) is not None:
+            return
+        if self.window.lazy.isVisible():
+            self.window.lazy.close_overlay()
+        self.window.gallery.toggle(all_spaces)
+
     def open_lazy_toolbar(self, mode: str = "new", text: str = "", insert_at: int | None = None) -> None:
         if getattr(self.window, "_onboarding", None) is not None:
             return                      # the welcome screen owns the window until it finishes

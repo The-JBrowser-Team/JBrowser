@@ -5,7 +5,48 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## [1.4.1] - 2026-09-29
+## [1.5.0] - 2026-09-29
+
+### Added
+- **Gallery.** The new *Gallery* button on the ribbon (or Ctrl+Shift+G) spreads every card in the space out as a
+  grid of live thumbnails that pop in one after another. Click a card to jump to it, type to filter by title or
+  address, use the arrow keys and Enter, close cards with ×, drag them to reorder, and add a card from the
+  *New card* tile. The **This space / All spaces** switch shows the cards of every space at once, grouped under each
+  space's name and colour; drag a card into another group to move it to that space. It works with the keyboard
+  and screen readers.
+- **Colour tints.** Settings → Appearance → *Colour tint* has 10 colours (rose, coral, amber, lime, mint, teal, sky,
+  indigo, violet and slate) and *No colour*. With Acrylic or Mica the colour is a light wash over the window; with
+  *Solid* the window takes on the colour fully. Incognito spaces always stay black. You can also pick a colour in
+  the welcome setup.
+- **Drag cards anywhere.** Hold a card's ribbon and drag it along the canvas to reorder it, or drop it onto a space
+  in the sidebar to move it there. Hold **Alt** and drag anywhere on a card to do the same. Cards in the sidebar
+  list can be dragged too: a line shows where the card will land, and dropping it on a space moves it.
+- The welcome setup has a new page about the Gallery, a colour picker on the *Look* page, and a Gallery step in the
+  tour. It shows once more after updating so you can try them.
+- The sidebar menu has *Gallery of all spaces*, and the main menu and command palette have *Gallery*. The command
+  palette can also switch the colour tint (type "colour") and the *New card* button.
+
+### Changed
+- **Tracker and ad blocking works properly now.** JBrowser reads the full Adblock Plus rules in EasyList and
+  EasyPrivacy (address patterns, exceptions and per-site rules), not only whole domains, and hides the empty ad
+  boxes that are left behind. A site on your allowed list is left completely alone. Settings shows how many rules
+  are active. The rules download in the background the first time JBrowser starts after updating.
+- **Fewer "unusual traffic" and "Checking your browser" pages.** JBrowser now looks like the Chrome it is built on:
+  it sends the same language header, no longer changes the reported processor, memory or graphics card, and
+  leaves Google, Cloudflare, Microsoft, Apple, PayPal and CAPTCHA pages untouched. Fingerprinting protection now
+  only scrambles canvas images, where it helps most.
+- The clock sits in the middle of the sidebar header.
+- The *New card* button is always at the bottom of the sidebar list, even in an empty space. Turn it off with
+  Settings → Appearance → *Always show the "New card" button*.
+- The memory saver still keeps chats, calls and screen shares awake, but now finds them without adding anything
+  to the page itself.
+- Settings describes tracker blocking and fingerprinting protection more accurately.
+- Packages updated to their latest versions; `requirements.lock.txt` lists the exact versions of this release.
+  No known vulnerabilities in any of them (checked against the OSV database).
+
+### Fixed
+- A card that scrolled out of view or went to sleep before its page had drawn showed a blank white picture. It now
+  shows the page's title until a real picture is taken.
 
 ### Fixed
 - **Setup no longer stops with "JBrowser is currently running".** If JBrowser is open, Setup now offers to close it

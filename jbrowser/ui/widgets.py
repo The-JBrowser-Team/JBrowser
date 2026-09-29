@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import math
 
-from PyQt6.QtCore import (QEasingCurve, QEvent, QObject, QPoint, QRect, QRectF, QSize, Qt, QTimer,
+from PyQt6.QtCore import (QEasingCurve, QEvent, QObject, QPoint, QPointF, QRect, QRectF, QSize, Qt, QTimer,
                           pyqtProperty, pyqtSignal)
 from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import (QAbstractButton, QFrame, QGraphicsOpacityEffect, QHBoxLayout, QLabel, QPushButton,
@@ -506,6 +506,133 @@ class Overlay(QWidget):
             self.close_overlay()
             return
         super().keyPressEvent(e)
+
+
+class TintPicker(QWidget):
+    """A row of colour swatches: "No colour" plus the tints in theme.TINTS.
+
+    Click a swatch, or use Tab / arrow keys and Space / Enter. Every swatch has its name as a
+    tooltip and accessible description, and the selected one gets a ring and a tick.
+    """
+
+    changed = pyqtSignal(str)          # the chosen key ("none" for no colour)
+
+    def __init__(self, value: str = "none", parent: QWidget | None = None, swatch: int = 26, gap: int = 8):
+        super().__init__(parent)
+        from jbrowser.ui.theme import TINTS
+        self._keys = ["none"] + list(TINTS)
+        self._value = value if value in self._keys else "none"
+        self._focus = self._keys.index(self._value)
+        self._hover = -1
+        self._sw = swatch
+        self._gap = gap
+        self.setMouseTracking(True)
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+        self.setFixedSize(len(self._keys) * (swatch + gap) - gap + 8, swatch + 8)
+        self.setAccessibleName("Colour tint")
+        self._sync_accessible()
+
+    def value(self) -> str:
+        return self._value
+
+    def set_value(self, key: str, emit: bool = False) -> None:
+        if key not in self._keys:
+            key = "none"
+        changed = key != self._value
+        self._value = key
+        self._focus = self._keys.index(key)
+        self._sync_accessible()
+        self.update()
+        if changed and emit:
+            self.changed.emit(key)
+
+    @staticmethod
+    def label(key: str) -> str:
+        from jbrowser.ui.theme import TINTS
+        return TINTS[key][0] if key in TINTS else "No colour"
+
+    def _sync_accessible(self) -> None:
+        self.setAccessibleDescription(f"{self.label(self._value)} selected")
+        self.setToolTip("Colour tint: " + self.label(self._keys[self._hover] if self._hover >= 0 else self._value))
+
+    def _rect(self, i: int) -> QRectF:
+        return QRectF(4 + i * (self._sw + self._gap), 4, self._sw, self._sw)
+
+    def _index_at(self, pos) -> int:
+        for i in range(len(self._keys)):
+            if self._rect(i).adjusted(-3, -3, 3, 3).contains(pos):
+                return i
+        return -1
+
+    def mouseMoveEvent(self, e) -> None:
+        i = self._index_at(e.position())
+        if i != self._hover:
+            self._hover = i
+            self._sync_accessible()
+            self.setCursor(Qt.CursorShape.PointingHandCursor if i >= 0 else Qt.CursorShape.ArrowCursor)
+            self.update()
+
+    def leaveEvent(self, e) -> None:
+        self._hover = -1
+        self._sync_accessible()
+        self.update()
+
+    def mousePressEvent(self, e) -> None:
+        i = self._index_at(e.position())
+        if i >= 0 and e.button() == Qt.MouseButton.LeftButton:
+            self.set_value(self._keys[i], emit=True)
+
+    def keyPressEvent(self, e) -> None:
+        k = e.key()
+        if k in (Qt.Key.Key_Left, Qt.Key.Key_Right):
+            self._focus = (self._focus + (1 if k == Qt.Key.Key_Right else -1)) % len(self._keys)
+            self.update()
+        elif k in (Qt.Key.Key_Space, Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            self.set_value(self._keys[self._focus], emit=True)
+        else:
+            super().keyPressEvent(e)
+
+    def focusInEvent(self, e) -> None:
+        self.update()
+        super().focusInEvent(e)
+
+    def focusOutEvent(self, e) -> None:
+        self.update()
+        super().focusOutEvent(e)
+
+    def paintEvent(self, _e) -> None:
+        from jbrowser.ui.theme import TINTS
+        th = theme()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        for i, key in enumerate(self._keys):
+            r = self._rect(i)
+            selected = key == self._value
+            if i == self._hover and not selected:
+                r = r.adjusted(-1.5, -1.5, 1.5, 1.5)
+            if key == "none":
+                p.setBrush(th.c("input"))
+                p.setPen(QPen(th.c("text3"), 1.2))
+                p.drawEllipse(r)
+                p.setPen(QPen(th.c("text3"), 1.6, Qt.PenStyle.SolidLine, Qt.PenCapStyle.RoundCap))
+                d = r.width() * 0.22
+                p.drawLine(r.topRight() + QPointF(-d, d), r.bottomLeft() + QPointF(d, -d))
+            else:
+                c = QColor(TINTS[key][1])
+                p.setPen(QPen(QColor(0, 0, 0, 40) if not th.dark else QColor(255, 255, 255, 40), 1))
+                p.setBrush(c)
+                p.drawEllipse(r)
+            if selected:
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.setPen(QPen(th.c("text"), 2))
+                p.drawEllipse(r.adjusted(-3, -3, 3, 3))
+                if key != "none":                   # (the ring alone marks "No colour": a tick would cross its slash)
+                    draw_glyph(p, r, "check", QColor("#ffffff"), r.width() * 0.46)
+            if self.hasFocus() and i == self._focus:
+                p.setBrush(Qt.BrushStyle.NoBrush)
+                p.setPen(QPen(th.c("accent"), 1.5, Qt.PenStyle.DashLine))
+                p.drawEllipse(r.adjusted(-4.5, -4.5, 4.5, 4.5))
+        p.end()
 
 
 def hline(parent: QWidget | None = None) -> QFrame:

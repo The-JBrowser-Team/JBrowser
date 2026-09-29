@@ -15,10 +15,9 @@ from typing import TYPE_CHECKING
 from PyQt6.QtCore import QObject, QStandardPaths, QTimer
 from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineScript, QWebEngineSettings
 
-from jbrowser.engine.js import (AUTOFILL_JS, BRIDGE_WORLD, DNT_JS, GPC_JS, GUARD_JS, fingerprint_js,
-                                qwebchannel_js)
+from jbrowser.engine.js import AUTOFILL_JS, BRIDGE_WORLD, GUARD_JS, privacy_js, qwebchannel_js
 from jbrowser.models.space import Space
-from jbrowser.services.privacy import ProfileInterceptor
+from jbrowser.services.privacy import CHALLENGE_SITES, ProfileInterceptor
 
 if TYPE_CHECKING:
     from jbrowser.context import AppContext
@@ -27,6 +26,23 @@ log = logging.getLogger(__name__)
 
 WA = QWebEngineSettings.WebAttribute
 _QT_TOKEN = re.compile(r"\s*QtWebEngine/[\d.]+")
+
+
+def accept_language() -> str:
+    """Chrome-style Accept-Language from the Windows display languages, e.g.
+    "en-AU,en;q=0.9". Qt sends none by default, and a browser without one looks like a bot."""
+    from PyQt6.QtCore import QLocale
+    langs: list[str] = []
+    for tag in QLocale.system().uiLanguages() or ["en-US"]:
+        parts = tag.replace("_", "-").split("-")
+        lang = parts[0].lower()
+        # Windows adds script subtags ("en-Latn-AU"); browsers send just language-REGION ("en-AU").
+        region = next((p.upper() for p in parts[1:] if len(p) == 2 or (len(p) == 3 and p.isdigit())), "")
+        for t in (f"{lang}-{region}" if region else lang, lang):   # each language's base follows it
+            if lang and t not in langs:
+                langs.append(t)
+    langs = langs[:6]
+    return ",".join(t if i == 0 else f"{t};q={max(0.1, 1 - i / 10):.1f}" for i, t in enumerate(langs))
 
 
 class ProfileManager(QObject):
@@ -41,6 +57,7 @@ class ProfileManager(QObject):
         self._clear_on_start()
         self._remove_stray_default_dirs()
         ctx.settings.changed.connect(self._on_setting)
+        ctx.privacy.blocklistUpdated.connect(lambda *_a: self.reinstall_scripts())   # new element-hiding rules
         ctx.userscripts.changed.connect(self.sync_user_scripts)
         ctx.motion.changed.connect(lambda _e: self._apply_settings_all())
 
@@ -127,6 +144,8 @@ class ProfileManager(QObject):
             for stray in self._default_dirs(prof.storageName()):
                 self._rmdir_empty(stray)
         prof.setHttpUserAgent(_QT_TOKEN.sub("", prof.httpUserAgent()))
+        if not prof.httpAcceptLanguage():
+            prof.setHttpAcceptLanguage(accept_language())
         interceptor = ProfileInterceptor(self.ctx.privacy, prof)
         self._interceptors[space.id] = interceptor
         prof.setUrlRequestInterceptor(interceptor)
@@ -185,14 +204,13 @@ class ProfileManager(QObject):
 
         IP = QWebEngineScript.InjectionPoint
         main = QWebEngineScript.ScriptWorldId.MainWorld
-        add("jb:guard", GUARD_JS, IP.DocumentCreation, main, False)
-        if s.get("privacy.gpc"):
-            add("jb:gpc", GPC_JS, IP.DocumentCreation, main, True)
-        if s.get("privacy.dnt"):
-            add("jb:dnt", DNT_JS, IP.DocumentCreation, main, True)
-        if s.get("privacy.fingerprint_protection"):
-            add("jb:fingerprint", fingerprint_js(self._fp_seed, s.get("privacy.allowlist") or []),
-                IP.DocumentCreation, main, True)
+        # The only script in the page's own world. Everything else runs in JBrowser's isolated world.
+        exempt = list(CHALLENGE_SITES) + list(s.get("privacy.allowlist") or [])
+        add("jb:privacy", privacy_js(self._fp_seed, exempt, bool(s.get("privacy.gpc")), bool(s.get("privacy.dnt")),
+                                     bool(s.get("privacy.fingerprint_protection"))),
+            IP.DocumentCreation, main, True)
+        add("jb:guard", GUARD_JS, IP.DocumentCreation, BRIDGE_WORLD, False)
+        add("jb:cosmetic", self.ctx.privacy.cosmetic_script(), IP.DocumentCreation, BRIDGE_WORLD, False)
         add("jb:qwebchannel", qwebchannel_js(), IP.DocumentCreation, BRIDGE_WORLD, False)
         add("jb:autofill", AUTOFILL_JS, IP.DocumentReady, BRIDGE_WORLD, False)
 
@@ -226,10 +244,14 @@ class ProfileManager(QObject):
         for prof in self._profiles.values():
             self._apply_settings(prof)
 
+    def reinstall_scripts(self) -> None:
+        for prof in self._profiles.values():
+            self._install_base_scripts(prof)
+
     def _on_setting(self, key: str, _value) -> None:
-        if key in ("privacy.gpc", "privacy.dnt", "privacy.fingerprint_protection", "privacy.allowlist"):
-            for prof in self._profiles.values():
-                self._install_base_scripts(prof)
+        if key in ("privacy.gpc", "privacy.dnt", "privacy.fingerprint_protection", "privacy.allowlist",
+                   "privacy.block_trackers"):
+            self.reinstall_scripts()
         elif key.startswith(("privacy.", "appearance.force_dark_web")):
             self._apply_settings_all()
 

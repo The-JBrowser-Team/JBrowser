@@ -8,7 +8,7 @@ one Qt process, plus the Chromium renderer processes (`QtWebEngineProcess.exe`) 
 ```
             ┌──────────────────────── jbrowser/ui ────────────────────────┐
  user ────► │ MainWindow · TitleBar · Sidebar · Canvas/WebCard · LazyToolbar │
-            │ dialogs/ · Onboarding · BrowserController · actions (commands) │
+            │ Gallery · dialogs/ · Onboarding · BrowserController · actions  │
             └───────────────┬───────────────────────────────▲──────────────┘
                  intents    │                               │ Qt signals
             ┌───────────────▼───────────────┐   ┌───────────┴──────────────┐
@@ -83,7 +83,7 @@ See [AUTO_UPDATE.md](AUTO_UPDATE.md) and [BUILDING.md](BUILDING.md).
 | Per-space browser profiles (cookies, storage, permissions) | `%APPDATA%\JBrowser\Profiles\<space-id>\` |
 | HTTP caches and favicons | `%LOCALAPPDATA%\JBrowser\Cache\` |
 | Logs | `%APPDATA%\JBrowser\Logs\jbrowser.log` |
-| Tracker and dangerous-site lists | `%APPDATA%\JBrowser\blocklist.txt`, `threats.txt` |
+| Tracker, ad-filter and dangerous-site lists | `%APPDATA%\JBrowser\blocklist.txt`, `filters.txt`, `threats.txt` |
 | Program files (installed) | `%LOCALAPPDATA%\Programs\JBrowser\` |
 | Downloaded updates (temporary) | `%TEMP%\JBrowser-Update\` |
 
@@ -101,7 +101,28 @@ See [AUTO_UPDATE.md](AUTO_UPDATE.md) and [BUILDING.md](BUILDING.md).
 - **Per-space proxies.** Chromium has one network stack per process, so a space's proxy applies to all traffic while
   that space is in front, and it is re-applied on every space switch. HTTPS (TLS-to-proxy) proxies are passed at
   start-up and need a restart.
-- **Tracker blocking** uses domain rules (the built-in list plus downloadable hosts and Adblock domain lists), not
-  cosmetic filters.
+- **Tracker and ad blocking** (`services/privacy.py`, `services/adfilter.py`). `BlocklistUpdater` splits each
+  downloaded list: pure domain rules go to `blocklist.txt` (a set, checked for third-party requests), and every other
+  Adblock Plus rule goes to `filters.txt`. `FilterEngine` indexes network filters by their rarest token, so a request
+  is only matched against a handful of candidates (tens of microseconds). `PageInterceptor` asks
+  `PrivacyService.should_block()` for every request: threats first, then the per-site allowlist and `$document`
+  exceptions, domain rules, network filters, and `@@` exceptions last (unless the filter is `$important`).
+  Cosmetic (`##`) rules become one profile-level script in the isolated world that picks the rules for the page's
+  host and adds a `<style>` before the first paint. Procedural filters (`:has-text()`, `+js()` and similar) are
+  skipped. Rules with more than 4 wildcards or longer than 512 characters are skipped, and URLs are cut at 2,048
+  characters, so no filter can make matching slow.
+- **Looking like Chrome.** The only script in the page's main world is `privacy_js` (canvas noise and the GPC/DNT
+  signals), and every function it patches reports itself as native code. Hardware values are not changed, the
+  `Accept-Language` header follows the Windows display languages, and sites that run bot checks
+  (`CHALLENGE_SITES` in `services/privacy.py`) get no page scripts at all. Memory-saver probes run in the isolated
+  world, and WebSocket and capture detection happens in the request interceptor and permission handler, not in the
+  page.
+- **Gallery** (`ui/gallery.py`) is an overlay child of `SpaceStack`. While it is open, the canvases are hidden, so
+  the translucent window never blends live web views into it and hidden pages stop drawing frames. Thumbnails come
+  from a fresh grab of the visible cards and from the snapshots cards take when they leave view or a space is left.
+  Blank grabs (a page that hasn't painted) are discarded.
+- **Colour tints** (`ui/theme.py`). With a translucent material, the tint is a wash (`window_tint`, 15 % dark or
+  10 % light) painted over the backdrop by `RootWidget`. With *Solid*, the tint is mixed into each `*_solid` token.
+  An active incognito space overrides both with black.
 - **Sound effects** use Qt Multimedia with the native Windows backend, so the build leaves out the FFmpeg plugin.
   Web video uses Chromium's own codecs.

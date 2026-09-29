@@ -49,8 +49,11 @@ class TabController(QObject):
         self.space = space
         self.disposed = False
         self.page = BrowserPage(profile, self)
-        self._interceptor = PageInterceptor(ctx.privacy, self._on_blocked, self)
+        self._interceptor = PageInterceptor(ctx.privacy, self._on_blocked, self, on_websocket=self._on_websocket)
         self.page.setUrlRequestInterceptor(self._interceptor)
+        # Hibernation guards that don't need anything inside the page (see engine/js.py GUARD_JS).
+        self._websocket = False          # the current page opened a WebSocket (chat, live updates)
+        self._capturing = False          # the page was allowed the camera, microphone or screen
         self._channel = QWebChannel(self)
         self._bridge = PageBridge(self)
         self._channel.registerObject("jbBridge", self._bridge)
@@ -224,8 +227,13 @@ class TabController(QObject):
 
     def _on_load_started(self) -> None:
         self.tab.loaded = True
+        self._websocket = False
+        self._capturing = False
         self.tab.update(loading=True, progress=5, crashed=False, blocked=0)
         self.navigated.emit()
+
+    def _on_websocket(self) -> None:
+        self._websocket = True
 
     def _on_load_finished(self, ok: bool) -> None:
         h = self.page.history()
@@ -356,9 +364,16 @@ class TabController(QObject):
         host = origin.host() or origin.toString()
         self._pending.append(permission)
 
+        PT = QWebEnginePermission.PermissionType
+        capture = permission.permissionType() in (PT.MediaAudioCapture, PT.MediaVideoCapture,
+                                                  PT.MediaAudioVideoCapture, PT.DesktopVideoCapture,
+                                                  PT.DesktopAudioVideoCapture)
+
         def decide(grant: bool, perm=permission):
             if grant:
                 perm.grant()
+                if capture:
+                    self._capturing = True     # a call or screen share: never hibernate this card
             else:
                 perm.deny()
             if perm in self._pending:
@@ -511,10 +526,12 @@ class TabController(QObject):
                     data = json.loads(result)
                 except ValueError:
                     data = {}
+            data["ws"] = self._websocket
+            data["rtc"] = self._capturing
             callback(data, was_frozen)
 
         QTimer.singleShot(2000, lambda: finish("__timeout__"))
-        page.runJavaScript("window.__jbGuardProbe ? window.__jbGuardProbe() : ''", 0, finish)
+        page.runJavaScript("window.__jbGuardProbe ? window.__jbGuardProbe() : ''", BRIDGE_WORLD, finish)
 
     def throttle(self, freeze: bool) -> None:
         """Out of sight: stop rendering (and optionally freeze JS timers/tasks)."""

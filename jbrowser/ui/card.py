@@ -27,6 +27,20 @@ HEADER_H = 36
 RADIUS = 10.0
 
 
+def is_blank(pm: QPixmap) -> bool:
+    """True when a grabbed page is one flat colour: it hasn't painted yet (or is empty)."""
+    img = pm.toImage().scaled(24, 24, Qt.AspectRatioMode.IgnoreAspectRatio,
+                              Qt.TransformationMode.SmoothTransformation)   # averages, so text still shows
+    first = img.pixelColor(0, 0)
+    for y in range(img.height()):
+        for x in range(img.width()):
+            c = img.pixelColor(x, y)
+            if abs(c.red() - first.red()) > 3 or abs(c.green() - first.green()) > 3 \
+                    or abs(c.blue() - first.blue()) > 3:
+                return False
+    return True
+
+
 class BrowserView(QWebEngineView):
     """QWebEngineView with JBrowser's context menu."""
 
@@ -507,7 +521,8 @@ class WebCard(QFrame):
             return
         if pm.width() > 1000:   # a faded preview; full resolution would cost ~9 MB per card
             pm = pm.scaledToWidth(1000, Qt.TransformationMode.SmoothTransformation)
-        self.snapshot.pixmap = pm
+        # A blank picture (the page hadn't painted yet) would outlive it: show the title placeholder instead.
+        self.snapshot.pixmap = None if is_blank(pm) else pm
 
     def enter_sleep(self) -> None:
         self.take_snapshot()

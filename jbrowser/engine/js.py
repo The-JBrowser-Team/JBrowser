@@ -7,100 +7,168 @@ from PyQt6.QtCore import QFile, QIODevice
 BRIDGE_WORLD = 1  # QWebEngineScript.ScriptWorldId.ApplicationWorld
 
 # --------------------------------------------------------------------------------------
-# Smart-protection guard (main world, document creation). Tracks the things that make a
-# card unsafe to hibernate: playing media, open WebSockets / WebRTC calls, unsaved edits
-# and beforeunload handlers. Queried by the lifecycle manager via window.__jbGuardProbe().
+# Smart-protection guard: tracks what makes a card unsafe to hibernate (playing media, unsaved
+# form input, full screen). It runs in JBrowser's isolated world (BRIDGE_WORLD), so the page
+# can neither see nor detect it: the DOM is shared between worlds, JavaScript objects are not.
+# Open WebSockets and calls are detected outside the page (network requests and camera /
+# microphone permissions, see TabController). Queried with window.__jbGuardProbe().
 GUARD_JS = r"""
 (function () {
   'use strict';
   if (window.__jbGuardProbe) return;
-  var sockets = new Set(), peers = new Set(), edited = new Set(), beforeUnload = 0;
-  try {
-    var NativeWS = window.WebSocket;
-    if (NativeWS) {
-      var JBWebSocket = function WebSocket(url, protocols) {
-        var ws = arguments.length > 1 ? new NativeWS(url, protocols) : new NativeWS(url);
-        sockets.add(ws);
-        ws.addEventListener('close', function () { sockets.delete(ws); });
-        return ws;
-      };
-      JBWebSocket.prototype = NativeWS.prototype;
-      ['CONNECTING', 'OPEN', 'CLOSING', 'CLOSED'].forEach(function (k) { JBWebSocket[k] = NativeWS[k]; });
-      window.WebSocket = JBWebSocket;
-    }
-  } catch (e) {}
-  try {
-    var NativePC = window.RTCPeerConnection;
-    if (NativePC) {
-      var JBPC = function RTCPeerConnection(a, b) {
-        var pc = arguments.length > 1 ? new NativePC(a, b) : new NativePC(a);
-        peers.add(pc);
-        return pc;
-      };
-      JBPC.prototype = NativePC.prototype;
-      if (NativePC.generateCertificate) JBPC.generateCertificate = NativePC.generateCertificate.bind(NativePC);
-      window.RTCPeerConnection = JBPC;
-      if (window.webkitRTCPeerConnection) window.webkitRTCPeerConnection = JBPC;
-    }
-  } catch (e) {}
-  try {
-    var nativeAdd = window.addEventListener, nativeRemove = window.removeEventListener;
-    window.addEventListener = function (type, fn, opts) {
-      if (type === 'beforeunload' && fn) beforeUnload++;
-      return nativeAdd.call(this, type, fn, opts);
-    };
-    window.removeEventListener = function (type, fn, opts) {
-      if (type === 'beforeunload' && fn && beforeUnload > 0) beforeUnload--;
-      return nativeRemove.call(this, type, fn, opts);
-    };
-  } catch (e) {}
+  var edited = new Set();
   document.addEventListener('input', function (e) {
     var t = e.target;
     if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'INPUT' || t.isContentEditable)) edited.add(t);
   }, true);
   document.addEventListener('submit', function () { edited.clear(); }, true);
-  Object.defineProperty(window, '__jbGuardProbe', {
-    value: function () {
-      var media = false, ws = 0, rtc = 0, dirty = false;
-      try {
-        document.querySelectorAll('video, audio').forEach(function (m) {
-          if (!m.paused && !m.ended && m.readyState > 2) media = true;
-        });
-      } catch (e) {}
-      sockets.forEach(function (s) { if (s.readyState <= 1) ws++; else sockets.delete(s); });
-      peers.forEach(function (p) {
-        if (p.connectionState !== 'closed' && p.signalingState !== 'closed') rtc++; else peers.delete(p);
+  window.__jbGuardProbe = function () {
+    var media = false, dirty = false;
+    try {
+      document.querySelectorAll('video, audio').forEach(function (m) {
+        if (!m.paused && !m.ended && m.readyState > 2) media = true;
       });
-      edited.forEach(function (el) {
-        if (!el.isConnected) { edited.delete(el); return; }
-        var v = el.isContentEditable ? el.textContent : el.value;
-        if (v && String(v).trim().length) dirty = true;
-      });
-      var unload = beforeUnload > 0 || typeof window.onbeforeunload === 'function';
-      return JSON.stringify({ media: media, ws: ws, rtc: rtc, dirty: dirty, beforeunload: unload,
-                              fullscreen: !!document.fullscreenElement });
+    } catch (e) {}
+    edited.forEach(function (el) {
+      if (!el.isConnected) { edited.delete(el); return; }
+      var v = el.isContentEditable ? el.textContent : el.value;
+      if (v && String(v).trim().length) dirty = true;
+    });
+    return JSON.stringify({ media: media, dirty: dirty, fullscreen: !!document.fullscreenElement });
+  };
+})();
+"""
+
+# --------------------------------------------------------------------------------------
+# Main-world privacy signals: Global Privacy Control, Do Not Track, and canvas fingerprint noise.
+# Bot checks (Google, Cloudflare) treat pages whose built-in functions were replaced as automated
+# and answer with CAPTCHAs, so every replacement keeps the look of the original: same name and
+# length, no prototype, and Function.prototype.toString reports "[native code]" as usual.
+# CPU / memory / GPU values are left alone: faking them in the page but not in workers is itself
+# a strong bot signal. Challenge and sign-in sites (EXEMPT) get none of this.
+_PRIVACY_TEMPLATE = r"""
+(function () {
+  'use strict';
+  var EXEMPT = __EXEMPT__, SEED = __SEED__, GPC = __GPC__, DNT = __DNT__, CANVAS = __CANVAS__;
+  var host = location.hostname || '';
+  if (EXEMPT.some(function (d) { return host === d || host.slice(-d.length - 1) === '.' + d; })
+      || /(^|\.)google\.[a-z]{2,3}(\.[a-z]{2})?$/.test(host)) return;
+  var FP = Function.prototype, nativeToString = FP.toString, masks = new WeakMap();
+  function mask(fn, original) {
+    masks.set(fn, nativeToString.call(original));
+    try { Object.defineProperty(fn, 'length', { value: original.length }); } catch (e) {}
+    return fn;
+  }
+  var shims = {
+    toString() { return masks.has(this) ? masks.get(this) : nativeToString.call(this); }
+  };
+  masks.set(shims.toString, nativeToString.call(nativeToString));
+  try { Object.defineProperty(FP, 'toString', { value: shims.toString, writable: true, configurable: true, enumerable: false }); } catch (e) {}
+  function getter(proto, name, value) {
+    var d = Object.getOwnPropertyDescriptor(proto, name);
+    var g = Object.getOwnPropertyDescriptor({ get [name]() { return value; } }, name).get;
+    if (d && d.get) mask(g, d.get);
+    else masks.set(g, 'function get ' + name + '() { [native code] }');
+    try { Object.defineProperty(proto, name, { get: g, set: undefined, configurable: true, enumerable: true }); } catch (e) {}
+  }
+  if (GPC) getter(Navigator.prototype, 'globalPrivacyControl', true);
+  if (DNT) getter(Navigator.prototype, 'doNotTrack', '1');
+  if (!CANVAS) return;
+  // Per-site, per-session key: the same site sees stable values, different sites can't correlate.
+  var key = SEED;
+  for (var i = 0; i < host.length; i++) key = ((key << 5) - key + host.charCodeAt(i)) | 0;
+  function noisy(data) {
+    var k = key >>> 0;
+    for (var p = 0; p < data.length; p += 4) {
+      k = (k * 1664525 + 1013904223) >>> 0;
+      if ((k & 0xff) < 6) { var c = (k >>> 8) % 3; data[p + c] = data[p + c] ^ 1; }
     }
-  });
-})();
-"""
-
-GPC_JS = r"""
-(function () {
+  }
   try {
-    Object.defineProperty(Navigator.prototype, 'globalPrivacyControl',
-      { get: function () { return true; }, configurable: true, enumerable: true });
+    var C2D = CanvasRenderingContext2D.prototype, HC = HTMLCanvasElement.prototype;
+    var getImageData = C2D.getImageData, toDataURL = HC.toDataURL, toBlob = HC.toBlob;
+    var noisyCopy = function (canvas) {
+      if (!canvas.width || !canvas.height || canvas.width * canvas.height > 16777216) return canvas;
+      var copy = document.createElement('canvas');
+      copy.width = canvas.width; copy.height = canvas.height;
+      var cx = copy.getContext('2d');
+      cx.drawImage(canvas, 0, 0);
+      var img = getImageData.call(cx, 0, 0, copy.width, copy.height);
+      noisy(img.data);
+      cx.putImageData(img, 0, 0);
+      return copy;
+    };
+    var methods = {
+      getImageData() { var img = getImageData.apply(this, arguments); try { noisy(img.data); } catch (e) {} return img; },
+      toDataURL() { return toDataURL.apply(noisyCopy(this), arguments); },
+      toBlob() { return toBlob.apply(noisyCopy(this), arguments); }
+    };
+    C2D.getImageData = mask(methods.getImageData, getImageData);
+    HC.toDataURL = mask(methods.toDataURL, toDataURL);
+    HC.toBlob = mask(methods.toBlob, toBlob);
   } catch (e) {}
 })();
 """
 
-DNT_JS = r"""
+
+def privacy_js(seed: int, exempt: list[str], gpc: bool, dnt: bool, canvas: bool) -> str:
+    """The main-world privacy script, or "" when every part of it is switched off."""
+    import json
+    if not (gpc or dnt or canvas):
+        return ""
+    return (_PRIVACY_TEMPLATE.replace("__EXEMPT__", json.dumps(sorted(set(exempt))))
+            .replace("__SEED__", str(int(seed) & 0x7FFFFFFF))
+            .replace("__GPC__", "true" if gpc else "false").replace("__DNT__", "true" if dnt else "false")
+            .replace("__CANVAS__", "true" if canvas else "false"))
+
+
+# Element hiding (ad boxes, "Advertisement" frames). Runs in JBrowser's isolated world at document
+# creation, picks the rules for its own site from DATA (FilterEngine.cosmetic_data) and adds them as
+# one style sheet, as early as the page allows. ALLOW: sites where protection is switched off.
+_COSMETIC_TEMPLATE = r"""
 (function () {
-  try {
-    Object.defineProperty(Navigator.prototype, 'doNotTrack',
-      { get: function () { return '1'; }, configurable: true, enumerable: true });
-  } catch (e) {}
+  'use strict';
+  var D = __DATA__, ALLOW = __ALLOW__;
+  var h = (location.hostname || '').toLowerCase();
+  if (!h || location.protocol.indexOf('http') !== 0) return;
+  var parts = h.split('.'), chain = [];
+  for (var i = 0; i < Math.max(1, parts.length - 1); i++) chain.push(parts.slice(i).join('.'));
+  function hit(set) { for (var j = 0; j < chain.length; j++) if (set[chain[j]]) return true; return false; }
+  if (hit(D.nc) || hit(ALLOW)) return;
+  var unhide = {}, out = [];
+  chain.forEach(function (c) { (D.u[c] || []).forEach(function (s) { unhide[s] = 1; }); });
+  if (!hit(D.ng)) {
+    D.g.forEach(function (s) {
+      if (unhide[s]) return;
+      var k = D.k[s];
+      if (k && chain.some(function (c) { return k.indexOf(c) >= 0; })) return;
+      out.push(s);
+    });
+  }
+  chain.forEach(function (c) { (D.s[c] || []).forEach(function (s) { if (!unhide[s]) out.push(s); }); });
+  if (!out.length) return;
+  // One rule per selector: a selector this engine version doesn't understand only drops its own rule.
+  var css = out.join('{display:none!important}\n') + '{display:none!important}';
+  function add() {
+    var root = document.documentElement;
+    if (!root) return false;
+    var st = document.createElement('style');
+    st.textContent = css;
+    root.appendChild(st);
+    return true;
+  }
+  if (!add()) {
+    var mo = new MutationObserver(function () { if (add()) mo.disconnect(); });
+    mo.observe(document, { childList: true });
+  }
 })();
 """
+
+
+def cosmetic_js(data: dict, allow: list[str]) -> str:
+    import json
+    return (_COSMETIC_TEMPLATE.replace("__DATA__", json.dumps(data, separators=(",", ":")))
+            .replace("__ALLOW__", json.dumps({d: 1 for d in allow})))
 
 # --------------------------------------------------------------------------------------
 # Password capture & autofill. Runs in an isolated world: the page cannot read the bridge,
@@ -186,69 +254,6 @@ AUTOFILL_JS = r"""
                                          attributeFilter: ['type', 'style', 'class', 'hidden'] });
 })();
 """
-
-_FINGERPRINT_TEMPLATE = r"""
-(function () {
-  'use strict';
-  var EXEMPT = __EXEMPT__, SEED = __SEED__;
-  var host = location.hostname || '';
-  if (EXEMPT.some(function (d) { return host === d || host.slice(-d.length - 1) === '.' + d; })) return;
-  // Per-site, per-session key: the same site sees stable values, different sites can't correlate.
-  var key = SEED;
-  for (var i = 0; i < host.length; i++) key = ((key << 5) - key + host.charCodeAt(i)) | 0;
-  function noisy(data) {
-    var k = key >>> 0;
-    for (var p = 0; p < data.length; p += 4) {
-      k = (k * 1664525 + 1013904223) >>> 0;
-      if ((k & 0xff) < 6) { var c = (k >>> 8) % 3; data[p + c] = data[p + c] ^ 1; }
-    }
-  }
-  try {
-    var C2D = CanvasRenderingContext2D.prototype, getImageData = C2D.getImageData;
-    C2D.getImageData = function () {
-      var img = getImageData.apply(this, arguments);
-      try { noisy(img.data); } catch (e) {}
-      return img;
-    };
-    var HC = HTMLCanvasElement.prototype, toDataURL = HC.toDataURL, toBlob = HC.toBlob;
-    function noisyCopy(canvas) {
-      if (!canvas.width || !canvas.height || canvas.width * canvas.height > 16777216) return canvas;
-      var copy = document.createElement('canvas');
-      copy.width = canvas.width; copy.height = canvas.height;
-      var cx = copy.getContext('2d');
-      cx.drawImage(canvas, 0, 0);
-      var img = getImageData.call(cx, 0, 0, copy.width, copy.height);
-      noisy(img.data);
-      cx.putImageData(img, 0, 0);
-      return copy;
-    }
-    HC.toDataURL = function () { return toDataURL.apply(noisyCopy(this), arguments); };
-    HC.toBlob = function () { return toBlob.apply(noisyCopy(this), arguments); };
-  } catch (e) {}
-  try {
-    Object.defineProperty(Navigator.prototype, 'hardwareConcurrency', { get: function () { return 4; }, configurable: true });
-    Object.defineProperty(Navigator.prototype, 'deviceMemory', { get: function () { return 8; }, configurable: true });
-  } catch (e) {}
-  function patchGL(proto) {
-    if (!proto) return;
-    var getParameter = proto.getParameter;
-    proto.getParameter = function (p) {
-      if (p === 0x9245) return 'Google Inc.';                 // UNMASKED_VENDOR_WEBGL
-      if (p === 0x9246) return 'ANGLE (Generic Renderer)';    // UNMASKED_RENDERER_WEBGL
-      return getParameter.apply(this, arguments);
-    };
-  }
-  try { patchGL(window.WebGLRenderingContext && WebGLRenderingContext.prototype); } catch (e) {}
-  try { patchGL(window.WebGL2RenderingContext && WebGL2RenderingContext.prototype); } catch (e) {}
-})();
-"""
-
-
-def fingerprint_js(seed: int, exempt: list[str]) -> str:
-    import json
-    return _FINGERPRINT_TEMPLATE.replace("__EXEMPT__", json.dumps(sorted(set(exempt)))) \
-        .replace("__SEED__", str(int(seed) & 0x7FFFFFFF))
-
 
 INTERSTITIAL_HTML = """<!doctype html><html><head><meta charset="utf-8"><title>Dangerous site blocked</title>
 <style>
