@@ -78,19 +78,18 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.5.3 (latest) · 30 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.3)
+### 1.5.4 (latest) · 30 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.4)
 
-- **The one-line PowerShell install works again** (it stopped just before opening the installer), and it never
-  leaves JBrowser running as administrator.
-- **Simpler downloading** on the website: one big *Download for Windows* button, then three short steps.
-- A new **open source** section on the website, and the site is ready to move to **jbrowser.app** with better
-  search-engine support.
-- Updated packages and the newest Chrome version.
+- **Export your passwords safely**: a CSV inside a ZIP locked with a password you choose (AES-256). Open it with
+  7-Zip or WinRAR, or import it into JBrowser on another PC.
+- **A calmer Archive**, without the explanations.
+- **Python 3.14.7** (was 3.14.0): seven releases of bug and security fixes. All packages up to date.
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.5.3 | The one-line PowerShell install works again, simpler download window, an open-source section on the website, which moved to jbrowser.app |
 | 1.5.2 | Sites see the current Chrome (155), Google sign-in pages exempt from blocking, card outline in your tint, saved pages can't read your files, ready for SignPath code signing |
 | 1.5.1 | Google sign-in fix (Firefox user agent for Google's sign-in server), code signing built into the release scripts, a website with real screenshots and versioned developer docs |
 | 1.5.0 | The Gallery, colour tints, drag cards anywhere, real ad blocking with EasyList and EasyPrivacy, fewer CAPTCHAs |

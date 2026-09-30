@@ -5,6 +5,22 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.5.4] - 2026-09-30
+
+### Added
+- **Export your passwords, safely.** *Passwords → Export…* saves every login as a spreadsheet file (CSV, in the same
+  layout Chrome, Edge and Firefox use) inside a ZIP locked with a password you choose, using AES-256 encryption. The
+  passwords never touch the disk unencrypted. Open the ZIP with 7-Zip, WinRAR or PeaZip, or import it into JBrowser
+  on another computer: *Import…* now reads these encrypted ZIPs as well as plain CSV files.
+
+### Changed
+- **A calmer Archive.** The explanations are gone: one header line ("Archive · last 48 hours") with the *Clear*
+  button, the search box, and your closed cards with just the site and when you closed them. The details are in each
+  card's tooltip.
+- **Python 3.14.7.** JBrowser now ships with the latest Python 3.14 (it had 3.14.0), with seven releases of bug and
+  security fixes. Python 3.15 is still a release candidate; JBrowser will move to it once it's final and proven.
+- All packages checked and up to date.
+
 ## [1.5.3] - 2026-09-30
 
 ### Fixed

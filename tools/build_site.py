@@ -1560,7 +1560,7 @@ def clear_folder(path: Path) -> None:
     """Empty ``path`` (a previous build). Folders another program still holds open (a preview server,
     a sync client) are left in place; the build then writes over them."""
     import time
-    for attempt in range(4):
+    for _ in range(4):
         failed: list[str] = []
         if path.exists():
             shutil.rmtree(path, onexc=lambda _fn, p, _exc: failed.append(p))

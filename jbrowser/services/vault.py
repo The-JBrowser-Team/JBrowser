@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import base64
 import csv
+import io
 import json
 import logging
 import os
@@ -357,28 +358,45 @@ class PasswordVault(QObject):
             self._save()
             self.changed.emit()
 
-    def import_csv(self, path: str) -> int:
-        """Import a Chrome / Edge / Firefox password export (name,url,username,password[,note])."""
+    def export_csv(self) -> tuple[bytes, int]:
+        """Every saved login as CSV in the column layout Chrome, Edge and Firefox export and import
+        (name,url,username,password,note). Returns (UTF-8 bytes, number of logins). Only ever written to
+        disk inside an encrypted ZIP (see PasswordsDialog._export)."""
         if not self.ensure_unlocked():
             raise VaultError("Vault is locked")
+        buf = io.StringIO(newline="")
+        w = csv.writer(buf, lineterminator="\r\n")
+        w.writerow(["name", "url", "username", "password", "note"])
+        rows = sorted(self._entries, key=lambda c: (c.host, c.username))
+        for c in rows:
+            w.writerow([c.host, c.origin, c.username, c.password, c.note])
+        return buf.getvalue().encode("utf-8"), len(rows)
+
+    def import_csv(self, path: str, data: bytes | None = None) -> int:
+        """Import a Chrome / Edge / Firefox password export (name,url,username,password[,note]), from
+        ``path`` or, when given, from ``data`` (a CSV read out of an encrypted ZIP)."""
+        if not self.ensure_unlocked():
+            raise VaultError("Vault is locked")
+        if data is None:
+            with open(path, "rb") as fh:
+                data = fh.read()
         count = 0
-        with open(path, newline="", encoding="utf-8-sig") as fh:
-            for row in csv.DictReader(fh):
-                row = {(k or "").strip().lower(): (v or "") for k, v in row.items()}
-                url = row.get("url") or row.get("origin") or ""
-                user = row.get("username") or row.get("login") or ""
-                pwd = row.get("password") or ""
-                if not url or not pwd:
-                    continue
-                q = QUrl(url)
-                if not q.host():
-                    continue
-                origin = origin_of(q)
-                if any(e.origin == origin and e.username == user for e in self._entries):
-                    continue
-                self._entries.append(Credential(origin=origin, username=user, password=pwd,
-                                                note=row.get("note", "") or row.get("notes", "")))
-                count += 1
+        for row in csv.DictReader(io.StringIO(data.decode("utf-8-sig"), newline="")):
+            row = {(k or "").strip().lower(): (v or "") for k, v in row.items()}
+            url = row.get("url") or row.get("origin") or ""
+            user = row.get("username") or row.get("login") or ""
+            pwd = row.get("password") or ""
+            if not url or not pwd:
+                continue
+            q = QUrl(url)
+            if not q.host():
+                continue
+            origin = origin_of(q)
+            if any(e.origin == origin and e.username == user for e in self._entries):
+                continue
+            self._entries.append(Credential(origin=origin, username=user, password=pwd,
+                                            note=row.get("note", "") or row.get("notes", "")))
+            count += 1
         if count:
             self._save()
             self.changed.emit()

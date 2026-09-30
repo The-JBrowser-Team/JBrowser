@@ -102,6 +102,70 @@ class CredentialDialog(JDialog):
         self.accept()
 
 
+EXPORT_MIN_LENGTH = 10
+
+
+class ExportDialog(JDialog):
+    """Choose the password for an encrypted export (a CSV inside an AES-256 ZIP)."""
+
+    def __init__(self, count: int, parent: QWidget | None = None):
+        super().__init__("Export passwords", parent, (460, 300), modal=True)
+        intro = QLabel(f"Your {count} saved logins go into a ZIP file locked with a password you choose.")
+        intro.setWordWrap(True)
+        self.root.addWidget(intro)
+        form = QFormLayout()
+        self.pw1 = QLineEdit()
+        self.pw1.setEchoMode(QLineEdit.EchoMode.Password)
+        self.pw1.setPlaceholderText(f"At least {EXPORT_MIN_LENGTH} characters")
+        self.pw2 = QLineEdit()
+        self.pw2.setEchoMode(QLineEdit.EchoMode.Password)
+        row = QHBoxLayout()
+        row.addWidget(self.pw1, 1)
+        show = QPushButton("Show")
+        show.setCheckable(True)
+        show.toggled.connect(self._show)
+        row.addWidget(show)
+        form.addRow("Password", row)
+        form.addRow("Confirm", self.pw2)
+        self.root.addLayout(form)
+        self.hint = QLabel("Tip: a few random words make a strong password you can remember.")
+        self.hint.setProperty("muted", True)
+        self.hint.setWordWrap(True)
+        self.root.addWidget(self.hint)
+        self.root.addStretch(1)
+        bb = QDialogButtonBox(QDialogButtonBox.StandardButton.Cancel)
+        self.ok = bb.addButton("Export…", QDialogButtonBox.ButtonRole.AcceptRole)
+        self.ok.setProperty("primary", True)
+        self.ok.setEnabled(False)
+        bb.accepted.connect(self.accept)
+        bb.rejected.connect(self.reject)
+        self.root.addWidget(bb)
+        self.pw1.textChanged.connect(self._check)
+        self.pw2.textChanged.connect(self._check)
+
+    def _show(self, on: bool) -> None:
+        mode = QLineEdit.EchoMode.Normal if on else QLineEdit.EchoMode.Password
+        self.pw1.setEchoMode(mode)
+        self.pw2.setEchoMode(mode)
+
+    def _check(self) -> None:
+        a, b = self.pw1.text(), self.pw2.text()
+        if len(a) < EXPORT_MIN_LENGTH:
+            msg = f"Use at least {EXPORT_MIN_LENGTH} characters ({len(a)} so far)." if a else \
+                "Tip: a few random words make a strong password you can remember."
+        elif b and a != b:
+            msg = "The passwords don't match."
+        elif not b:
+            msg = "Type the password again to confirm it."
+        else:
+            msg = "Don't lose this password: without it, nobody can open the file, not even you."
+        self.hint.setText(msg)
+        self.ok.setEnabled(len(a) >= EXPORT_MIN_LENGTH and a == b)
+
+    def password(self) -> str:
+        return self.pw1.text()
+
+
 class PasswordsDialog(ChromeWindow):
     def __init__(self, ctx, ui, parent: QWidget | None = None):
         super().__init__("Passwords", parent, (940, 600))
@@ -163,9 +227,12 @@ class PasswordsDialog(ChromeWindow):
         row.addStretch(1)
         self.root.addLayout(row)
         row2 = QHBoxLayout()
-        imp = QPushButton("Import CSV…")
-        imp.setToolTip("Import a Chrome / Edge / Firefox password export (name,url,username,password)")
+        imp = QPushButton("Import…")
+        imp.setToolTip("Import a Chrome, Edge or Firefox password export (CSV), or a JBrowser export (encrypted ZIP)")
         imp.clicked.connect(self._import)
+        exp = QPushButton("Export…")
+        exp.setToolTip("Save every login as a CSV file inside a ZIP locked with a password you choose (AES-256)")
+        exp.clicked.connect(self._export)
         never = QPushButton("Never-save list…")
         never.clicked.connect(self._never)
         self.master_btn = QPushButton()
@@ -175,7 +242,7 @@ class PasswordsDialog(ChromeWindow):
         lock = QPushButton("Lock now")
         lock.clicked.connect(lambda: (ctx.vault.lock(), self.reload()))
         self.lock_btn = lock
-        for b in (imp, never):
+        for b in (imp, exp, never):
             row2.addWidget(b)
         row2.addStretch(1)
         for b in (self.master_btn, self.remove_master_btn, lock):
@@ -298,15 +365,80 @@ class PasswordsDialog(ChromeWindow):
     def _import(self) -> None:
         if not self.ui.unlock_vault():
             return
-        path, _ = QFileDialog.getOpenFileName(self, "Import passwords", "", "CSV files (*.csv)")
+        path, _ = QFileDialog.getOpenFileName(self, "Import passwords", "",
+                                              "Password exports (*.csv *.zip);;CSV files (*.csv);;ZIP files (*.zip)")
         if not path:
             return
         try:
-            n = self.ctx.vault.import_csv(path)
+            if path.lower().endswith(".zip"):
+                n = self._import_zip(path)
+                if n is None:
+                    return
+                self.ui.toast(f"Imported {n} logins", "key")
+            else:
+                n = self.ctx.vault.import_csv(path)
+                self.ui.toast(f"Imported {n} logins. Delete the CSV file now: it is not encrypted", "key")
         except Exception as exc:
             QMessageBox.warning(self, "Import failed", str(exc))
+
+    def _import_zip(self, path: str) -> int | None:
+        """A JBrowser export, or any ZIP with a password CSV inside (plain or AES encrypted)."""
+        from jbrowser.core.aeszip import ZipPasswordError, read_zip
+        password = ""
+        for attempt in range(4):
+            try:
+                files = read_zip(path, password)
+                break
+            except ZipPasswordError:
+                label = "Password for this ZIP file:" if attempt == 0 else "Wrong password. Try again:"
+                password, ok = QInputDialog.getText(self, "Import passwords", label, QLineEdit.EchoMode.Password)
+                if not ok:
+                    return None
+        else:
+            QMessageBox.warning(self, "Import failed", "The password is wrong.")
+            return None
+        csvs = [data for name, data in files.items() if name.lower().endswith(".csv")]
+        if not csvs:
+            raise ValueError("The ZIP file has no CSV file in it")
+        return sum(self.ctx.vault.import_csv("", data) for data in csvs)
+
+    def _export(self) -> None:
+        vault = self.ctx.vault
+        if not self.ui.unlock_vault():
             return
-        self.ui.toast(f"Imported {n} logins. Delete the CSV file now: it is not encrypted", "key")
+        if vault.mode == "master":
+            pw, ok = QInputDialog.getText(self, "Export passwords", "Enter your master password to export:",
+                                          QLineEdit.EchoMode.Password)
+            if not ok:
+                return
+            if not vault.verify_password(pw):
+                QMessageBox.warning(self, "Export passwords", "That isn't your master password.")
+                return
+        data, count = vault.export_csv()
+        if not count:
+            QMessageBox.information(self, "Export passwords", "There are no saved logins to export.")
+            return
+        dlg = ExportDialog(count, self)
+        if not dlg.exec():
+            return
+        from PyQt6.QtCore import QStandardPaths
+        folder = QStandardPaths.writableLocation(QStandardPaths.StandardLocation.DocumentsLocation)
+        suggested = f"{folder}/JBrowser passwords {time.strftime('%Y-%m-%d')}.zip"
+        path, _ = QFileDialog.getSaveFileName(self, "Export passwords", suggested, "ZIP files (*.zip)")
+        if not path:
+            return
+        if not path.lower().endswith(".zip"):
+            path += ".zip"
+        from jbrowser.core.aeszip import write_encrypted_zip
+        try:
+            write_encrypted_zip(path, {"passwords.csv": data}, dlg.password())
+        except OSError as exc:
+            QMessageBox.warning(self, "Export failed", str(exc))
+            return
+        QMessageBox.information(
+            self, "Passwords exported",
+            f"Saved {count} logins to:\n{path}\n\nTo open it, use 7-Zip, WinRAR or PeaZip with your password, or "
+            "import it into JBrowser. (Windows' own \"Extract All\" can't open encrypted ZIP files.)")
 
     def _never(self) -> None:
         if not self.ui.unlock_vault():

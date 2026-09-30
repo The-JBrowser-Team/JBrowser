@@ -121,8 +121,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   together with browsing history.
 - **Password manager**: AES-256-GCM encrypted vault, key protected by Windows DPAPI or an optional master password (Scrypt).
   Offers to save/update logins, autofills (isolated script world, so pages can't read it), per-space or global logins,
-  password generator, CSV import (Chrome/Edge/Firefox), never-save list, clipboard auto-clear and a local
-  **password health check** that flags weak and reused passwords.
+  password generator, CSV import (Chrome/Edge/Firefox), **encrypted export** (a CSV inside a ZIP locked with a
+  password you choose, AES-256; 7-Zip, WinRAR and JBrowser itself open it), never-save list, clipboard auto-clear and
+  a local **password health check** that flags weak and reused passwords.
 - **Downloads** manager with progress, speed/ETA, pause/resume/cancel, open file / show in folder.
 - **DevTools** docked inside the card (F12 / Ctrl+Shift+I), **find in page** (Ctrl+F), **zoom** remembered per site
   (Ctrl+= / Ctrl+- / Ctrl+0), print, save page (HTML/MHTML), save as PDF, view source, card screenshots.

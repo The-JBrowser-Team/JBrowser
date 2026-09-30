@@ -5,13 +5,13 @@ import time
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QModelIndex, QPoint, QRect, QRectF, QSize, Qt
-from PyQt6.QtGui import QFont, QGuiApplication, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPainterPath, QPen
 from PyQt6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget, QListWidgetItem, QPushButton,
                              QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from jbrowser.core.urls import pretty_url
 from jbrowser.ui.icons import draw_emoji, draw_glyph
-from jbrowser.ui.theme import theme
+from jbrowser.ui.theme import mix, theme
 
 if TYPE_CHECKING:
     from jbrowser.context import AppContext
@@ -20,6 +20,7 @@ if TYPE_CHECKING:
 
 EntryRole = Qt.ItemDataRole.UserRole + 1
 HeaderRole = Qt.ItemDataRole.UserRole + 2
+EMPTY_TEXT = "Cards you close appear here"
 
 
 def ago(ts: float, now: float | None = None) -> str:
@@ -114,7 +115,7 @@ class _Delegate(QStyledItemDelegate):
             draw_emoji(p, QRectF(x, sub_y, 14, 16), entry.space_icon, 10)
             x += 17
         p.setPen(th.c("text3"))
-        sub = f"{entry.space_name} · {entry.host or pretty_url(entry.url)} · {ago(entry.closed_at)}"
+        sub = f"{entry.host or pretty_url(entry.url)} · {ago(entry.closed_at)}"   # the space: its icon, and the tooltip
         p.drawText(QRectF(x, sub_y, right - x, 16), Qt.AlignmentFlag.AlignVCenter,
                    fm2.elidedText(sub, Qt.TextElideMode.ElideRight, int(right - x)))
         p.restore()
@@ -175,38 +176,36 @@ class ArchivePopup(QFrame):
         lay.setContentsMargins(14, 14, 14, 12)
         lay.setSpacing(8)
         head = QHBoxLayout()
-        title = QLabel("Archive", self)
+        # One label, so "last 48 hours" sits on the same baseline as the larger "Archive". The muted text
+        # colour is translucent; rich text needs it solid, so it is blended with the popup's background.
+        th = theme()
+        muted = th.c("text3")
+        solid = mix(th.c("dialog_solid"), QColor(muted.red(), muted.green(), muted.blue()), muted.alphaF())
+        title = QLabel(f"Archive&nbsp;&nbsp;<span style='font-size:9pt; color:{solid.name()}'>"
+                       "last 48 hours</span>", self)
+        title.setTextFormat(Qt.TextFormat.RichText)
         f = title.font()
         f.setPointSizeF(12)
         title.setFont(f)
-        head.addWidget(title)
+        head.addWidget(title, 0, Qt.AlignmentFlag.AlignVCenter)
         head.addStretch(1)
+        self.clear_btn = QPushButton("Clear", self)
+        self.clear_btn.setToolTip("Remove every card from the Archive")
+        self.clear_btn.clicked.connect(self._clear)
+        head.addWidget(self.clear_btn)
         lay.addLayout(head)
-        sub = QLabel("Cards you closed in the last 48 hours. Click one to bring it back, history and all.", self)
-        sub.setProperty("muted", True)
-        sub.setWordWrap(True)
-        lay.addWidget(sub)
         self.search = QLineEdit(self)
-        self.search.setPlaceholderText("Search the archive")
+        self.search.setPlaceholderText("Search")
         self.search.setClearButtonEnabled(True)
         self.search.textChanged.connect(self.reload)
         lay.addWidget(self.search)
         self.list = _List(self)
         self.list.setItemDelegate(_Delegate(self))
         lay.addWidget(self.list, 1)
-        self.empty = QLabel("Nothing here yet.\nCards you close wait here for 48 hours.", self)
+        self.empty = QLabel(EMPTY_TEXT, self)
         self.empty.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.empty.setProperty("muted", True)
         lay.addWidget(self.empty, 1)
-        foot = QHBoxLayout()
-        note = QLabel("Clearing browsing history also clears the Archive.", self)
-        note.setProperty("hint", True)
-        note.setWordWrap(True)
-        foot.addWidget(note, 1)
-        self.clear_btn = QPushButton("Clear archive", self)
-        self.clear_btn.clicked.connect(self._clear)
-        foot.addWidget(self.clear_btn)
-        lay.addLayout(foot)
         self._entries: dict[str, "ArchiveEntry"] = {}
         ctx.archive.changed.connect(self.reload)
         self.reload()
@@ -232,16 +231,15 @@ class ArchivePopup(QFrame):
                 last_group = g
             it = QListWidgetItem()
             it.setData(EntryRole, e.id)
-            it.setToolTip(f"{e.title}\n{e.url}")
+            it.setToolTip(f"{e.title}\n{e.url}\n{e.space_name} · closed {ago(e.closed_at, now)}\n"
+                          "Click to reopen · middle-click to open in the background")
             self.list.addItem(it)
             self._entries[e.id] = e
         has = bool(self._entries)
         self.list.setVisible(has)
         self.empty.setVisible(not has)
-        if not has and q:
-            self.empty.setText("No closed cards match your search.")
-        elif not has:
-            self.empty.setText("Nothing here yet.\nCards you close wait here for 48 hours.")
+        if not has:
+            self.empty.setText("No matches" if q else EMPTY_TEXT)
         self.clear_btn.setEnabled(len(self.ctx.archive) > 0)
 
     def reopen(self, entry_id: str, background: bool = False) -> None:
