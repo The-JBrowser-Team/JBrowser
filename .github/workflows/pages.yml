@@ -55,6 +55,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
+          include-hidden-files: true   # .well-known/security.txt (and .nojekyll)
 
   deploy:
     needs: build
