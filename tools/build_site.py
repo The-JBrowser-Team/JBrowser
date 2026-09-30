@@ -43,10 +43,14 @@ import shutil
 import subprocess
 import sys
 import tokenize
+import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from indexnow import INDEXNOW_KEY  # noqa: E402  (tools/indexnow.py, no dependencies)
 
 try:
     import markdown
@@ -1031,8 +1035,12 @@ class Site:
         self.repo = self.ident.get("GITHUB_REPO", "The-JBrowser-Team/JBrowser")
         self.repo_url = f"https://github.com/{self.repo}"
         owner, name = self.repo.split("/")
-        self.site_url = f"https://{owner.lower()}.github.io/{name}/"
-        self.base_path = f"/{name}/"
+        # The site's public address: the JBROWSER_SITE_URL variable (the SITE_URL repository variable in
+        # pages.yml, e.g. https://jbrowser.app/), or the GitHub Pages address of the repository.
+        self.site_url = (os.environ.get("JBROWSER_SITE_URL") or f"https://{owner.lower()}.github.io/{name}/").strip()
+        if not self.site_url.endswith("/"):
+            self.site_url += "/"
+        self.base_path = urllib.parse.urlsplit(self.site_url).path or "/"
         self.releases_info = release_details(self.repo, offline)
         self.nav = json.loads((DOCS_SRC / "nav.json").read_text(encoding="utf-8"))
         self.search_entries: dict[str, list] = {}
@@ -1148,7 +1156,28 @@ class Site:
                 "latest_version": d["version"], "exe_url": esc(d["exe_url"]), "exe_name": esc(d["exe_name"]),
                 "exe_size": d["size"], "release_date": d["date"], "release_url": esc(d["release_url"]),
                 "repo": self.repo, "docs_home": f"{root}docs/latest/index.html",
-                "canonical": self.site_url + (page[:-len("index.html")] if page.endswith("index.html") else page)}
+                "canonical": self.site_url + (page[:-len("index.html")] if page.endswith("index.html") else page),
+                "og_image": self.site_url + "static/img/shots/og-image.jpg", "head_extra": ""}
+
+    def software_json_ld(self) -> str:
+        """schema.org SoftwareApplication data for the home page, so search engines know what JBrowser is."""
+        d = self.download()
+        data = {
+            "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "JBrowser",
+            "applicationCategory": "BrowserApplication", "operatingSystem": "Windows 10, Windows 11",
+            "description": "A spatial, privacy-focused web browser for Windows: pages side by side on one canvas, "
+                           "separate spaces, built-in ad and tracker blocking. Free and open source.",
+            "url": self.site_url, "downloadUrl": self.site_url + "download/", "softwareVersion": d["version"],
+            "license": "https://www.gnu.org/licenses/gpl-3.0.html", "isAccessibleForFree": True,
+            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+            "image": self.site_url + "static/img/shots/og-image.jpg",
+            "screenshot": self.site_url + "static/img/shots/hero-dark-1920.webp",
+            "author": {"@type": "Organization", "name": self.ident.get("COMPANY", "The JBrowser Team"),
+                       "url": self.repo_url},
+            "codeRepository": self.repo_url,
+        }
+        text = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
+        return f'<script type="application/ld+json">{text}</script>'
 
     def build_home(self) -> None:
         page = "index.html"
@@ -1159,7 +1188,7 @@ class Site:
                              "JBrowser replaces the tab strip with an infinite canvas of web cards, organised into "
                              "isolated Spaces, with built-in ad and tracker blocking. Free and open source.")
         values.update({"news": news, "size_note": f" · {self.download()['size']}" if self.download()["size"] else "",
-                       "og_image": self.site_url + "static/img/shots/og-image.jpg"})
+                       "head_extra": self.software_json_ld()})
         write(self.out / page, render("home.html", values))
         self.sitemap.append("")
 
@@ -1234,6 +1263,19 @@ class Site:
         write(self.out / "sitemap.xml", '<?xml version="1.0" encoding="UTF-8"?>\n'
               '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + "\n</urlset>\n")
         write(self.out / "robots.txt", f"User-agent: *\nAllow: /\nSitemap: {self.site_url}sitemap.xml\n")
+        # IndexNow (Bing, Yandex, Seznam, Naver): the key file proves the site is ours; the Pages workflow
+        # sends the sitemap's pages to api.indexnow.org after each deploy (tools/indexnow.py).
+        write(self.out / f"{INDEXNOW_KEY}.txt", INDEXNOW_KEY + "\n")
+        # security.txt (RFC 9116): where to report vulnerabilities.
+        expires = (datetime.now(timezone.utc) + timedelta(days=365)).strftime("%Y-%m-%dT00:00:00Z")
+        write(self.out / ".well-known" / "security.txt",
+              f"Contact: {self.repo_url}/security/advisories/new\n"
+              f"Policy: {self.repo_url}/blob/main/SECURITY.md\n"
+              f"Canonical: {self.site_url}.well-known/security.txt\n"
+              f"Preferred-Languages: en\nExpires: {expires}\n")
+        host = urllib.parse.urlsplit(self.site_url).hostname or ""
+        if not host.endswith(".github.io"):
+            write(self.out / "CNAME", host + "\n")          # the custom domain (also set in the repository)
 
     # -- link rewriting ---------------------------------------------------------
     def fix_links(self, body: str, page: str, v: Version | None, api_names: set[str] | None = None) -> str:
@@ -1460,6 +1502,12 @@ class Site:
             "pager": "".join(pager), "home_link": esc(link("index")),
             "version_short": esc("main" if v.is_main else v.id),
         })
+        # Search engines should send people to the current docs: the newest release's own folder is the
+        # same as docs/latest/ (canonical), and older versions and main aren't indexed (links still followed).
+        if dir_id == self.latest.id:
+            values["canonical"] = f"{self.site_url}docs/latest/{p['slug']}.html"
+        elif dir_id != "latest":
+            values["head_extra"] = '<meta name="robots" content="noindex, follow">'
         return render("docs.html", values)
 
 

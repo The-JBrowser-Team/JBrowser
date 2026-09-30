@@ -78,23 +78,20 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.5.2 (latest) · 29 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.2)
+### 1.5.3 (latest) · 30 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.3)
 
-- **Sites see the current Chrome** (Chrome 155) instead of JBrowser's year-old engine version, in the user agent and
-  every other browser detail; each release updates the numbers.
-- **Google sign-in, second round**: sign-in pages (Google, Microsoft, Apple) are no longer filtered by the ad and
-  tracker blocker, which blocked requests Google's security check needs.
-- **The active card's outline takes your colour tint** (grey with *No colour*) instead of blue.
-- **Security**: saved web pages can no longer read your other files, a stronger master-password key, and signed
-  copies will accept only signed updates.
-- Videos JBrowser can't play (H.264, AAC) now say so, and the loading spinner is lighter on the CPU.
-- **Ready for free code signing** by SignPath Foundation: releases can be built and signed on GitHub's own machines,
-  and the website has the code signing and privacy policies SignPath requires ([docs/SIGNING.md](docs/SIGNING.md)).
+- **The one-line PowerShell install works again** (it stopped just before opening the installer), and it never
+  leaves JBrowser running as administrator.
+- **Simpler downloading** on the website: one big *Download for Windows* button, then three short steps.
+- A new **open source** section on the website, and the site is ready to move to **jbrowser.app** with better
+  search-engine support.
+- Updated packages and the newest Chrome version.
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.5.2 | Sites see the current Chrome (155), Google sign-in pages exempt from blocking, card outline in your tint, saved pages can't read your files, ready for SignPath code signing |
 | 1.5.1 | Google sign-in fix (Firefox user agent for Google's sign-in server), code signing built into the release scripts, a website with real screenshots and versioned developer docs |
 | 1.5.0 | The Gallery, colour tints, drag cards anywhere, real ad blocking with EasyList and EasyPrivacy, fewer CAPTCHAs |
 | 1.4.1 | Setup closes a running JBrowser for you, a 30 MB smaller download, nothing lost when Windows closes JBrowser |

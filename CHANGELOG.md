@@ -5,13 +5,26 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
-## [Unreleased]
+## [1.5.3] - 2026-09-30
+
+### Fixed
+- **The one-line PowerShell install works again.** It stopped with *"Cannot validate argument on parameter
+  'ArgumentList'"* in Windows PowerShell (the version built into Windows) right before opening the installer.
+- Pasted into a PowerShell window opened *as administrator*, the install command now opens the installer with your
+  normal rights, so JBrowser never ends up running as administrator. If JBrowser is ever started as administrator
+  anyway, it says so and suggests opening it normally.
 
 ### Changed
-- **Simpler installing.** The website's *Download* buttons open a short guide: the one-line install command (copied
-  for you and shown in full), three plain steps (open PowerShell, paste, press Enter) and what the command does, with
-  the installer file as the alternative. The README starts with the same steps. The install script says what it is
-  doing in plain words and when it's done.
+- **Simpler downloading.** The website's *Download* buttons open a short, clear window with one big *Download for
+  Windows* button. Once the download starts it shows three steps to install, including what to click if Windows
+  says "Windows protected your PC". Installing with one PowerShell command is still there as an option.
+- **A new "Nothing hidden" section on the website** about JBrowser being open source: all code public, nothing sent
+  about you, checked downloads, free under the GPL.
+- **Ready for jbrowser.app.** The website can move to its own domain with a single setting, and it now helps search
+  engines: a structured description of JBrowser for Google and Bing, link previews on every page, old documentation
+  versions kept out of search results, automatic notifications to Bing when pages change (IndexNow), and a
+  `security.txt` for security researchers.
+- Packages updated; the newest stable Chrome version is recorded as usual.
 - The website and the app credit **The JBrowser Team**.
 
 ## [1.5.2] - 2026-09-29

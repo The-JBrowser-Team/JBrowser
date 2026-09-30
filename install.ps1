@@ -33,7 +33,7 @@ function Install-JBrowser {
     }
 
     $work = Join-Path $env:TEMP "JBrowser-Install"
-    if (Test-Path $work) { Remove-Item $work -Recurse -Force }
+    if (Test-Path $work) { Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue }
     New-Item -ItemType Directory $work | Out-Null
     $zipPath = Join-Path $work $zip.name
     Write-Host ("Downloading {0} ({1:N0} MB)..." -f $zip.name, ($zip.size / 1MB)) -ForegroundColor Cyan
@@ -57,6 +57,16 @@ function Install-JBrowser {
     Write-Host "Checked: the download matches the published fingerprint." -ForegroundColor Green
     Write-Host "${action}: the installer window is opening (it may appear behind this one)..." -ForegroundColor Cyan
     Unblock-File $setup.FullName
+    $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
+        [Security.Principal.WindowsBuiltInRole]::Administrator)
+    if ($admin -and -not $env:JBROWSER_SILENT) {
+        # From an administrator PowerShell, Setup (and the JBrowser it starts at the end) would run as
+        # administrator too. Explorer starts it with your normal rights instead; JBrowser is installed
+        # for your account and never needs administrator rights.
+        Start-Process explorer.exe -ArgumentList "`"$($setup.FullName)`""
+        Write-Host "Follow the installer window to finish. You can close this window." -ForegroundColor Green
+        return
+    }
     # Windows PowerShell 5.1 refuses an empty -ArgumentList, so it is only passed when there are arguments.
     $start = @{ FilePath = $setup.FullName; PassThru = $true; Wait = $true }
     if ($env:JBROWSER_SILENT) { $start.ArgumentList = @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-") }

@@ -390,6 +390,16 @@ def dpapi_unprotect(data: bytes, entropy: bytes = b"JBrowser") -> bytes:
         _kernel32.LocalFree(blob_out.pbData)
 
 
+def running_as_admin() -> bool:
+    """True when this process runs elevated (as administrator)."""
+    if not IS_WINDOWS:
+        return False
+    try:
+        return bool(ctypes.windll.shell32.IsUserAnAdmin())
+    except (AttributeError, OSError):
+        return False
+
+
 def authenticode(path: str) -> tuple[str, str]:
     """The Authenticode signature of a file: (status, signer subject), e.g. ("Valid", "CN=…") or
     ("NotSigned", ""). ("Unknown", "") when it can't be checked. Takes about half a second."""

@@ -234,6 +234,12 @@ def run(argv: list[str] | None = None) -> int:
     elif not restored and not welcome:
         QTimer.singleShot(900, lambda: window.toasts.show(
             "Welcome to JBrowser. Ctrl+T opens a new card, Ctrl+/ shows every shortcut.", "lightbulb", 6000))
+    if win.running_as_admin():
+        # A browser should never run as administrator: a hacked page would get the same rights.
+        log.warning("Running as administrator")
+        QTimer.singleShot(1500, lambda: window.toasts.show(
+            "JBrowser is running as administrator, which gives websites more power than they need. "
+            "Close it and open it normally from the Start menu.", "warning", 12000))
     QTimer.singleShot(8000, ctx.threats.maybe_refresh)             # weekly dangerous-site list refresh
     if not os.environ.get("JBROWSER_SKIP_UPDATES"):
         ctx.updater.start()                                        # daily GitHub Releases check

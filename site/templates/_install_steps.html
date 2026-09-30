@@ -1,42 +1,25 @@
-<ol class="install-steps">
-  <li>
-    <span class="n">1</span>
-    <div>
-      <p class="step-title">Copy this command <span class="copied-note" hidden>Copied ✓</span></p>
-      <div class="code-copy install-cmd"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
-        <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
-    </div>
-  </li>
-  <li>
-    <span class="n">2</span>
-    <div>
-      <p class="step-title">Open PowerShell</p>
-      <p>Press the <kbd><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg> Windows</kbd> key,
-        type <b>PowerShell</b> and press <kbd>Enter</kbd>. A window with a blinking cursor opens.</p>
-    </div>
-  </li>
-  <li>
-    <span class="n">3</span>
-    <div>
-      <p class="step-title">Paste it and press Enter</p>
-      <p>Right-click inside the window (or press <kbd>Ctrl</kbd> + <kbd>V</kbd>), then press <kbd>Enter</kbd>.
-        After a moment the JBrowser installer opens: click through it like any other app.</p>
-    </div>
-  </li>
-</ol>
-<details class="install-why">
-  <summary>What does this command do?</summary>
-  <p>It downloads the newest JBrowser from our <a href="{{repo_url}}/releases/latest">official releases on GitHub</a>,
-    checks that the file is exactly the one we published (using its SHA-256 fingerprint), and opens the normal
-    JBrowser installer. It doesn't need administrator rights and changes nothing else on your computer.
-    The script is short and public: <a href="{{repo_url}}/blob/main/install.ps1">read it on GitHub</a>.</p>
-  <p>Why not a normal download? JBrowser is new, so Windows doesn't recognise it yet and shows a
-    "Windows protected your PC" warning for a downloaded installer. Installing with the command avoids that warning,
-    and it checks the file for you before running it.</p>
-</details>
-<div class="install-alt">
-  <p><b>Prefer a normal download?</b> Download the installer and open it. If Windows says "Windows protected your PC",
-    click <em>More info</em>, then <em>Run anyway</em>.</p>
-  <a class="btn btn-ghost" href="{{exe_url}}" data-latest-exe data-direct>Download the installer file</a>
+<a class="btn btn-primary btn-large install-main" href="{{exe_url}}" data-latest-exe data-direct>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5.5 10.5 4.4v7.1H3zM11.5 4.3 21 3v8.5h-9.5zM3 12.5h7.5v7.1L3 18.5zM11.5 12.5H21V21l-9.5-1.3z"/></svg>
+  Download for Windows</a>
+<p class="install-sub">Free and open source · No account needed · <span data-latest-label>Version {{latest_version}}</span></p>
+<div class="after-download">
+  <p class="after-title">Then install it</p>
+  <ol class="install-steps">
+    <li><span class="n">1</span><p>Open <b data-latest-name>{{exe_name}}</b> from your Downloads.</p></li>
+    <li><span class="n">2</span><p>If Windows says <b>"Windows protected your PC"</b>, click <b>More info</b>, then <b>Run anyway</b>.
+      <span class="why">JBrowser is new, so Windows doesn't recognise it yet.</span></p></li>
+    <li><span class="n">3</span><p>Follow the installer. JBrowser opens when it's done.</p></li>
+  </ol>
 </div>
+<details class="install-alt">
+  <summary>Or install with one command (no Windows warning)</summary>
+  <ol class="install-steps compact">
+    <li><span class="n">1</span><p>Open <b>PowerShell</b>: press the Windows key, type <b>PowerShell</b>, press Enter.</p></li>
+    <li><span class="n">2</span><p>Paste this line and press Enter:</p></li>
+  </ol>
+  <div class="code-copy install-cmd"><code>irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex</code>
+    <button type="button" class="copy" data-copy="irm https://raw.githubusercontent.com/{{repo}}/main/install.ps1 | iex">Copy</button></div>
+  <p class="install-note">It downloads JBrowser from our <a href="{{repo_url}}/releases/latest">GitHub releases</a>, checks
+    the file's fingerprint and opens the same installer. <a href="{{repo_url}}/blob/main/install.ps1">Read the script</a>.</p>
+</details>
 <p class="install-notwin" hidden>JBrowser is for Windows 10 and 11. Open this page on your Windows PC to install it.</p>

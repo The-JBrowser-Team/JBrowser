@@ -195,53 +195,58 @@ h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; letter-spac
 
 /* the install window (every Download button) and the download page share _install_steps.html */
 .install-dialog {
-  width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; overflow: auto;
-  border: 1px solid var(--border-2); border-radius: 20px; background: var(--surface); color: var(--text);
+  width: min(520px, calc(100vw - 32px)); max-height: calc(100vh - 32px); padding: 0; overflow: auto;
+  border: 1px solid var(--border-2); border-radius: 22px; background: var(--surface); color: var(--text);
   box-shadow: var(--shadow-big);
 }
 .install-dialog::backdrop { background: rgba(8, 8, 16, .55); backdrop-filter: blur(4px); }
 .install-dialog[open] { animation: install-in .22s var(--ease); }
 @keyframes install-in { from { opacity: 0; transform: translateY(10px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .install-dialog[open] { animation: none; } }
-.install-body { position: relative; padding: 28px 30px 26px; }
+.install-body { position: relative; padding: 30px 32px 24px; text-align: center; }
 .dialog-close {
   position: absolute; top: 14px; right: 14px; width: 36px; height: 36px; display: grid; place-items: center;
   border: 0; border-radius: 10px; background: transparent; color: var(--text-2); cursor: pointer;
 }
 .dialog-close:hover { background: var(--surface-2); color: var(--text); }
 .dialog-close svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.install-head { display: flex; gap: 14px; align-items: center; margin: 0 40px 12px 0; }
-.install-head h2 { margin: 0; font-size: 24px; }
-.install-head p { margin: 2px 0 0; color: var(--text-3); font-size: 14px; }
-.install-intro { margin: 0 0 18px; color: var(--text-2); font-size: 15.5px; }
-.install-steps { list-style: none; padding: 0; margin: 0 0 16px; display: grid; gap: 16px; text-align: left; }
-.install-steps li { display: flex; gap: 14px; align-items: flex-start; }
+.install-head img { filter: drop-shadow(0 10px 24px rgba(120, 90, 255, .35)); }
+.install-head h2 { margin: 12px 0 2px; font-size: 26px; }
+.install-head p { margin: 0 0 20px; color: var(--text-3); font-size: 15px; }
+.install-main { width: 100%; justify-content: center; font-size: 17px; padding-top: 15px; padding-bottom: 15px; }
+.install-main svg { width: 18px; height: 18px; fill: currentColor; }
+.install-sub { margin: 10px 0 0; color: var(--text-3); font-size: 13.5px; }
+/* "Then install it": after the download starts in the window; always shown on the download page */
+.after-download { display: none; margin-top: 20px; padding: 16px 18px; border-radius: 14px; background: var(--surface-2); text-align: left; }
+.install-dialog.started .after-download, .install-page .after-download { display: block; }
+.install-dialog.started .after-download { animation: install-in .25s var(--ease); }
+.after-title { margin: 0 0 10px; font-weight: 700; font-size: 15.5px; }
+.install-steps { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; text-align: left; }
+.install-steps li { display: flex; gap: 12px; align-items: flex-start; }
 .install-steps .n {
-  flex: none; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px;
-  background: var(--brand); color: #fff; font-weight: 700; font-size: 15px;
+  flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px;
+  background: var(--brand); color: #fff; font-weight: 700; font-size: 13px; margin-top: 1px;
 }
-.install-steps li > div { flex: 1; min-width: 0; }
-.install-steps p { margin: 2px 0 0; color: var(--text-2); font-size: 15px; line-height: 1.55; }
-.install-steps .step-title { margin: 3px 0 0; color: var(--text); font-weight: 600; font-size: 16px; }
-.install-steps kbd svg { width: 11px; height: 11px; fill: currentColor; vertical-align: -1px; }
-.copied-note { margin-left: 8px; color: var(--good); font-weight: 600; font-size: 14px; }
+.install-steps p { margin: 0; color: var(--text-2); font-size: 14.5px; line-height: 1.55; }
+.install-steps b { color: var(--text); }
+.install-steps .why { display: block; color: var(--text-3); font-size: 13.5px; }
+.install-alt { margin-top: 18px; padding-top: 14px; border-top: 1px solid var(--border); text-align: left; font-size: 14.5px; }
+.install-alt summary { cursor: pointer; color: var(--link); font-weight: 600; width: fit-content; margin: 0 auto; }
+.install-alt[open] summary { margin-bottom: 12px; }
+.install-alt .install-steps { margin-bottom: 10px; }
 .install-cmd { align-items: flex-start; }
 .install-cmd code {           /* shown in full, never cut off: people should see exactly what they paste */
-  min-width: 0; font-size: 13.5px; line-height: 1.55; padding-top: 2px;
+  min-width: 0; font-size: 13px; line-height: 1.55; padding-top: 2px;
   white-space: normal; overflow-wrap: anywhere;
 }
-.install-why { margin: 0 0 16px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); font-size: 14.5px; text-align: left; }
-.install-why summary { cursor: pointer; color: var(--link); font-weight: 600; }
-.install-why p { margin: 10px 0 0; color: var(--text-2); line-height: 1.55; }
-.install-alt { padding-top: 16px; border-top: 1px solid var(--border); text-align: left; }
-.install-alt p { margin: 0 0 12px; color: var(--text-2); font-size: 14.5px; line-height: 1.55; }
+.install-note { margin: 10px 0 0; color: var(--text-3); font-size: 13.5px; line-height: 1.55; }
 .install-notwin { margin: 14px 0 0; color: var(--warn); font-size: 14.5px; }
 .install-page {
-  margin: 8px auto 40px; padding: 26px 28px; border: 1px solid var(--border); border-radius: 18px;
-  background: var(--surface); box-shadow: var(--shadow);
+  max-width: 560px; margin: 8px auto 48px; padding: 28px 30px 24px; border: 1px solid var(--border);
+  border-radius: 20px; background: var(--surface); box-shadow: var(--shadow); text-align: center;
 }
 @media (max-width: 560px) {
-  .install-body, .install-page { padding: 22px 18px; }
+  .install-body, .install-page { padding: 24px 18px 20px; }
 }
 
 /* ---------------------------------------------------------------- changelog */

@@ -48,6 +48,7 @@ jobs:
         run: python tools/build_site.py --out _site
         env:
           GITHUB_TOKEN: ${{ github.token }}   # release sizes and dates from the GitHub API
+          JBROWSER_SITE_URL: ${{ vars.SITE_URL }}   # the site's own domain (https://jbrowser.app/) once set up
 
       - uses: actions/configure-pages@v6
 
@@ -64,3 +65,17 @@ jobs:
     steps:
       - id: deployment
         uses: actions/deploy-pages@v5
+
+  # Tell Bing and the other IndexNow search engines about the pages (only on the site's own domain).
+  indexnow:
+    needs: deploy
+    if: vars.SITE_URL != ''
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: main
+          sparse-checkout: tools/indexnow.py
+          sparse-checkout-cone-mode: false
+      - name: Send the sitemap to IndexNow
+        run: sleep 60 && python3 tools/indexnow.py "${{ vars.SITE_URL }}sitemap.xml"

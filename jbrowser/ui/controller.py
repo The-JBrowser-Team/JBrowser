@@ -14,7 +14,7 @@ from PyQt6.QtWebEngineCore import QWebEngineDownloadRequest
 from PyQt6.QtWidgets import QFileDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
 
 from jbrowser.core.settings import SLEEP_PRESETS
-from jbrowser.core.urls import pretty_url, strip_www  # noqa: F401  (strip_www used by site actions)
+from jbrowser.core.urls import pretty_url, strip_www
 from jbrowser.models.tab import Tab
 from jbrowser.services.network import DEV_PORTS, DNS_MODES, describe_proxy
 from jbrowser.ui.widgets import menu_action, submenu
@@ -667,7 +667,7 @@ class BrowserController(QObject):
 
     def show_spaces_menu(self, pos: QPoint) -> None:
         m = QMenu(self.window)
-        for i, sp in enumerate(self.ctx.state.spaces):
+        for sp in self.ctx.state.spaces:
             menu_action(m, f"{sp.icon}  {sp.name}" + ("  (incognito)" if sp.incognito else ""),
                         lambda sid=sp.id: self.select_space(sid), checkable=True,
                         checked=sp.id == self.ctx.state.active_space_id)

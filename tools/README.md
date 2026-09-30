@@ -21,6 +21,7 @@ which can create `.venv` from any Python 3.14+.
 | `convert_sounds.py` | Converts an MP3 into the WAV format used for UI sounds, and prints its loudness envelope | `python tools\convert_sounds.py in.mp3 assets\sounds\x.wav` |
 | `site_screenshots.py` | Photographs the real app in front of a gradient (the canvas, Gallery, Lazy Toolbar, privacy panel, every colour tint, light mode, incognito, the welcome) and converts the pictures for the website. About two and a half minutes; hands off the mouse meanwhile. | `.\.venv\Scripts\python.exe tools\site_screenshots.py` |
 | `build_site.py` | Builds the website (home page, download page, changelog and the versioned developer docs) from `site/`, `CHANGELOG.md` and every release tag. Needs `requirements-site.txt`. | `python tools\build_site.py --serve` · `--offline` · `--out DIR` |
+| `indexnow.py` | After each website deploy on the custom domain, tells Bing and other IndexNow search engines about every page in the sitemap (run by `pages.yml`) | `python tools\indexnow.py https://jbrowser.app/sitemap.xml` |
 | `version_info.txt` | The exe's version resource (generated: don't edit by hand) | written by `version.py --sync` |
 
 `dist\` above is the build output folder. When the repository is inside OneDrive it is

@@ -572,7 +572,7 @@ class WebCard(QFrame):
             w.deleteLater()
 
     def _on_navigated(self) -> None:
-        for key, w in list(self._infobars.items()):
+        for w in list(self._infobars.values()):
             if not w.spec.persist_navigation:
                 w.dismiss()
         self.status.hide()

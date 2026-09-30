@@ -197,7 +197,7 @@ class AppContext(QObject):
             self.history.clear()       # also empties the Archive (history.cleared)
         if "downloads" in items:
             self.downloads.clear_finished()
-        for sid, prof in [(s.id, self.profiles.get(s.id)) for s in self.state.spaces]:
+        for prof in [self.profiles.get(s.id) for s in self.state.spaces]:
             if prof is None:
                 continue
             if "cookies" in items:

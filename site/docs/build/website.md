@@ -102,10 +102,42 @@ The download buttons are baked in at build time and refreshed in the browser fro
 new release even before the site is rebuilt. `download/` is a permanent link that always offers the newest version.
 
 **How visitors install.** Every *Download* button opens the install window (`<dialog id="install-dialog">` in
-`_footer.html`; `site.js` opens it): the one-line PowerShell install, copied when the visitor clicks and always shown
-in full, three plain steps (open PowerShell, paste, press Enter), a "What does this command do?" explanation linking
-to `install.ps1`, and the installer file as the alternative, with the SmartScreen note. The download page shows the
-same steps (`_install_steps.html`, shared by both). Links with `data-direct` download the file itself, and without
-JavaScript every button is a plain download link. The window is deliberately transparent, so it can't be mistaken for
-"paste this command" scams: nothing is copied without a click, the command is visible, it names what it does, and it
-never suggests the Win+R box.
+`_footer.html`; `site.js` opens it). Its one big button downloads the installer; once clicked, the window shows three
+steps to run it, including the SmartScreen "More info → Run anyway" note. The one-line PowerShell install is a
+collapsed alternative, with the command always shown in full and a link to `install.ps1`; nothing is copied without a
+click on *Copy*. The download page shows the same content (`_install_steps.html`, shared by both), with the steps
+always visible. Links with `data-direct` download the file itself, and without JavaScript every button is a plain
+download link.
+
+## The domain and search engines
+
+The site's address comes from the `SITE_URL` repository variable (`JBROWSER_SITE_URL` for `build_site.py`). Unset,
+the site is built for `https://the-jbrowser-team.github.io/JBrowser/`; set to `https://jbrowser.app/`, the build uses
+that address for canonical links, link previews, the sitemap and `robots.txt`, writes a `CNAME` file and roots the
+404 page at `/`. Pages link to each other relatively, so a build works at either address.
+
+What the build does for search engines:
+
+| Piece | Why |
+|---|---|
+| `<link rel="canonical">`, `og:*` and `twitter:card` on every page | one address per page, and proper link previews |
+| schema.org `SoftwareApplication` JSON-LD on the home page | tells Google and Bing that JBrowser is a free Windows browser, with its version and download page |
+| `sitemap.xml` and `robots.txt` | the pages to index: home, download, changelog, policies and the latest docs |
+| docs of the newest release point at `docs/latest/` (canonical); older versions and `main` are `noindex, follow` | searches land on the current documentation |
+| `<key>.txt` and the `indexnow` job in `pages.yml` (`tools/indexnow.py`) | after each deploy on the custom domain, Bing, Yandex and others are told about every page (IndexNow) |
+| `.well-known/security.txt` | where to report a vulnerability (RFC 9116) |
+
+Moving to the domain, once its DNS points at GitHub Pages (four `A` records for `jbrowser.app`, `AAAA` records, and
+`www` as a `CNAME` to `the-jbrowser-team.github.io`, all *DNS only* in Cloudflare):
+
+```powershell
+gh variable set SITE_URL --body "https://jbrowser.app/"
+gh api -X PUT repos/The-JBrowser-Team/JBrowser/pages -f cname=jbrowser.app
+gh workflow run pages.yml --ref main
+# when GitHub has issued the certificate (a few minutes):
+gh api -X PUT repos/The-JBrowser-Team/JBrowser/pages -F https_enforced=true
+```
+
+GitHub then redirects the old `github.io` address to the domain. Google needs the site added in Google Search
+Console (a domain property verified with a DNS `TXT` record) and the sitemap submitted there; Bing Webmaster Tools can
+import it from Search Console.
