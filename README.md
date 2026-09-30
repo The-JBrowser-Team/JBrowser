@@ -10,10 +10,10 @@
 </p>
 
 <p align="center">
-  <a href="https://the-jbrowser-team.github.io/JBrowser/"><b>Website</b></a> ·
-  <a href="https://the-jbrowser-team.github.io/JBrowser/download/"><b>Download</b></a> ·
-  <a href="https://the-jbrowser-team.github.io/JBrowser/changelog/"><b>Changelog</b></a> ·
-  <a href="https://the-jbrowser-team.github.io/JBrowser/docs/"><b>Developer docs</b></a>
+  <a href="https://jbrowser.app/"><b>Website</b></a> ·
+  <a href="https://jbrowser.app/download/"><b>Download</b></a> ·
+  <a href="https://jbrowser.app/changelog/"><b>Changelog</b></a> ·
+  <a href="https://jbrowser.app/docs/"><b>Developer docs</b></a>
 </p>
 
 <p align="center">
@@ -140,7 +140,7 @@ py -3.14 tools\update_deps.py        # creates .venv, installs everything and ch
 
 Run `tools\update_deps.py` again at any time to update all packages. [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)
 covers the command-line options, test profiles, debugging and code conventions, and the
-**[developer documentation](https://the-jbrowser-team.github.io/JBrowser/docs/)** explains the architecture, the web
+**[developer documentation](https://jbrowser.app/docs/)** explains the architecture, the web
 engine, privacy, the UI and the release process for every version, with a generated Python API reference.
 
 ## Build and release

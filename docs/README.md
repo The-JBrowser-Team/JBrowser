@@ -1,7 +1,7 @@
 # Documentation
 
 The full developer documentation, for every version, is on the website:
-**[the-jbrowser-team.github.io/JBrowser/docs](https://the-jbrowser-team.github.io/JBrowser/docs/)**. It is built from
+**[jbrowser.app/docs](https://jbrowser.app/docs/)**. It is built from
 [`site/docs`](../site/docs) together with the code itself (see [`site/README.md`](../site/README.md)). The guides below
 are the short versions that live next to the code.
 

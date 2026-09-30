@@ -52,7 +52,7 @@ runners, approved by hand for every release. Programs signed this way show **Sig
 | [`.github/workflows/release-build.yml`](../.github/workflows/release-build.yml) | Builds `JBrowser.exe` and the installer on a GitHub-hosted Windows runner from a release tag. With SignPath set up, it sends `JBrowser.exe` to SignPath before packing it into the installer, then the installer, checks both signatures, writes the checksums and the zip, attaches them to the release and publishes it. Without SignPath it makes the same build unsigned (that's how it is tested). |
 | [`.signpath/artifact-configurations/`](../.signpath/artifact-configurations/) | The two SignPath artifact configurations (`app` and `installer`), which also check the product name (JBrowser) and version, as SignPath Foundation requires. |
 | [`tools/release.ps1`](../tools/release.ps1) | When the repository has the `SIGNPATH_ORGANIZATION_ID` variable, it creates the release as a draft and starts the signed build instead of uploading a local, unsigned one. |
-| The website's [code signing policy](https://the-jbrowser-team.github.io/JBrowser/code-signing/) and [privacy policy](https://the-jbrowser-team.github.io/JBrowser/privacy/) | Required by SignPath Foundation: what is signed, team roles, and every connection JBrowser makes. |
+| The website's [code signing policy](https://jbrowser.app/code-signing/) and [privacy policy](https://jbrowser.app/privacy/) | Required by SignPath Foundation: what is signed, team roles, and every connection JBrowser makes. |
 | The updater | Once the installed JBrowser is signed, it installs only updates signed by the same publisher (on top of the SHA-256 check). Unsigned copies keep updating as before. |
 
 ### What the project owner does (once)

@@ -58,8 +58,8 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
 ### Added
 - **Ready for free code signing by SignPath Foundation**, which will remove *"Windows protected your PC"*: releases
   can now be built on GitHub's own Windows machines (`release-build.yml`), sent to SignPath for signing, and published
-  from there. The website has the required [code signing policy](https://the-jbrowser-team.github.io/JBrowser/code-signing/)
-  and a [privacy policy](https://the-jbrowser-team.github.io/JBrowser/privacy/) listing every connection JBrowser makes.
+  from there. The website has the required [code signing policy](https://jbrowser.app/code-signing/)
+  and a [privacy policy](https://jbrowser.app/privacy/) listing every connection JBrowser makes.
   [docs/SIGNING.md](docs/SIGNING.md) lists the steps left for the project owner. This release is still unsigned.
 
 ## [1.5.1] - 2026-09-29
@@ -78,7 +78,7 @@ Each release section below becomes the release notes on GitHub (see [docs/RELEAS
   release notes and `INSTALL.txt` follow. [docs/SIGNING.md](docs/SIGNING.md) explains why the warning appears and
   compares the ways to get a certificate. This release is still unsigned: a certificate from a trusted authority has
   to be requested by the publisher first.
-- **A website** at [the-jbrowser-team.github.io/JBrowser](https://the-jbrowser-team.github.io/JBrowser/): a home page
+- **A website** at [jbrowser.app](https://jbrowser.app/): a home page
   with a direct download of the newest installer, a permanent download link, this changelog, and developer
   documentation for every release (architecture, web engine, privacy, UI, building and releasing, and references
   generated from each version's code), with a version switcher and search. It is built by `tools/build_site.py`

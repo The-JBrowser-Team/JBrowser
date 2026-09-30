@@ -1,7 +1,7 @@
 # `site/`: the website
 
 The JBrowser website, published with GitHub Pages at
-**[the-jbrowser-team.github.io/JBrowser](https://the-jbrowser-team.github.io/JBrowser/)**: a home page with the
+**[jbrowser.app](https://jbrowser.app/)**: a home page with the
 newest download, a permanent download link, the changelog, and the developer documentation for every release.
 
 [`tools/build_site.py`](../tools/build_site.py) builds it; [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
@@ -41,4 +41,4 @@ Text for older versions.
 
 Front matter can limit a page (`since: 1.5.0`, `until: 1.4.1`, `only: main`). Link other pages with relative `.md`
 links, source files with `source:path`, and classes with `api:jbrowser.module.Class`. The full guide is the
-[website page](https://the-jbrowser-team.github.io/JBrowser/docs/main/build/website.html) (`docs/build/website.md`).
+[website page](https://jbrowser.app/docs/main/build/website.html) (`docs/build/website.md`).

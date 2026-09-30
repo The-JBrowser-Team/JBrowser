@@ -16,7 +16,7 @@ Use `--profile-dir` with a throw-away folder so testing never touches your real 
 
 ## Find your way around
 
-- The [developer documentation](https://the-jbrowser-team.github.io/JBrowser/docs/) covers the architecture, the
+- The [developer documentation](https://jbrowser.app/docs/) covers the architecture, the
   web engine, privacy, the UI, building and releasing, with a Python API reference generated from the code.
 - [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) explains the layers and how data flows between them.
 - Every folder has a `README.md` listing its files and what each is for.

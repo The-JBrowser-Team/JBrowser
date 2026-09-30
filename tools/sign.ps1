@@ -39,7 +39,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $Description = "JBrowser"
-$InfoUrl = "https://the-jbrowser-team.github.io/JBrowser/"
+$InfoUrl = "https://jbrowser.app/"
 $TimestampServers = if ($env:JBROWSER_SIGN_TIMESTAMP) { @($env:JBROWSER_SIGN_TIMESTAMP) } else {
     @("http://timestamp.digicert.com", "http://timestamp.sectigo.com", "http://timestamp.globalsign.com/tsa/r6advanced1")
 }

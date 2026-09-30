@@ -72,7 +72,7 @@ function Update-Website {
     & $script:Gh workflow run pages.yml --ref main 2>&1 | Out-Null
     $ok = $LASTEXITCODE -eq 0
     $ErrorActionPreference = $saved
-    if ($ok) { Write-Host "Website rebuild started: https://the-jbrowser-team.github.io/JBrowser/" -ForegroundColor Green }
+    if ($ok) { Write-Host "Website rebuild started: https://jbrowser.app/" -ForegroundColor Green }
     else { Write-Warning "Could not start the website rebuild. Run: gh workflow run pages.yml --ref main" }
 }
 
