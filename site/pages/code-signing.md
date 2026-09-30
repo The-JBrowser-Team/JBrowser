@@ -35,10 +35,10 @@ Free code signing provided by [SignPath.io](https://about.signpath.io/), certifi
 
 | Role | Who |
 |---|---|
-| Committers and reviewers | [The JBrowser Team](https://github.com/The-JBrowser-Team) (JB, Miles and Tom), through the team's GitHub account; see the [contributors](https://github.com/The-JBrowser-Team/JBrowser/graphs/contributors). Changes from anyone else are reviewed by a team member before they are merged. |
-| Approvers | The JBrowser Team's maintainers. An approver approves every signing request. |
+| Committers and reviewers | The project's maintainer, through the [The-JBrowser-Team](https://github.com/The-JBrowser-Team) GitHub account; see the [contributors](https://github.com/The-JBrowser-Team/JBrowser/graphs/contributors). Changes from anyone else are reviewed by the maintainer before they are merged. |
+| Approvers | The project's maintainer, who approves every signing request. |
 
-Team members use multi-factor authentication for GitHub and SignPath.
+The maintainer uses multi-factor authentication for GitHub and SignPath.
 
 ## Privacy
 
