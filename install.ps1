@@ -57,8 +57,10 @@ function Install-JBrowser {
     Write-Host "Checked: the download matches the published fingerprint." -ForegroundColor Green
     Write-Host "${action}: the installer window is opening (it may appear behind this one)..." -ForegroundColor Cyan
     Unblock-File $setup.FullName
-    $arguments = if ($env:JBROWSER_SILENT) { @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-") } else { @() }
-    $p = Start-Process $setup.FullName -ArgumentList $arguments -PassThru -Wait
+    # Windows PowerShell 5.1 refuses an empty -ArgumentList, so it is only passed when there are arguments.
+    $start = @{ FilePath = $setup.FullName; PassThru = $true; Wait = $true }
+    if ($env:JBROWSER_SILENT) { $start.ArgumentList = @("/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/SP-") }
+    $p = Start-Process @start
     Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
     if ($p.ExitCode -eq 0) {
         Write-Host "Done. JBrowser $version is installed and will keep itself up to date." -ForegroundColor Green
