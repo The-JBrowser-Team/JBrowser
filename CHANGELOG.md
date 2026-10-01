@@ -5,6 +5,14 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.6.1] - 2026-10-01
+
+### Fixed
+- **Scrolling up and down no longer slides to the next card.** When a page reached its top or bottom, the rest of an
+  up-and-down scroll moved the canvas sideways to the next card. Now only sideways scrolling (a tilting wheel, a
+  touchpad swipe, or the wheel with **Shift** held) moves along the canvas; **Alt + wheel** still pans from anywhere.
+  A mostly vertical touchpad swipe with a little sideways wobble no longer nudges the canvas either.
+
 ## [1.6.0] - 2026-10-01
 
 ### Fixed

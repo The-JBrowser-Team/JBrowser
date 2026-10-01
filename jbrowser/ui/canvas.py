@@ -485,14 +485,27 @@ class Canvas(QWidget):
                 return
         self.scroll_to(new, animated=animated)
 
+    @staticmethod
+    def horizontal_delta(e) -> tuple[float, bool]:
+        """The sideways part of a wheel event and whether it came from a touchpad (pixel deltas).
+        Only scrolling that is mostly sideways counts, or the wheel with Shift held (Windows' usual
+        horizontal scroll); up-and-down scrolling gives 0."""
+        pd, ad = e.pixelDelta(), e.angleDelta()
+        pixels = not pd.isNull()
+        x, y = (pd.x(), pd.y()) if pixels else (ad.x(), ad.y())
+        if abs(x) > abs(y):
+            return float(x), pixels
+        if not x and y and e.modifiers() & Qt.KeyboardModifier.ShiftModifier:
+            return float(y), pixels
+        return 0.0, pixels
+
     def wheelEvent(self, e) -> None:
-        pd = e.pixelDelta()
-        ad = e.angleDelta()
-        if not pd.isNull():
-            self._wheel(-(pd.x() or pd.y()), animated=False)
-        else:
-            d = ad.x() or ad.y()
-            self._wheel(-d * 1.4, animated=True)
+        # Only sideways scrolling moves along the canvas. Up-and-down scrolling a page passes on when
+        # it reaches its top or bottom must not slide to the next card (Alt + wheel still pans: see
+        # pan_from_wheel).
+        dx, pixels = self.horizontal_delta(e)
+        if dx:
+            self._wheel(-dx if pixels else -dx * 1.4, animated=not pixels)
         e.accept()
 
     def pan_from_wheel(self, e) -> None:

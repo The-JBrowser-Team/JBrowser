@@ -44,6 +44,17 @@ offset; a timer ticking twice per screen refresh (`_smooth_step()`) moves the ca
 - trackpad deltas are followed exactly, but however many arrive between two ticks, the canvas lays out once.
 
 `scroll_to()` (keyboard, minimap, `ensure_visible`) keeps its eased animation and stops the smoother.
+<!-- endif -->
+<!-- if >= 1.6.1 -->
+
+[[changed 1.6.1]] **Only sideways input moves the canvas.** A page passes the rest of a wheel or touchpad scroll on
+to its parent when it reaches its top or bottom, and the canvas used to turn that vertical rest into sideways
+movement, sliding to the next card. `horizontal_delta()` now takes only input that is mostly sideways (`|x| > |y|`,
+so a vertical swipe with a little wobble doesn't count), or the wheel with Shift held (Windows' usual horizontal
+scroll); everything else is ignored. **Alt + wheel** (`pan_from_wheel()`, routed by `MainWindow`) still pans with the
+vertical wheel on purpose.
+<!-- endif -->
+<!-- if >= 1.6.0 -->
 
 Two painting changes halve the work of each frame on large or high-DPI screens:
 

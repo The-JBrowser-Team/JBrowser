@@ -20,8 +20,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - Cards laid out left→right on a continuous canvas with a live **overview strip** (minimap).
 - **Pull to add**: keep scrolling past the first or last card and a "+" grows in the gap; when its ring fills, a new
   card opens at that end. Alt+← on the first card (or Alt+→ on the last) twice does the same from the keyboard.
-- Pan with trackpad swipes, horizontal wheel, **Alt + mouse wheel** anywhere, or by dragging the overview strip.
-  Scrolling eases at the screen's frame rate and keeps up with the input on slower PCs too.
+- Pan with trackpad swipes, horizontal wheel, **Shift + wheel**, **Alt + mouse wheel** anywhere, or by dragging the
+  overview strip. Scrolling up and down never moves the canvas, even at the end of a page. Scrolling eases at the
+  screen's frame rate and keeps up with the input on slower PCs too.
 - **Alt + ← / →** steps focus between cards (smoothly scrolled into view); Ctrl+Tab cycles and wraps around.
 - **Pinned cards** stay at the start of their space (right-click → Pin card).
 - **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**.

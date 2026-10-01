@@ -78,7 +78,12 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.6.0 (latest) · 1 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.0)
+### 1.6.1 (latest) · 1 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.1)
+
+- **Scrolling up and down no longer slides to the next card** when a page reaches its top or bottom. Only sideways
+  scrolling (or Shift + wheel, or Alt + wheel) moves along the canvas.
+
+**1.6.0** (1 October 2026):
 
 - **Dark mode stays dark on Acrylic**, even when Windows itself uses light mode (and the other way round).
 - **Google sign-in, for good**: while you sign in, JBrowser presents itself as Firefox in every way Google checks.
