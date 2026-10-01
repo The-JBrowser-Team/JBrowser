@@ -16,6 +16,7 @@ from PyQt6.QtWebEngineCore import QWebEngineProfile, QWebEngineScript, QWebEngin
 
 from jbrowser.engine import identity
 from jbrowser.engine.js import AUTOFILL_JS, BRIDGE_WORLD, GUARD_JS, privacy_js, qwebchannel_js
+from jbrowser.engine.signin import SigninIdentity
 from jbrowser.models.space import Space
 from jbrowser.services.privacy import CHALLENGE_SITES, ProfileInterceptor
 
@@ -52,6 +53,7 @@ class ProfileManager(QObject):
         self._interceptors: dict[str, ProfileInterceptor] = {}
         self._incognito: set[str] = set()
         self._fp_seed = secrets.randbits(31)   # fingerprint noise key, new every session
+        self.signin = SigninIdentity(self._apply_identity, self)   # Firefox while signing in to Google
         self._wipe_pending_profiles()
         self._clear_on_start()
         self._remove_stray_default_dirs()
@@ -142,7 +144,7 @@ class ProfileManager(QObject):
             prof.setPersistentPermissionsPolicy(QWebEngineProfile.PersistentPermissionsPolicy.StoreOnDisk)
             for stray in self._default_dirs(prof.storageName()):
                 self._rmdir_empty(stray)
-        identity.apply(prof)                        # the current Chrome, in headers and JavaScript
+        self._apply_identity(prof)                  # the current Chrome, in headers and JavaScript
         if not prof.httpAcceptLanguage():
             prof.setHttpAcceptLanguage(accept_language())
         interceptor = ProfileInterceptor(self.ctx.privacy, prof)
@@ -167,6 +169,7 @@ class ProfileManager(QObject):
         self.ctx.cookies.detach(space.id)
         if prof is None:
             return
+        self.signin.forget_profile(prof)
         if not space.incognito:
             pending = self.ctx.settings.get("profiles.pending_wipe") or []
             if space.id not in pending:
@@ -218,6 +221,10 @@ class ProfileManager(QObject):
             self.ctx.userscripts.sync_profile(prof, sid)
 
     # -------------------------------------------------------------- settings
+    def _apply_identity(self, prof: QWebEngineProfile) -> None:
+        """The version JBrowser presents (Settings → Advanced): the newest Chrome, or the engine's own."""
+        identity.apply(prof, identity.version_for(self.ctx.settings.get("advanced.identity")))
+
     def _apply_settings(self, prof: QWebEngineProfile) -> None:
         s = self.ctx.settings
         ws = prof.settings()
@@ -258,6 +265,10 @@ class ProfileManager(QObject):
             self.reinstall_scripts()
         elif key.startswith(("privacy.", "appearance.force_dark_web")):
             self._apply_settings_all()
+        elif key == "advanced.identity":
+            for prof in self._profiles.values():
+                if not self.signin.is_firefox(prof):   # a sign-in in progress keeps Firefox until it ends
+                    self._apply_identity(prof)
 
     # --------------------------------------------------------------- data
     def clear_cache(self, space_id: str | None = None) -> None:

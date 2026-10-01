@@ -6,10 +6,53 @@
 .section-title { font-size: clamp(30px, 4vw, 48px); margin: 10px 0 12px; letter-spacing: -.02em; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
-/* scroll-in animation: only once home.js runs (it adds .js-reveal to <html> and .in as things appear) */
-.js-reveal .reveal { opacity: 0; transform: translateY(22px); transition: opacity .7s var(--ease), transform .7s var(--ease); }
-.js-reveal .reveal.in { opacity: 1; transform: none; }
-@media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; } }
+/* scroll-in animation: only once home.js runs (it adds .js-reveal to <html> and .in as things appear).
+   Things drift up, unblur and settle; neighbours in a grid follow one another (delays set by home.js). */
+.js-reveal .reveal {
+  opacity: 0; transform: translateY(26px) scale(.985); filter: blur(6px);
+  transition: opacity .8s var(--ease), transform .9s var(--spring), filter .8s var(--ease);
+}
+.js-reveal .reveal.in { opacity: 1; transform: none; filter: none; }
+@media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; filter: none; } }
+.home { --spring: cubic-bezier(.16, 1.12, .3, 1); }
+
+/* ---------------------------------------------------------------- intro: the logo shines, then the page appears */
+.intro { display: none; }
+.intro-on .intro {
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-content: center; justify-items: center; gap: 22px;
+  background: var(--bg); animation: intro-out .6s var(--ease) 1.5s forwards;
+}
+.intro-on .intro::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -300px 0 0 -280px;
+  border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(138, 92, 255, .38), rgba(255, 92, 157, .14) 55%, transparent);
+  animation: intro-glow 1.8s var(--ease) both;
+}
+.intro-mark {
+  position: relative; width: 144px; height: 144px; border-radius: 38px;
+  filter: drop-shadow(0 22px 48px rgba(110, 80, 255, .5));
+  animation: intro-pop .8s var(--spring) both;
+}
+.intro-mark img { display: block; width: 100%; height: 100%; }
+.intro-shine {
+  position: absolute; inset: 0;
+  -webkit-mask: url(../img/icons/icon-512.png) center / contain no-repeat;
+  mask: url(../img/icons/icon-512.png) center / contain no-repeat;
+  background: linear-gradient(115deg, transparent 0 40%, rgba(255, 255, 255, .15) 44%, rgba(255, 255, 255, .78) 50%,
+                              rgba(255, 255, 255, .15) 56%, transparent 60% 100%);
+  background-size: 280% 100%; background-position: 130% 0;
+  animation: intro-shine 1s cubic-bezier(.45, 0, .2, 1) .5s both;
+}
+.intro-word {
+  position: relative; font: 700 26px var(--font-display); letter-spacing: .02em; color: var(--text);
+  animation: intro-word .9s var(--ease) .35s both;
+}
+@keyframes intro-pop { from { opacity: 0; transform: scale(.72) rotate(-6deg); } }
+@keyframes intro-shine { to { background-position: -30% 0; } }
+@keyframes intro-word { from { opacity: 0; letter-spacing: .3em; filter: blur(6px); } }
+@keyframes intro-glow { from { opacity: 0; transform: scale(.6); } 60% { opacity: 1; } to { opacity: .85; transform: scale(1.08); } }
+@keyframes intro-out { to { opacity: 0; visibility: hidden; transform: scale(1.04); } }
+@media (prefers-reduced-motion: reduce) { .intro-on .intro { display: none; } }
 
 /* ---------------------------------------------------------------- hero */
 .hero { position: relative; overflow: hidden; padding: 84px 0 0; text-align: center; }
@@ -19,9 +62,23 @@
     radial-gradient(34% 40% at 50% 38%, rgba(138, 92, 255, .42), transparent 70%),
     radial-gradient(30% 36% at 78% 58%, rgba(255, 92, 157, .32), transparent 70%),
     radial-gradient(30% 36% at 22% 55%, rgba(91, 140, 255, .34), transparent 70%);
-  filter: blur(8px);
+  filter: blur(8px); animation: glow-drift 22s ease-in-out infinite alternate; will-change: transform;
 }
 :root[data-theme="light"] .hero-glow { opacity: .45; }
+@keyframes glow-drift {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(2.5%, -2%, 0) scale(1.07) rotate(2deg); }
+  100% { transform: translate3d(-2.5%, 1.5%, 0) scale(1.03) rotate(-2deg); }
+}
+/* a soft light passes over the main buttons when you point at them */
+.home .btn-primary { position: relative; overflow: hidden; isolation: isolate; }
+.home .btn-primary::after {
+  content: ""; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, .32) 50%, transparent 70%);
+  transform: translateX(-120%); transition: transform .8s var(--ease);
+}
+.home .btn-primary:hover::after { transform: translateX(120%); }
+[data-parallax] { translate: 0 var(--py, 0px); transition: translate .1s linear; }
 .hero-copy { position: relative; }
 .eyebrow {
   display: inline-flex; gap: 10px; align-items: center; padding: 7px 16px; border-radius: 999px; font-size: 14px;
@@ -110,7 +167,12 @@
   background: var(--surface); border: 1px solid var(--border); box-shadow: var(--shadow);
   transition: transform .25s var(--ease), border-color .25s, box-shadow .25s;
 }
-.feature:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border)); }
+.feature:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow: 0 18px 40px rgba(60, 40, 160, .16); }
+.feature:hover .f-icon, .os-point:hover .f-icon { transform: scale(1.08) rotate(-4deg); }
+.f-icon { transition: transform .35s var(--spring); }
+.os-point { transition: transform .25s var(--ease), border-color .25s; }
+.os-point:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--accent) 35%, var(--border)); }
 .feature h3 { margin: 2px 0 4px; font-size: 18px; }
 .feature p { margin: 0; color: var(--text-2); font-size: 15px; }
 .f-icon {
@@ -120,7 +182,7 @@
 .f-icon svg { width: 24px; height: 24px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ---------------------------------------------------------------- install */
-.install-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 56px; align-items: center; }
+.install-grid { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); gap: 56px; align-items: center; }
 .steps-mini { list-style: none; padding: 0; margin: 26px 0; display: grid; gap: 18px; }
 .steps-mini li { display: flex; gap: 16px; align-items: flex-start; }
 .steps-mini li > span {

@@ -36,6 +36,20 @@ The window has no native title bar but keeps every native behaviour. `NativeFram
 `WM_NCHITTEST` (resize edges, the caption, and `HTMAXBUTTON` over the maximise button so Windows 11 shows the Snap
 Layouts flyout), rounded corners and the drop shadow. `apply_backdrop()` asks DWM for Mica, Mica Alt or Acrylic
 (`DWMWA_SYSTEMBACKDROP_TYPE`); translucent pixels in the window then show the backdrop.
+<!-- if >= 1.6.0 -->
+
+[[new 1.6.0]] **Keeping the backdrop's light/dark state.** DWM draws the material light or dark according to the
+window's `DWMWA_USE_IMMERSIVE_DARK_MODE`. Qt sets that attribute itself whenever the application palette changes
+(`QWindowsWindow::windowEvent`, `ApplicationPaletteChange`), using *its* colour scheme, which follows Windows. With
+Windows in light mode and JBrowser in dark mode, a routine Windows settings broadcast (an accent colour, energy
+saver) turned the Acrylic light behind light text, and maximising re-darkened only the newly exposed area. So:
+
+- `Theme._request_scheme()` tells Qt JBrowser's scheme (`QStyleHints.setColorScheme`; `unsetColorScheme()` when the
+  theme follows Windows), so Qt's own updates agree with JBrowser's.
+- `MainWindow` and `ChromeWindow` check the attribute after palette changes, activation and maximise/restore
+  (`win.dark_frame()`), restore it if anything else changed it, and rebuild the material
+  (`apply_backdrop(rebuild=True)`: none, then the material again) so no part of the window keeps the wrong one.
+<!-- endif -->
 
 ### The window's event filter
 

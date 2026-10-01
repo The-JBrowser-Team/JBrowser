@@ -2,10 +2,12 @@
 animated transitions, and reporting viewport visibility to the lifecycle manager."""
 from __future__ import annotations
 
+import math
+import time
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEasingCurve, QPoint, QRect, QRectF, Qt, QTimer, QVariantAnimation
-from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
+from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import QWidget
 
 from jbrowser.core.motion import motion
@@ -29,6 +31,61 @@ ADD_BTN = 44
 PULL_DIST = 440.0   # wheel / trackpad travel past an end of the canvas that opens a new card there
 REVEAL = 88.0       # how far the cards slide aside while being pulled
 DRAG_LIFT = 6       # px a card rises while it is being dragged
+SMOOTH_TAU = 0.055  # s: wheel scrolling covers 95 % of the way to where it is heading in ~0.17 s
+
+# Card shadows: (spread, opacity) layers, resting and lifted (dragged).
+SHADOW_LAYERS = {False: ((9, 0.10), (5, 0.16), (2, 0.24)), True: ((22, 0.10), (13, 0.18), (6, 0.26))}
+_shadow_cache: dict[tuple, tuple[QPixmap, int, int]] = {}
+
+
+def _shadow_tile(color: QColor, lifted: bool, dpr: float) -> tuple[QPixmap, int, int]:
+    """A card's soft shadow as a small nine-slice image, its padding around the card and its slice
+    margin. Drawn once: painting the image's edges every frame is far cheaper than filling large
+    anti-aliased shapes."""
+    key = (color.rgba(), lifted, round(dpr, 2))
+    cached = _shadow_cache.get(key)
+    if cached is not None:
+        return cached
+    layers = SHADOW_LAYERS[lifted]
+    spread = max(s for s, _a in layers)
+    pad = spread + 5                       # room for the shadow's spread and its downward offset
+    margin = pad + 10 + spread + 2         # slice margin: covers the widest rounded corner
+    side = 2 * margin + 4                  # a 4 px stretchable band between the slices
+    card = QRectF(pad, pad, side - 2 * pad, side - 2 * pad)
+    pm = QPixmap(int(side * dpr), int(side * dpr))
+    pm.setDevicePixelRatio(dpr)
+    pm.fill(Qt.GlobalColor.transparent)
+    p = QPainter(pm)
+    p.setRenderHint(QPainter.RenderHint.Antialiasing)
+    for s, alpha in layers:
+        c = QColor(color)
+        c.setAlphaF(color.alphaF() * alpha)
+        path = QPainterPath()
+        path.addRoundedRect(card.adjusted(-s, -s + 3, s, s + 4), 10 + s, 10 + s)
+        p.fillPath(path, c)
+    p.end()
+    if len(_shadow_cache) > 16:
+        _shadow_cache.clear()
+    _shadow_cache[key] = (pm, pad, margin)
+    return _shadow_cache[key]
+
+
+def _paint_shadow(p: QPainter, card: QRectF, color: QColor, lifted: bool, dpr: float) -> None:
+    """Paint the shadow around ``card`` from the nine-slice tile (the middle is hidden by the card)."""
+    pm, pad, m = _shadow_tile(color, lifted, dpr)
+    t = card.adjusted(-pad, -pad, pad, pad)
+    if t.width() < 2 * m or t.height() < 2 * m:
+        return
+    side = pm.width() / dpr                     # the tile is square
+    xs = ((0.0, m, t.left(), m), (m, side - 2 * m, t.left() + m, t.width() - 2 * m),
+          (side - m, m, t.right() - m, m))
+    ys = ((0.0, m, t.top(), m), (m, side - 2 * m, t.top() + m, t.height() - 2 * m),
+          (side - m, m, t.bottom() - m, m))
+    for i, (sx, sw, tx, tw) in enumerate(xs):
+        for j, (sy, sh, ty, th) in enumerate(ys):
+            if i == 1 and j == 1:
+                continue
+            p.drawPixmap(QRectF(tx, ty, tw, th), pm, QRectF(sx * dpr, sy * dpr, sw * dpr, sh * dpr))
 
 
 class EdgePullIndicator(QWidget):
@@ -153,6 +210,9 @@ class Canvas(QWidget):
         self.ui = ui
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.setMouseTracking(True)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)   # see _background
+        self._bg_key: tuple | None = None
+        self._bg = QColor()
         self.cards: dict[str, WebCard] = {}
         self._geo: dict[str, tuple[float, float]] = {}
         self._from: dict[str, tuple[float, float]] = {}
@@ -160,6 +220,13 @@ class Canvas(QWidget):
         self._offset = float(space.scroll)
         self._target_offset = self._offset
         self._pan_anim: QVariantAnimation | None = None
+        # Wheel and touchpad scrolling: one layout per frame, easing towards _target_offset by time
+        # (see _smooth_step), so slower PCs drop frames instead of falling behind the input.
+        self._smooth = QTimer(self)
+        self._smooth.setTimerType(Qt.TimerType.PreciseTimer)
+        self._smooth.timeout.connect(self._smooth_step)
+        self._smooth_last = 0.0
+        self._smooth_jump = False
         self._layout_anim: QVariantAnimation | None = None
         self._in_view: set[str] = set()
         self._first_show = True
@@ -350,6 +417,7 @@ class Canvas(QWidget):
     def scroll_to(self, value: float, animated: bool = True, duration: int = 260) -> None:
         value = self._clamp(value, self.targets())
         self._target_offset = value
+        self._smooth.stop()
         if self._pan_anim is not None:
             self._pan_anim.stop()
             self._pan_anim = None
@@ -366,8 +434,35 @@ class Canvas(QWidget):
         anim.start()
 
     def scroll_by(self, delta: float, animated: bool = True) -> None:
-        base = self._target_offset if (self._pan_anim is not None and animated) else self._offset
-        self.scroll_to(base + delta, animated=animated, duration=180)
+        """Wheel / touchpad scrolling. ``animated`` eases (mouse wheel notches); otherwise the canvas
+        follows exactly (touchpad), but still moves at most once per frame."""
+        moving = self._smooth.isActive() or self._pan_anim is not None
+        base = self._target_offset if moving else self._offset
+        if self._pan_anim is not None:
+            self._pan_anim.stop()
+            self._pan_anim = None
+        self._target_offset = self._clamp(base + delta, self.targets())
+        self._smooth_jump = not animated or not motion().enabled
+        if not self._smooth.isActive():
+            screen = self.screen()
+            rate = screen.refreshRate() if screen is not None else 60.0
+            # Twice per screen refresh: painting is held to the refresh rate anyway, and a tick
+            # that just misses a frame no longer costs a whole frame.
+            self._smooth.setInterval(max(4, int(500 / max(60.0, rate or 60.0))))
+            self._smooth_last = time.perf_counter()
+            self._smooth.start()
+
+    def _smooth_step(self) -> None:
+        now = time.perf_counter()
+        dt, self._smooth_last = now - self._smooth_last, now
+        diff = self._target_offset - self._offset
+        if abs(diff) < 0.5:
+            self._smooth.stop()
+            if diff:
+                self._set_offset(self._target_offset)
+            return
+        k = 1.0 if self._smooth_jump else 1.0 - math.exp(-dt / SMOOTH_TAU)
+        self._set_offset(self._offset + diff * k)
 
     def ensure_visible(self, tab_id: str, align: str = "nearest", animated: bool = True) -> None:
         targets = self.targets()
@@ -756,6 +851,27 @@ class Canvas(QWidget):
                 self.setCursor(Qt.CursorShape.PointingHandCursor if hover else Qt.CursorShape.ArrowCursor)
                 self.update()
 
+    def _background(self) -> QColor:
+        """The window's backdrop wash with the canvas tint over it, as one colour. The canvas paints
+        every one of its pixels with it (WA_OpaquePaintEvent), so Qt no longer repaints the window
+        underneath on every frame of scrolling, which halves the work on large or high-DPI screens."""
+        th = theme()
+        if not th.translucent:
+            return th.c("canvas_solid")
+        wash = th.backdrop_wash()
+        canvas = th.c("canvas")
+        key = (wash.rgba() if wash is not None else None, canvas.rgba())
+        if key != self._bg_key:
+            img = QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
+            img.fill(Qt.GlobalColor.transparent)
+            p = QPainter(img)
+            if wash is not None:
+                p.fillRect(0, 0, 1, 1, wash)
+            p.fillRect(0, 0, 1, 1, canvas)
+            p.end()
+            self._bg_key, self._bg = key, img.pixelColor(0, 0)
+        return QColor(self._bg)
+
     def paintEvent(self, _e) -> None:
         th = theme()
         p = QPainter(self)
@@ -764,23 +880,18 @@ class Canvas(QWidget):
             p.fillRect(self.rect(), Qt.GlobalColor.black)
             p.end()
             return
-        p.fillRect(self.rect(), th.surface("canvas"))
-        view = QRectF(self.rect())
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        p.fillRect(self.rect(), self._background())
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+        view = QRectF(self.rect()).adjusted(-40, -40, 40, 40)
         base = th.c("shadow")
+        dpr = self.devicePixelRatioF()
         for tid, card in self.cards.items():
             if not card.isVisible():
                 continue
             g = QRectF(card.geometry())
-            if not g.intersects(view):
-                continue
-            lifted = tid == self._drag_tab
-            layers = ((22, 0.10), (13, 0.18), (6, 0.26)) if lifted else ((9, 0.10), (5, 0.16), (2, 0.24))
-            for spread, alpha in layers:
-                c = QColor(base)
-                c.setAlphaF(base.alphaF() * alpha)
-                path = QPainterPath()
-                path.addRoundedRect(g.adjusted(-spread, -spread + 3, spread, spread + 4), 10 + spread, 10 + spread)
-                p.fillPath(path, c)
+            if g.intersects(view):
+                _paint_shadow(p, g, base, tid == self._drag_tab, dpr)
         if not self.cards:
             r = QRectF(self._empty_rect())
             if self._empty_hover:

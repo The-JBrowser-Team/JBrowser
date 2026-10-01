@@ -2,10 +2,28 @@
 <html lang="en">
 <head>
 {% include _head.html %}
+<script>
+  /* The shining-logo intro: once per visit, and never with reduced motion. The overlay times itself in
+     CSS (home.css), so it always leaves, even if a script fails. */
+  (function () {
+    try {
+      if (matchMedia("(prefers-reduced-motion: reduce)").matches || sessionStorage.getItem("jb-intro")) return;
+      sessionStorage.setItem("jb-intro", "1");
+      document.documentElement.classList.add("intro-on");
+    } catch (e) {}
+  })();
+</script>
 <link rel="preload" as="image" href="{{root}}static/img/shots/hero-dark-1920.webp" imagesrcset="{{root}}static/img/shots/hero-dark-1280.webp 1280w, {{root}}static/img/shots/hero-dark-1920.webp 1920w" imagesizes="(max-width: 1240px) 100vw, 1200px">
 <link rel="stylesheet" href="{{root}}static/css/home.css">
 </head>
 <body class="home">
+<div class="intro" aria-hidden="true">
+  <div class="intro-mark">
+    <img src="{{root}}static/img/icons/icon-512.png" alt="" width="128" height="128">
+    <span class="intro-shine"></span>
+  </div>
+  <span class="intro-word">JBrowser</span>
+</div>
 {% include _topbar.html %}
 <main id="main">
 
@@ -13,7 +31,7 @@
 <section class="hero">
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="wrap hero-copy">
-    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: the Gallery <span aria-hidden="true">→</span></a>
+    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: smoother, sturdier, easier sign-in <span aria-hidden="true">→</span></a>
     <h1 class="reveal">Welcome to the internet <span class="grad">- again.</span></h1>
     <p class="lead reveal">Your pages side by side on one calm canvas. Private by default. Made for Windows&nbsp;11.</p>
     <div class="cta reveal">
@@ -119,7 +137,7 @@
       <p class="tint-name" aria-live="polite"><span id="tint-name">No colour</span></p>
       <p class="fineprint">Also: dark or light, Acrylic, Mica or Solid, and your Windows accent colour.</p>
     </div>
-    <div class="colours-shot reveal">
+    <div class="colours-shot reveal" data-parallax="14">
       <img class="shot" id="tint-img" src="{{root}}static/img/shots/tint-none-1280.webp"
            srcset="{{root}}static/img/shots/tint-none-1280.webp 1280w, {{root}}static/img/shots/tint-none-full.webp 1640w"
            sizes="(max-width: 1000px) 100vw, 700px" width="1640" height="1120" loading="lazy"
@@ -175,7 +193,7 @@
       <article class="os-point reveal"><div class="f-icon" style="--c:#ff9f43"><svg viewBox="0 0 24 24"><rect x="4" y="3.5" width="16" height="17" rx="3"/><path d="M8.5 12.5l2.3 2.3 4.7-4.8"/></svg></div>
         <h3>Checked downloads</h3><p>Every release is built from its public code and has a published fingerprint.</p></article>
       <article class="os-point reveal"><div class="f-icon" style="--c:#ff5c9d"><svg viewBox="0 0 24 24"><path d="M12 20.5s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.7c0 5.6-7.5 10.2-7.5 10.2z"/></svg></div>
-        <h3>Free, for good</h3><p>Made by an independent developer, not an ad company. The GPL keeps it free.</p></article>
+        <h3>Free, for good</h3><p>Made by a small group of developers, not an ad company. The GPL keeps it free.</p></article>
     </div>
   </div>
 </section>
@@ -183,24 +201,24 @@
 <!-- ================================================================ install -->
 <section class="section install" id="install">
   <div class="wrap install-grid">
-    <div class="install-copy reveal">
-      <p class="kicker">Get started</p>
-      <h2 class="section-title">Ready in a minute.</h2>
-      <ol class="steps-mini">
-        <li><span>1</span><div><b>Download</b><p>The installer for Windows 10 and 11. No administrator rights needed.</p></div></li>
-        <li><span>2</span><div><b>Open it</b><p>If Windows asks, choose <em>More info</em>, then <em>Run anyway</em>.</p></div></li>
-        <li><span>3</span><div><b>Make it yours</b><p>A short welcome sets the look, search and protection.</p></div></li>
-      </ol>
-      <div class="cta">
-        <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
-      </div>
-    </div>
-    <button class="shot-button install-shot reveal" type="button" data-zoom aria-label="Enlarge the welcome screenshot">
+    <button class="shot-button install-shot reveal" type="button" data-zoom data-parallax="18" aria-label="Enlarge the welcome screenshot">
       <img class="shot" src="{{root}}static/img/shots/welcome-look-1280.webp"
            srcset="{{root}}static/img/shots/welcome-look-1280.webp 1280w, {{root}}static/img/shots/welcome-look-1920.webp 1920w, {{root}}static/img/shots/welcome-look-full.webp 2595w"
            sizes="(max-width: 900px) 100vw, 680px" width="2595" height="1706" loading="lazy"
            alt="The JBrowser welcome: choosing the theme, the window material and a colour">
     </button>
+    <div class="install-copy reveal">
+      <p class="kicker">Get started</p>
+      <h2 class="section-title">Ready in a minute.</h2>
+      <ol class="steps-mini">
+        <li class="reveal"><span>1</span><div><b>Download</b><p>The installer for Windows 10 and 11. No administrator rights needed.</p></div></li>
+        <li class="reveal"><span>2</span><div><b>Open it</b><p>If Windows asks, choose <em>More info</em>, then <em>Run anyway</em>.</p></div></li>
+        <li class="reveal"><span>3</span><div><b>Make it yours</b><p>A short welcome sets the look, search and protection.</p></div></li>
+      </ol>
+      <div class="cta">
+        <a class="btn btn-primary btn-large" href="{{exe_url}}" data-latest-exe>Download JBrowser <span data-latest-version>{{latest_version}}</span></a>
+      </div>
+    </div>
   </div>
 </section>
 

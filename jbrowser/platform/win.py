@@ -99,6 +99,8 @@ if IS_WINDOWS:
     _user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
     _dwm.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
     _dwm.DwmSetWindowAttribute.restype = ctypes.c_long
+    _dwm.DwmGetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
+    _dwm.DwmGetWindowAttribute.restype = ctypes.c_long
     _dwm.DwmExtendFrameIntoClientArea.argtypes = [wintypes.HWND, ctypes.POINTER(MARGINS)]
     _dwm.DwmExtendFrameIntoClientArea.restype = ctypes.c_long
     _shell32.SHAppBarMessage.argtypes = [wintypes.DWORD, ctypes.POINTER(APPBARDATA)]
@@ -124,6 +126,17 @@ def set_dark_title(hwnd: int, dark: bool) -> None:
         _set_dword_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, int(dark))
 
 
+def dark_frame(hwnd: int) -> bool | None:
+    """Whether Windows currently draws this window (frame and backdrop) dark; None if unknown."""
+    if not IS_WINDOWS:
+        return None
+    v = ctypes.c_int(0)
+    for attr in (DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD):
+        if _dwm.DwmGetWindowAttribute(hwnd, attr, ctypes.byref(v), ctypes.sizeof(v)) == 0:
+            return bool(v.value)
+    return None
+
+
 def _colorref(c: QColor) -> int:
     return (c.blue() << 16) | (c.green() << 8) | c.red()
 
@@ -142,10 +155,16 @@ def set_corner_preference(hwnd: int, preference: int = DWMWCP_ROUND) -> None:
         _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, preference)
 
 
-def apply_backdrop(hwnd: int, material: str, dark: bool) -> bool:
-    """Apply a Windows 11 system backdrop. Returns True when a translucent material is active."""
+def apply_backdrop(hwnd: int, material: str, dark: bool, rebuild: bool = False) -> bool:
+    """Apply a Windows 11 system backdrop. Returns True when a translucent material is active.
+
+    ``rebuild`` makes Windows recreate the material for the whole window. Use it when the window
+    was drawn with the wrong light/dark state: otherwise parts drawn before (e.g. the area of the
+    window before it was maximised) keep the old, wrong material."""
     if not IS_WINDOWS:
         return False
+    if rebuild and material != "solid" and WIN_BUILD >= 22523:
+        _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS["solid"])
     set_dark_title(hwnd, dark)
     _set_dword_attr(hwnd, 2, 2)  # DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED (full screen may disable it)
     _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
@@ -167,6 +186,16 @@ def apply_backdrop(hwnd: int, material: str, dark: bool) -> bool:
     except Exception as exc:  # pragma: no cover - depends on OS build
         log.info("No system backdrop available: %s", exc)
         return False
+
+
+def apply_popup_backdrop(hwnd: int, dark: bool) -> bool:
+    """Acrylic behind a borderless popup (Windows 11 22H2 and later). Returns True when active."""
+    if not IS_WINDOWS or WIN_BUILD < 22523:
+        return False
+    set_dark_title(hwnd, dark)
+    margins = MARGINS(-1, -1, -1, -1)        # a popup has no frame: the whole window is backdrop
+    _dwm.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
+    return _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS["acrylic"])
 
 
 def refresh_frame(hwnd: int) -> None:

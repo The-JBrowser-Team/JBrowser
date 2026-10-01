@@ -48,10 +48,35 @@ def _chromium_flags(paths: AppPaths) -> None:
     from jbrowser.services.network import normalize_proxy
 
     stored = read_json(paths.settings_file, {}) or {}
+    if not isinstance(stored, dict):
+        stored = {}
     flags = ["--log-level=3"]
-    cfg = normalize_proxy(stored.get("network.proxy") if isinstance(stored, dict) else None)
+    cfg = normalize_proxy(stored.get("network.proxy"))
     if cfg["mode"] == "manual" and cfg["type"] == "https" and cfg["host"]:
         flags.append(f"--proxy-server=https://{cfg['host']}:{cfg['port']}")
+    # Like the flags below, environment variables an earlier copy set for itself are inherited by a
+    # restarted one: clear them so a changed setting takes effect. Variables the user set stay.
+    for name in os.environ.pop("JBROWSER_SET_ENV", "").split(","):
+        if name:
+            os.environ.pop(name, None)
+    owned: list[str] = []
+
+    def own(name: str, value: str) -> None:
+        if name not in os.environ:
+            os.environ[name] = value
+            owned.append(name)
+
+    # Graphics acceleration (Settings → Advanced). Qt WebEngine draws pages with Direct3D 11, which
+    # glitches or flickers with some graphics drivers (often dedicated cards). "compatible" uses the
+    # OpenGL (ANGLE) pipeline Qt WebEngine used before 6.5 instead; "off" draws pages in software.
+    gpu_mode = stored.get("advanced.gpu_mode", "auto")
+    backend = "d3d11"
+    if gpu_mode == "compatible":
+        backend = "opengl"
+        own("QSG_RHI_BACKEND", "opengl")
+    elif gpu_mode == "off":
+        flags.append("--disable-gpu")
+    log.info("Graphics acceleration: %s", gpu_mode)
     existing = os.environ.get("QTWEBENGINE_CHROMIUM_FLAGS", "")
     # A restarted or updated copy inherits this variable from the previous one: drop the flags that
     # copy added itself (e.g. a proxy that has since been removed) and keep only the user's own.
@@ -61,13 +86,14 @@ def _chromium_flags(paths: AppPaths) -> None:
     added = " ".join(flags)
     os.environ["QTWEBENGINE_CHROMIUM_FLAGS"] = (existing + " " + added).strip()
     os.environ["JBROWSER_ADDED_CHROMIUM_FLAGS"] = added
-    # Composite widget windows through Direct3D 11 from the start. Otherwise the first web
-    # card converts the raster window to an RHI window, which recreates the HWND (flicker)
-    # and drops the Mica backdrop.
-    os.environ.setdefault("QT_WIDGETS_RHI", "1")
-    os.environ.setdefault("QT_WIDGETS_RHI_BACKEND", "d3d11")
+    # Composite widget windows through the GPU (the same API as the web pages) from the start.
+    # Otherwise the first web card converts the raster window to an RHI window, which recreates
+    # the HWND (flicker) and drops the Mica backdrop.
+    own("QT_WIDGETS_RHI", "1")
+    own("QT_WIDGETS_RHI_BACKEND", backend)
     # UI sound effects only need the native Windows audio backend (not FFmpeg).
-    os.environ.setdefault("QT_MEDIA_BACKEND", "windows")
+    own("QT_MEDIA_BACKEND", "windows")
+    os.environ["JBROWSER_SET_ENV"] = ",".join(owned)
 
 
 def _wait_for_process(pid: int, timeout_ms: int = 20000) -> None:

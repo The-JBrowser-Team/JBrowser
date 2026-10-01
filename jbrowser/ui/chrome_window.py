@@ -106,14 +106,19 @@ class ChromeWindow(QWidget):
             return False, 0
         return (True, result) if handled else (False, 0)
 
-    def apply_backdrop(self) -> None:
+    def apply_backdrop(self, rebuild: bool = False) -> None:
         if not self._backdrop_done:
             return
         th = theme()
         hwnd = int(self.winId())
-        win.apply_backdrop(hwnd, th.settings.get("appearance.material"), th.dark)
+        win.apply_backdrop(hwnd, th.settings.get("appearance.material"), th.dark, rebuild)
         win.refresh_frame(hwnd)
         self.update()
+
+    def _check_frame(self) -> None:
+        """Restore the light/dark state if something else changed it (see MainWindow._check_frame)."""
+        if self._backdrop_done and win.dark_frame(int(self.winId())) not in (None, theme().dark):
+            self.apply_backdrop(rebuild=True)
 
     def showEvent(self, e) -> None:
         super().showEvent(e)
@@ -124,13 +129,19 @@ class ChromeWindow(QWidget):
     def event(self, e) -> bool:
         if e.type() == QEvent.Type.WinIdChange and self._backdrop_done:
             QTimer.singleShot(0, self.apply_backdrop)
+        elif e.type() in (QEvent.Type.ApplicationPaletteChange, QEvent.Type.WindowActivate,
+                          QEvent.Type.WindowDeactivate) and self._backdrop_done:
+            QTimer.singleShot(0, self._check_frame)
         return super().event(e)
 
     def changeEvent(self, e) -> None:
         if e.type() == QEvent.Type.WindowStateChange:
             self.caption.max_btn.set_glyph("restore" if self.isMaximized() else "max")
-            QTimer.singleShot(0, self.apply_backdrop)
+            QTimer.singleShot(0, self._after_state_change)
         super().changeEvent(e)
+
+    def _after_state_change(self) -> None:
+        self.apply_backdrop(rebuild=win.dark_frame(int(self.winId())) not in (None, theme().dark))
 
     def _on_theme(self) -> None:
         self.apply_backdrop()

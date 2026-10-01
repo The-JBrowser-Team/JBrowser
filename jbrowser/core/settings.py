@@ -108,6 +108,10 @@ DEFAULTS: dict[str, Any] = {
     "downloads.directory": "",
     "downloads.ask": False,
     "downloads.protect": True,
+    # Advanced
+    "advanced.media_notice": False,           # explain videos in formats the engine can't play (H.264, AAC)
+    "advanced.gpu_mode": "auto",              # auto | compatible | off  (applied at start-up)
+    "advanced.identity": "current",           # current: newest Chrome · engine: the engine's own version
     # Zoom
     "zoom.sites": {},
     # Profiles scheduled for deletion on next start

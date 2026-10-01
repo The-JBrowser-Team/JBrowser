@@ -97,6 +97,7 @@ class Theme(QObject):
         self.translucent = True
         self.tint: QColor | None = None
         self.incognito = False
+        self._syncing = False
         self._colors: dict[str, QColor] = {}
         hints = QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
@@ -133,9 +134,33 @@ class Theme(QObject):
                 c = None
         return c or win.system_accent_color() or QColor("#4c8dff")
 
+    def _request_scheme(self, dark: bool | None) -> None:
+        """Tell Qt which scheme JBrowser shows (None: follow Windows). Qt re-applies its own idea of
+        light/dark to every window's frame whenever the application palette changes, which Windows
+        triggers on its own (accent colour, energy saver, ...). With Windows in Light mode and
+        JBrowser in Dark mode, that turned the Acrylic backdrop light behind light text."""
+        hints = QGuiApplication.styleHints()
+        if not hasattr(hints, "setColorScheme"):       # Qt < 6.8
+            return
+        self._syncing = True
+        try:
+            if dark is None:
+                hints.unsetColorScheme()
+            else:
+                hints.setColorScheme(Qt.ColorScheme.Dark if dark else Qt.ColorScheme.Light)
+        finally:
+            self._syncing = False
+
     def refresh(self) -> None:
+        if self._syncing:            # colorSchemeChanged caused by _request_scheme itself
+            return
         mode = self.settings.get("appearance.theme")
+        follow_system = mode == "system" and not self.incognito
+        if follow_system:
+            self._request_scheme(None)                  # so _system_dark() reads Windows' own setting
         self.dark = self.incognito or (self._system_dark() if mode == "system" else mode == "dark")
+        if not follow_system:
+            self._request_scheme(self.dark)
         self.tokens = dict(DARK if self.dark else LIGHT)
         tint = TINTS.get(self.settings.get("appearance.tint") or "")
         self.tint = QColor(tint[1]) if tint and not self.incognito else None

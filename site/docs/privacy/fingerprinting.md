@@ -64,8 +64,8 @@ requests **to `accounts.google.com`** carry a current **Firefox** user agent, wh
 
 - `ProfileInterceptor` ([request pipeline](request-pipeline.md)) sets the `User-Agent` header when the request's host
   is in `SIGNIN_UA_HOSTS`, in every space, incognito included. Every other site, Google's other services and
-  JavaScript's `navigator.userAgent` still see Chrome.
-- `firefox_user_agent()` works out the Firefox version from the date (Firefox 140 came out on 24 June 2025, and a new
+  JavaScript's `navigator.userAgent` still see Chrome<!-- if >= 1.6.0 --> (except while a page is signing in: see below)<!-- endif -->.
+- `firefox_user_agent()`<!-- if >= 1.6.0 --> (in [engine/identity.py](source:jbrowser/engine/identity.py))<!-- endif --> works out the Firefox version from the date (Firefox 140 came out on 24 June 2025, and a new
   version follows every four weeks), so the user agent never looks years old. It counts 30 days per version, so it
   never names a version that doesn't exist yet.
 - Once signed in, the Google account works everywhere, because the sign-in cookies belong to the space, not the user
@@ -73,6 +73,31 @@ requests **to `accounts.google.com`** carry a current **Firefox** user agent, wh
 
 If Google changes its checks and sign-in breaks again, test a newer Firefox user agent, or a user agent from another
 browser, against a Google account in a throw-away space before changing `SIGNIN_UA_HOSTS` or the helper.
+<!-- endif -->
+<!-- if >= 1.6.0 -->
+
+[[new 1.6.0]] **While signing in, the whole space presents Firefox.** The Firefox header alone is enough on most
+PCs. Where Google looks closer, it compares the rest of the browser with that header: `navigator.userAgent`,
+`navigator.userAgentData` and the `Sec-CH-UA` headers still said Chromium, and Google refused. Switching the user
+agent to Firefox in DevTools fixed it, so JBrowser now makes that switch itself
+([engine/signin.py](source:jbrowser/engine/signin.py)):
+
+- When a card or a popup is about to load a page on `accounts.google.com` (`BrowserPage` and
+  `PopupPage.acceptNavigationRequest`, which also see redirects), `SigninIdentity.before_navigation()` holds that
+  navigation, switches the space's profile with `identity.apply_firefox()` and loads the page again a moment later.
+  Chromium doesn't allow a page's identity to change from inside `acceptNavigationRequest` (it stops the process), and
+  this way Google never sees a request from a half-switched browser.
+- `apply_firefox()` sets a current Firefox user agent (headers and JavaScript), turns the high-entropy client hints
+  off and empties the brand list, so `Sec-CH-UA` is empty and `navigator.userAgentData.brands` is `[]`, which is what
+  DevTools' Firefox override gives. Qt can't stop the low-entropy `Sec-CH-UA-Mobile` and `Sec-CH-UA-Platform`
+  headers; they agree with Firefox on Windows anyway.
+- The space presents Firefox until none of its pages has been on the sign-in server for 4 seconds
+  (`RESTORE_DELAY_MS`), then gets its normal identity back (`ProfileManager._apply_identity()`). Sign-in bounces
+  between Google's servers, and the delay stops the identity flipping back and forth.
+- A page that reaches the sign-in server without passing `acceptNavigationRequest` first is caught by `urlChanged`:
+  the space switches and the page loads again, at most once every 30 seconds.
+
+Other pages of that space present Firefox for those few moments too, which is harmless.
 <!-- endif -->
 <!-- if >= 1.5.2 -->
 
@@ -105,6 +130,12 @@ presents the **newest stable Chrome** instead, the same way everywhere a site ca
   the brand made it reject JBrowser at once (redirecting to `/signin/rejected`), while the plain Chromium brand works.
   Chromium itself and several Chromium-based browsers send the same brands.
 - The engine's real version shows in *Settings → About JBrowser* (`qWebEngineChromiumVersion()`).
+<!-- if >= 1.6.0 -->
+- [[new 1.6.0]] *Settings → Advanced → How JBrowser introduces itself to websites* (`advanced.identity`) can present
+  the engine's own version instead (`"engine"`: `identity.version_for()` returns `qWebEngineChromiumVersion()`), which
+  matches what's really inside and can help with sites that ask "I'm not a robot" often. A change applies to every
+  space at once, except one that is signing in to Google at that moment.
+<!-- endif -->
 
 Pages still run on Chromium 140. Sites that choose code by the version they see get code for a newer Chrome; in
 testing (YouTube, Reddit, X, Google, Microsoft, GitHub and 20 more), none broke.

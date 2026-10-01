@@ -34,6 +34,24 @@ on the selected cards; the layout follows.
 canvas takes horizontal wheel and trackpad input directly, and `MainWindow` routes **Alt + wheel** from anywhere over
 the canvas to `pan_from_wheel()`. The **overview strip** (`Minimap`) at the bottom draws every card as a segment and
 the viewport as a window; clicking or dragging it scrolls.
+<!-- if >= 1.6.0 -->
+
+[[changed 1.6.0]] **Scrolling at frame rate.** Wheel and trackpad input (`scroll_by()`) only moves the target
+offset; a timer ticking twice per screen refresh (`_smooth_step()`) moves the canvas towards it, once per tick:
+
+- mouse-wheel notches ease by time (`SMOOTH_TAU`, 55 ms: 95 % of the way in about 0.17 s), so a new notch continues
+  the motion instead of restarting an animation, and a slower PC takes bigger steps instead of falling behind;
+- trackpad deltas are followed exactly, but however many arrive between two ticks, the canvas lays out once.
+
+`scroll_to()` (keyboard, minimap, `ensure_visible`) keeps its eased animation and stops the smoother.
+
+Two painting changes halve the work of each frame on large or high-DPI screens:
+
+- **Card shadows** come from a small nine-slice image (`_shadow_tile()`, cached per colour and pixel ratio) instead
+  of three large anti-aliased shapes per card; only the edges are drawn, since the card covers the middle.
+- **The canvas paints every pixel** (`WA_OpaquePaintEvent`) with one colour, `_background()`: the window's tint wash
+  with the canvas tint over it, worked out once. Qt then skips repainting the window underneath on every frame.
+<!-- endif -->
 
 ## Pull to add a card
 
@@ -89,7 +107,7 @@ WebCard
 
 - `apply(fields)` updates the header and state from the `Tab`'s changed fields.
 - `BrowserView` builds JBrowser's context menu on top of Chromium's standard actions (open link in a new card or
-  another space, copy clean link, save image, inspect…).
+  another space, copy clean link, save image, inspect…).<!-- if >= 1.6.0 --> [[changed 1.6.0]] Back, Forward, Reload and Stop are left out (every card has them in its header), and the standard items get JBrowser's own glyphs instead of Qt's icons.<!-- endif -->
 - `take_snapshot()` grabs the view as a picture while it still renders (before throttling and sleep);
   `enter_sleep()` shows it faded with a moon badge.
 <!-- if >= 1.5.0 -->

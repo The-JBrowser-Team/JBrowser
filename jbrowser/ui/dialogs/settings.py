@@ -894,6 +894,22 @@ class SettingsWindow(ChromeWindow):
                         _button("Open folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(paths.data))))),
             SettingCard("keyboard", "Keyboard shortcuts", "Every shortcut in one place.",
                         _button("Show shortcuts", lambda: (self.close(), self.ui.open_hotkeys()))),
+            SettingCard("tiles", "Graphics acceleration",
+                        "If websites flicker, show stripes or draw in the wrong place (it happens with some graphics "
+                        "cards and drivers, often dedicated ones), try “Compatible”, or “Off” as a last resort. "
+                        "Applies after a restart.",
+                        _buttons(self._combo("advanced.gpu_mode", [("auto", "Automatic (recommended)"),
+                                                                    ("compatible", "Compatible"),
+                                                                    ("off", "Off (slower, no glitches)")]),
+                                 _button("Restart now", lambda: (self.close(), self.ui.restart())))),
+            SettingCard("globe", "How JBrowser introduces itself to websites",
+                        "JBrowser tells sites it's the newest Chrome, so none treat it as outdated. If Google keeps "
+                        "asking “I'm not a robot”, try the engine's own version, which matches what's really inside.",
+                        self._combo("advanced.identity", [("current", "Newest Chrome (recommended)"),
+                                                          ("engine", "Engine version")])),
+            self._toggle_card("advanced.media_notice", "info", "Explain videos JBrowser can't play",
+                              "Shows a note when a video or sound is in a format JBrowser can't play yet (such as "
+                              "H.264), so you know to open it in another browser."),
         )
 
     def _reset(self) -> QWidget:

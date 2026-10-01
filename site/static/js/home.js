@@ -23,7 +23,18 @@
   var SHOWCASE = [1280, 1920, "full"];
 
   // ------------------------------------------------------------ reveal on scroll
-  var reveals = document.querySelectorAll(".reveal");
+  // With the intro (the shining logo, see home.html / home.css) the page appears as the logo fades.
+  var INTRO_MS = root.classList.contains("intro-on") ? 1500 : 0;
+  var reveals = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
+  // Once revealed, an element drops the reveal transition so its own hover effects are quick again.
+  function settle(el) {
+    el.addEventListener("transitionend", function done(e) {
+      if (e.target !== el || e.propertyName !== "opacity") return;
+      el.removeEventListener("transitionend", done);
+      el.classList.remove("reveal");
+      el.style.transitionDelay = "";
+    });
+  }
   if ("IntersectionObserver" in window && !reduced) {
     root.classList.add("js-reveal");
     // Safety net: whatever is on screen but still hidden after 3 s (a tab that was in the background)
@@ -31,17 +42,45 @@
     var sweep = function () {
       reveals.forEach(function (el) { if (el.getBoundingClientRect().top < innerHeight) el.classList.add("in"); });
     };
-    setTimeout(sweep, 3000);
+    setTimeout(sweep, 3000 + INTRO_MS);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) setTimeout(sweep, 400); });
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
-    reveals.forEach(function (el, i) {
-      el.style.transitionDelay = (el.closest(".hero") ? i * 70 : 0) + "ms";
-      io.observe(el);
+    var heroIndex = 0;
+    reveals.forEach(function (el) {
+      var delay = 0;
+      if (el.closest(".hero")) {
+        delay = heroIndex++ * 90;
+      } else {
+        // neighbours in a grid or list follow one another
+        var siblings = Array.prototype.filter.call(el.parentElement.children, function (c) { return c.classList.contains("reveal"); });
+        if (siblings.length > 1) delay = siblings.indexOf(el) * 85;
+      }
+      el.style.transitionDelay = delay + "ms";
+      settle(el);
     });
+    setTimeout(function () { reveals.forEach(function (el) { io.observe(el); }); }, INTRO_MS);
   } else {
     reveals.forEach(function (el) { el.classList.add("in"); });
+  }
+
+  // ------------------------------------------------------------ gentle parallax on the big pictures
+  var drifting = Array.prototype.slice.call(document.querySelectorAll("[data-parallax]"));
+  if (drifting.length && !reduced) {
+    var queued = false;
+    var drift = function () {
+      queued = false;
+      drifting.forEach(function (el) {
+        var r = el.getBoundingClientRect();
+        if (r.bottom < -100 || r.top > innerHeight + 100) return;
+        var k = (r.top + r.height / 2 - innerHeight / 2) / innerHeight;      // -0.5 … 0.5 while on screen
+        el.style.setProperty("--py", (-k * parseFloat(el.getAttribute("data-parallax") || "16")).toFixed(1) + "px");
+      });
+    };
+    addEventListener("scroll", function () { if (!queued) { queued = true; requestAnimationFrame(drift); } }, { passive: true });
+    addEventListener("resize", drift, { passive: true });
+    drift();
   }
 
   // ------------------------------------------------------------ hero tilt: flattens as you scroll

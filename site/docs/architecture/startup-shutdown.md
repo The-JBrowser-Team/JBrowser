@@ -22,6 +22,13 @@ the frozen `JBrowser.exe` all call it.
       start. Otherwise the first web card converts the window, which recreates its handle (a flicker) and drops the
       Mica backdrop.
     - `QT_MEDIA_BACKEND=windows`: sound effects use the native backend, so the build needs no FFmpeg.
+<!-- if >= 1.6.0 -->
+    - [[new 1.6.0]] **Graphics acceleration** (`advanced.gpu_mode`, read from the settings file): `auto` keeps the
+      above; `compatible` draws through OpenGL instead (`QSG_RHI_BACKEND=opengl` and `QT_WIDGETS_RHI_BACKEND=opengl`,
+      the pipeline Qt WebEngine used before 6.5, for graphics drivers that glitch with Direct3D 11); `off` adds
+      `--disable-gpu` (pages drawn in software). Variables JBrowser set itself are listed in `JBROWSER_SET_ENV` and
+      cleared by a restarted copy, so a changed setting takes effect; variables the user set are never touched.
+<!-- endif -->
 6. **Import `QtWebEngineWidgets` before `QApplication` exists** (Qt's rule), set the AppUserModelID so the taskbar
    groups windows correctly, and create the application with the Fusion style.
 7. **Single instance** ([single_instance.py](source:jbrowser/single_instance.py)). The instance key includes a hash

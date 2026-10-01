@@ -5,6 +5,50 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.6.0] - 2026-10-01
+
+### Fixed
+- **Dark mode stays dark on Acrylic.** On PCs where Windows itself is set to light mode (or the other way round),
+  the frosted window could turn washed-out and pale behind light text, most often after maximising and switching
+  windows, sometimes leaving a pale rectangle where the window used to be. Qt quietly re-applied Windows' own
+  light/dark setting to the window whenever Windows changed a setting (an accent colour, energy saver, …). JBrowser
+  now tells Qt which mode it shows, restores its own mode if anything else changes it, and redraws the whole backdrop
+  when it does. Light mode on a dark Windows is fixed the same way.
+- **Google sign-in, for good.** Some PCs still couldn't sign in to Google until the browser was switched to Firefox in
+  DevTools. JBrowser now does that switch itself: while a page is on Google's sign-in page (in a card or a "Sign in
+  with Google" popup), its space presents itself as Firefox everywhere a site can look (the user agent, JavaScript
+  and the browser hints), and a few seconds after sign-in it goes back to Chrome. The sign-in page loads with the
+  switch already made.
+- **Fewer "I'm not a robot" checks when you're not signed in to Google.** Google's reCAPTCHA now keeps its own
+  cookies on the sites that use it, so it recognises you instead of treating every visit as a stranger's, and Google's
+  own pages are no longer filtered when they talk to Google. Google's other third-party cookies stay blocked.
+- **Smoother horizontal scrolling,** especially on slower PCs (such as laptops with Ryzen 5 chips) and large or
+  high-DPI screens. Scrolling now eases continuously instead of restarting with every wheel notch, touchpad scrolling
+  moves the canvas once per frame instead of once per event, card shadows are drawn from a ready-made image, and the
+  window no longer repaints its background under the canvas on every frame. Together that more than halves the work
+  of each frame.
+
+### Added
+- **Settings → Advanced → Graphics acceleration.** If websites flicker or draw glitches (it happens with some graphics
+  cards and drivers, often dedicated ones), choose *Compatible*, which draws pages through OpenGL like Qt WebEngine
+  did before 6.5, or *Off* as a last resort. *Restart now* applies it.
+- **Settings → Advanced → How JBrowser introduces itself.** The newest Chrome (as before), or the version of
+  Chromium really inside JBrowser, which can help on sites that ask "I'm not a robot" often.
+- **Settings → Advanced → Explain videos JBrowser can't play.** The note about videos in formats JBrowser can't play
+  (such as H.264) is now off by default, as it could get in the way; turn it on here.
+
+### Changed
+- **A translucent Archive.** The Archive opens on frosted glass (Acrylic) with your colour tint, like the main window.
+- **A cleaner right-click menu.** Back, Forward and Reload are gone from the menu on web pages (they're on every card
+  already), and the remaining items use JBrowser's own icons.
+- The Gallery no longer shows the "Click a card to open it…" line; the tips are in the filter box's tooltip.
+- **Website:** the home page opens with the JBrowser logo catching the light before the page fades in, moves more
+  smoothly as you scroll (softer reveals, a drifting glow, gentle depth on the screenshots), and "Ready in a minute"
+  now has the picture on the left. Proper icons for search results (PNG favicons in the sizes Google asks for, a web
+  app manifest, the logo in the site's structured data) help Google show the JBrowser logo.
+- JBrowser is made by **The JBrowser Team**, a small group of developers; the website and documentation say so.
+- Packages checked and up to date; the newest stable Chrome version is recorded as usual.
+
 ## [1.5.4] - 2026-09-30
 
 ### Added

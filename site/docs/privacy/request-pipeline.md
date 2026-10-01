@@ -50,6 +50,10 @@ If nothing redirects, the interceptor adds `DNT: 1` (`privacy.dnt`) and `Sec-GPC
 `User-Agent` header, so Google lets the user sign in. [Fingerprinting and bot checks](fingerprinting.md#google-sign-in)
 explains why.
 <!-- endif -->
+<!-- if >= 1.6.0 -->
+[[new 1.6.0]] While a page is on that server, its whole space presents Firefox, not just these requests
+([engine/signin.py](source:jbrowser/engine/signin.py)).
+<!-- endif -->
 <!-- if >= 1.5.2 -->
 
 [[new 1.5.2]] **Local files.** Before anything else, a request from a local page (`file://`) for another local file
@@ -70,6 +74,12 @@ In order:
    blocking off.
 4. With `privacy.block_trackers` off, stop here.
 5. **The allowed list**: when the page's own site (the first party) is on `privacy.allowlist`<!-- if >= 1.5.2 -->, or is a sign-in page (`SIGNIN_PAGE_HOSTS`, [why](fingerprinting.md#google-sign-in))<!-- endif -->, nothing is blocked.
+<!-- if >= 1.6.0 -->
+   [[new 1.6.0]] **Google talking to Google** isn't filtered either: a request from a Google page (any `google.*`,
+   `gstatic.com` or `googleapis.com` host, `_GOOGLE_HOST`) to another of those hosts. Blocking Google's own pings and
+   logs on its own pages made Google Search answer with "unusual traffic" pages and CAPTCHAs. Ad and tracker hosts
+   such as `doubleclick.net` are other domains and stay blocked.
+<!-- endif -->
 6. **List exemptions**: `@@||site^$document` rules in the filter lists exempt a site completely.
 7. **Domain rules** (`Blocklist`: the built-in list plus the downloaded domain lists) block **third-party** requests
    to tracker and ad domains.
@@ -106,6 +116,12 @@ Each profile's cookie store has a filter, `PrivacyService.allow_cookie()`. With
 - cookies set by CAPTCHA providers (`CAPTCHA_COOKIE_SITES`: reCAPTCHA, hCaptcha, Cloudflare challenges, Arkose
   Labs), which keep their "this person already passed" state in their own cookies; without them every site shows a
   harder challenge;
+<!-- endif -->
+<!-- if >= 1.6.0 -->
+- [[new 1.6.0]] Google's reCAPTCHA (`www.google.com/recaptcha/…`, `recaptcha.google.com`) and "Sign in with Google"
+  (`accounts.google.com`) inside other sites (`CAPTCHA_COOKIE_PATHS`, matched on the host and the path of the address
+  using the cookie). Without them reCAPTCHA met every visitor who isn't signed in to Google as a stranger and asked
+  "I'm not a robot" far more often. Google's other third-party cookies stay blocked;
 <!-- endif -->
 - on sites where protection is switched off (the allowed list).
 

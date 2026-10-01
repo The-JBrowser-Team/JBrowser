@@ -78,6 +78,7 @@ class TabController(QObject):
     def _connect(self) -> None:
         p = self.page
         p.urlChanged.connect(self._on_url)
+        self.ctx.profiles.signin.watch(p)
         p.titleChanged.connect(self._on_title)
         p.iconChanged.connect(self._on_icon)
         p.loadStarted.connect(self._on_load_started)
@@ -450,8 +451,9 @@ class TabController(QObject):
             self.fill(creds[0])
 
     def on_media_unsupported(self, kind: str) -> None:
-        """A video or sound on the page is in a format Qt WebEngine can't play (H.264, AAC)."""
-        if self.disposed:
+        """A video or sound on the page is in a format Qt WebEngine can't play (H.264, AAC). The notice is
+        off by default (Settings → Advanced), as it can be intrusive."""
+        if self.disposed or not self.ctx.settings.get("advanced.media_notice"):
             return
         url = self.page.url().toString()
         self.infobar.emit(InfoBarSpec(

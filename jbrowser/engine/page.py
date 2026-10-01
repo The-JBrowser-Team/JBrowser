@@ -35,6 +35,8 @@ class BrowserPage(QWebEnginePage):
                 ctrl = self._controller
                 QTimer.singleShot(0, lambda u=QUrl(url): None if ctrl.disposed else ctrl.show_threat(u))
             return False
+        if not self._controller.ctx.profiles.signin.before_navigation(self, url, is_main):
+            return False             # loads again in a moment, presenting Firefox (engine/signin.py)
         return super().acceptNavigationRequest(url, nav_type, is_main)
 
     def javaScriptConsoleMessage(self, level, message: str, line: int, source: str) -> None:

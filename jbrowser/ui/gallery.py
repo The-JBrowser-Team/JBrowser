@@ -850,13 +850,9 @@ class Gallery(QWidget):
         hl.addWidget(self.scope)
         hl.addWidget(self.close_btn)
         root.addWidget(head)
-        self.hint = QLabel("Click a card to open it  ·  drag to reorder it or move it to another space  ·  "
-                           "Delete closes the focused card  ·  Esc goes back", self)
-        self.hint.setProperty("hint", True)
-        hint_row = QHBoxLayout()
-        hint_row.setContentsMargins(MARGIN + 52, 0, MARGIN, 6)
-        hint_row.addWidget(self.hint)
-        root.addLayout(hint_row)
+        # No instructions on screen (they cluttered it); the keyboard help stays in the filter's tooltip.
+        self.search.setToolTip("Filter by title or address. Arrow keys move, Enter opens, Delete closes, Esc goes back. "
+                               "Drag a card to reorder it or move it to another space.")
         self.scroll = QScrollArea(self)
         self.scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.scroll.setWidgetResizable(False)

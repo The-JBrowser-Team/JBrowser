@@ -34,6 +34,12 @@ class PopupPage(QWebEnginePage):
     def createWindow(self, window_type):
         return self._popup.ctx.hooks.create_popup(self.profile(), self._popup.space)
 
+    def acceptNavigationRequest(self, url: QUrl, nav_type: QWebEnginePage.NavigationType, is_main: bool) -> bool:
+        # "Sign in with Google" popups: present Firefox before the sign-in page loads (engine/signin.py).
+        if not self._popup.ctx.profiles.signin.before_navigation(self, url, is_main):
+            return False
+        return super().acceptNavigationRequest(url, nav_type, is_main)
+
 
 class PopupWindow(QWidget):
     def __init__(self, ctx: "AppContext", ui: "BrowserController", profile: QWebEngineProfile, space: Space):
@@ -69,6 +75,7 @@ class PopupWindow(QWidget):
         self.view.setPage(self.page)
         lay.addWidget(self.view, 1)
         self.page.urlChanged.connect(self._on_url)
+        ctx.profiles.signin.watch(self.page)
         self.page.titleChanged.connect(lambda t: self.setWindowTitle(f"{t} · {space.name}" if t else "JBrowser popup"))
         self.page.windowCloseRequested.connect(self.close)
         self.page.geometryChangeRequested.connect(self._on_geometry)

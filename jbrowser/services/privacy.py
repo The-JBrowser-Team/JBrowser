@@ -4,7 +4,6 @@ from __future__ import annotations
 import logging
 import re
 import time
-from datetime import date
 from pathlib import Path
 from typing import Callable
 
@@ -12,6 +11,7 @@ from PyQt6.QtCore import QObject, QThread, QUrl, pyqtSignal
 from PyQt6.QtWebEngineCore import QWebEngineUrlRequestInfo, QWebEngineUrlRequestInterceptor
 
 from jbrowser.core.jsonstore import atomic_write_bytes
+from jbrowser.engine.identity import firefox_user_agent
 from jbrowser.core.settings import Settings
 from jbrowser.core.urls import is_local_host, registrable_domain, strip_www
 from jbrowser.core.workers import fetch_text
@@ -45,12 +45,19 @@ CHALLENGE_SITES = ("google.com", "gstatic.com", "recaptcha.net", "youtube.com", 
                    "arkoselabs.com", "funcaptcha.com", "microsoftonline.com", "live.com", "microsoft.com",
                    "apple.com", "icloud.com", "paypal.com")
 CAPTCHA_COOKIE_SITES = ("recaptcha.net", "hcaptcha.com", "challenges.cloudflare.com", "arkoselabs.com")
+# Google's reCAPTCHA runs from www.google.com/recaptcha/ inside other sites, and "Sign in with Google"
+# from accounts.google.com. Without their cookies there, reCAPTCHA sees a new visitor every time and
+# shows "I'm not a robot" far more often to anyone not signed in to Google. Only these addresses get
+# their cookies on other sites; Google's other third-party cookies stay blocked.
+CAPTCHA_COOKIE_PATHS = (("www.google.com", "/recaptcha/"), ("google.com", "/recaptcha/"),
+                        ("recaptcha.google.com", "/"), ("accounts.google.com", "/"))
+_GOOGLE_HOST = re.compile(r"^(?:[\w-]+\.)*(?:google\.[a-z]{2,3}(?:\.[a-z]{2})?|gstatic\.com|googleapis\.com)$")
 
 # Google refuses to sign in browsers it takes for web views embedded in other apps ("Couldn't sign
 # you in. This browser or app may not be secure"), and Qt WebEngine looks like one to its checks.
 # Like other Qt WebEngine browsers (qutebrowser's "ua-google" quirk), JBrowser sends a current
-# Firefox user agent in the requests to Google's sign-in server only; everywhere else, and in
-# JavaScript, it stays Chrome.
+# Firefox user agent in every request to Google's sign-in server, and while a page is on it the
+# whole space presents Firefox (engine/signin.py).
 SIGNIN_UA_HOSTS = ("accounts.google.com",)
 
 # Sign-in pages get no ad or tracker blocking and no element hiding (dangerous sites are still
@@ -61,13 +68,6 @@ SIGNIN_PAGE_HOSTS = ("accounts.google.com", "accounts.youtube.com", "login.micro
                      "login.microsoft.com", "account.live.com", "appleid.apple.com", "idmsa.apple.com",
                      "account.apple.com")
 
-
-def firefox_user_agent(today: date | None = None) -> str:
-    """A current Firefox user agent for Windows. Firefox 140 came out on 2025-06-24 and a new
-    version follows about every four weeks; counting 30 days per version never runs ahead."""
-    days = ((today or date.today()) - date(2025, 6, 24)).days
-    version = 140 + max(0, days // 30)
-    return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0"
 
 BLOCKLIST_SOURCES = [
     ("EasyPrivacy (trackers & telemetry)", "https://easylist.to/easylist/easyprivacy.txt"),
@@ -262,6 +262,11 @@ class PrivacyService(QObject):
         first = info.firstPartyUrl().host().lower()
         if first and (first in SIGNIN_PAGE_HOSTS or self.is_allowlisted(first)):
             return False
+        # Google's own pages talking to Google: blocking their pings and logs is what makes Google
+        # Search answer with "unusual traffic" and reCAPTCHA pages. (Ad and tracker domains such as
+        # doubleclick.net are separate hosts and stay blocked.)
+        if first and _GOOGLE_HOST.match(first) and _GOOGLE_HOST.match(host):
+            return False
         third = not first or registrable_domain(first) != registrable_domain(host)
         eng = self.filters
         if eng is not None and eng.site_allowed(first):
@@ -363,6 +368,9 @@ class PrivacyService(QObject):
         # them every site shows a harder challenge.
         origin = request.origin.host().lower()
         if origin and any(origin == d or origin.endswith("." + d) for d in CAPTCHA_COOKIE_SITES):
+            return True
+        path = request.origin.path() or "/"
+        if any(origin == h and path.startswith(p) for h, p in CAPTCHA_COOKIE_PATHS):
             return True
         first = request.firstPartyUrl.host()
         return bool(first) and self.is_allowlisted(first)

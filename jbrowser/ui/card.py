@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QUrl, pyqtSignal
-from PyQt6.QtGui import QContextMenuEvent, QFont, QGuiApplication, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtGui import QContextMenuEvent, QFont, QGuiApplication, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit, QMenu, QPushButton, QSplitter,
@@ -13,7 +13,8 @@ from PyQt6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit, QMenu, QPus
 from jbrowser.core.urls import pretty_url
 from jbrowser.models.infobar import InfoBarSpec
 from jbrowser.models.tab import Tab
-from jbrowser.ui.icons import draw_glyph
+from jbrowser.ui.icons import GLYPHS, draw_glyph
+from jbrowser.ui.icons import icon as make_icon
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import (ElidedLabel, IconButton, InfoBarWidget, ProgressLine, Spinner, menu_action,
                                  submenu)
@@ -51,6 +52,8 @@ class BrowserView(QWebEngineView):
 
     def contextMenuEvent(self, event: QContextMenuEvent) -> None:
         req = self.lastContextMenuRequest()
+        if req is None:              # no request from the page: Qt's standard menu would crash
+            return
         ui = self._card.ui
         tab_id = self._card.tab.id
         standard = self.createStandardContextMenu()   # engine actions (copy, paste, save image, ...)
@@ -76,11 +79,27 @@ class BrowserView(QWebEngineView):
             menu_action(menu, f"Search {ui.ctx.search.default_name} for “{short}”",
                         lambda: ui.open_url(ui.ctx.search.search_url(text), "new", after_tab=tab_id), "search")
             menu.addSeparator()
+        # Chromium's own actions, minus Back / Forward / Reload / Stop (the card header has them, and Qt's
+        # icons for them clashed with the rest of the menu), with JBrowser's glyphs instead of Qt's icons.
+        WA = QWebEnginePage.WebAction
+        page = self.page()
+        hidden = {page.action(a) for a in (WA.Back, WA.Forward, WA.Reload, WA.Stop, WA.ReloadAndBypassCache)}
+        glyphs = {page.action(a): g for a, g in (
+            (WA.Cut, "cut"), (WA.Copy, "copy"), (WA.Paste, "paste"), (WA.SelectAll, "selectall"),
+            (WA.SavePage, "save"), (WA.DownloadImageToDisk, "save"), (WA.CopyImageToClipboard, "picture"),
+            (WA.CopyImageUrlToClipboard, "link"), (WA.CopyLinkToClipboard, "link"),
+            (WA.DownloadLinkToDisk, "download"), (WA.DownloadMediaToDisk, "save"),
+            (WA.CopyMediaUrlToClipboard, "link"), (WA.ViewSource, "code"), (WA.InspectElement, "code"))}
+        last_separator = True
         for action in standard.actions():
             if action.isSeparator():
-                menu.addSeparator()
-            elif action.isVisible():
+                if not last_separator:
+                    menu.addSeparator()
+                last_separator = True
+            elif action.isVisible() and action not in hidden:
+                action.setIcon(make_icon(glyphs[action]) if action in glyphs and glyphs[action] in GLYPHS else QIcon())
                 menu.addAction(action)
+                last_separator = False
         menu.addSeparator()
         menu_action(menu, "Copy card screenshot", lambda: ui.copy_screenshot(tab_id), "crop")
         menu_action(menu, "Inspect", lambda: self._card.toggle_devtools(True), "code")

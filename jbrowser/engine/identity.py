@@ -64,12 +64,49 @@ def brand_versions(version: str) -> dict[str, str]:
     return {"Chromium": version, grease: f"{grease_version}.0.0.0"}
 
 
+def engine_version() -> str:
+    """The Chromium version Qt WebEngine is actually built on, e.g. "140.0.7339.225"."""
+    try:
+        from PyQt6.QtWebEngineCore import qWebEngineChromiumVersion
+        return qWebEngineChromiumVersion()
+    except ImportError:          # pragma: no cover - Qt < 6.3
+        return CHROME_VERSION
+
+
+def version_for(choice: str | None) -> str:
+    """The version for Settings → Advanced → "How JBrowser introduces itself": the newest Chrome
+    ("current", the default) or the engine's own Chromium ("engine")."""
+    return engine_version() if choice == "engine" else chrome_version()
+
+
 def apply(profile, version: str | None = None) -> str:
     """Present ``version`` (default: ``chrome_version()``) on a QWebEngineProfile. Returns the user agent."""
     version = version or chrome_version()
     ua = user_agent(version)
     profile.setHttpUserAgent(ua)
     hints = profile.clientHints()
+    hints.setAllClientHintsEnabled(True)
     hints.setFullVersion(version)
     hints.setFullVersionList(brand_versions(version))
+    return ua
+
+
+def firefox_user_agent(today: date | None = None) -> str:
+    """A current Firefox user agent for Windows. Firefox 140 came out on 2025-06-24 and a new
+    version follows about every four weeks; counting 30 days per version never runs ahead."""
+    days = ((today or date.today()) - date(2025, 6, 24)).days
+    version = 140 + max(0, days // 30)
+    return f"Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:{version}.0) Gecko/20100101 Firefox/{version}.0"
+
+
+def apply_firefox(profile) -> str:
+    """Present Firefox on a profile, as consistently as Qt WebEngine allows (see engine/signin.py):
+    the user agent in headers and JavaScript, no high-entropy client hints, and no browser brands in
+    the ``Sec-CH-UA`` header or ``navigator.userAgentData`` (Firefox has neither)."""
+    ua = firefox_user_agent()
+    profile.setHttpUserAgent(ua)
+    hints = profile.clientHints()
+    hints.setAllClientHintsEnabled(False)
+    hints.setFullVersionList({})
+    hints.setFullVersion("")
     return ua

@@ -78,17 +78,21 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.5.4 (latest) · 30 September 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.5.4)
+### 1.6.0 (latest) · 1 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.0)
 
-- **Export your passwords safely**: a CSV inside a ZIP locked with a password you choose (AES-256). Open it with
-  7-Zip or WinRAR, or import it into JBrowser on another PC.
-- **A calmer Archive**, without the explanations.
-- **Python 3.14.7** (was 3.14.0): seven releases of bug and security fixes. All packages up to date.
+- **Dark mode stays dark on Acrylic**, even when Windows itself uses light mode (and the other way round).
+- **Google sign-in, for good**: while you sign in, JBrowser presents itself as Firefox in every way Google checks.
+- **Fewer "I'm not a robot" checks** when you're not signed in to Google.
+- **Smoother horizontal scrolling**, especially on slower PCs and large screens.
+- **Settings → Advanced**: a graphics mode for cards that glitch, how JBrowser introduces itself, and the (now
+  optional) note about videos it can't play.
+- A translucent Archive, a cleaner right-click menu, and a livelier website.
 
 ### Earlier versions
 
 | Version | Highlights |
 |---|---|
+| 1.5.4 | Encrypted password export (CSV in an AES-256 ZIP), a calmer Archive, Python 3.14.7 |
 | 1.5.3 | The one-line PowerShell install works again, simpler download window, an open-source section on the website, which moved to jbrowser.app |
 | 1.5.2 | Sites see the current Chrome (155), Google sign-in pages exempt from blocking, card outline in your tint, saved pages can't read your files, ready for SignPath code signing |
 | 1.5.1 | Google sign-in fix (Firefox user agent for Google's sign-in server), code signing built into the release scripts, a website with real screenshots and versioned developer docs |

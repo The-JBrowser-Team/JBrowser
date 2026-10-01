@@ -212,18 +212,32 @@ class MainWindow(QMainWindow):
             self._backdrop_done = True
             self.apply_backdrop()
 
+    _FRAME_CHECK_EVENTS = (QEvent.Type.ApplicationPaletteChange, QEvent.Type.WindowActivate,
+                           QEvent.Type.WindowDeactivate)
+
     def event(self, e) -> bool:
         if e.type() == QEvent.Type.WinIdChange and self._backdrop_done:
             # The native window was recreated (e.g. surface type change): DWM state is per-HWND.
             QTimer.singleShot(0, self.apply_backdrop)
+        elif e.type() in self._FRAME_CHECK_EVENTS and self._backdrop_done:
+            QTimer.singleShot(0, self._check_frame)
         return super().event(e)
 
-    def apply_backdrop(self) -> None:
+    def _check_frame(self) -> None:
+        """Put the window's light/dark state back if anything changed it (Qt re-applies its own on
+        palette changes), and rebuild the backdrop so no part keeps the wrong material."""
+        if not self._backdrop_done or self._shut_down:
+            return
+        if win.dark_frame(int(self.winId())) not in (None, theme().dark):
+            log.info("Window light/dark state was changed outside JBrowser; restoring it")
+            self.apply_backdrop(rebuild=True)
+
+    def apply_backdrop(self, rebuild: bool = False) -> None:
         if not self._backdrop_done:
             return
         hwnd = int(self.winId())
         material = self.ctx.settings.get("appearance.material")
-        ok = win.apply_backdrop(hwnd, material, theme().dark)
+        ok = win.apply_backdrop(hwnd, material, theme().dark, rebuild)
         translucent = ok and material != "solid"
         if translucent != theme().translucent:
             theme().translucent = translucent
@@ -279,8 +293,9 @@ class MainWindow(QMainWindow):
 
     def _refresh_native_frame(self) -> None:
         if self._backdrop_done and not self._shut_down:
-            win.refresh_frame(int(self.winId()))
-            self.apply_backdrop()
+            hwnd = int(self.winId())
+            win.refresh_frame(hwnd)
+            self.apply_backdrop(rebuild=win.dark_frame(hwnd) not in (None, theme().dark))
 
     # ------------------------------------------------------------- lifecycle
     def _card(self, tab_id: str) -> WebCard | None:

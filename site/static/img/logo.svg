@@ -1,5 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="JBrowser">
-  <!-- The JBrowser mark, as drawn by paint_logo() in jbrowser/ui/icons.py -->
+  <!-- The JBrowser mark, as drawn by paint_logo() in jbrowser/ui/icons.py. Written by tools/make_icon.py;
+       the "J" is a path, so the logo looks the same wherever it is drawn (no font needed). -->
   <defs>
     <linearGradient id="jb-bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#5b8cff"/>
@@ -16,7 +17,6 @@
   <rect x="14" y="27" width="22" height="46" rx="3.5" fill="#fff" fill-opacity="0.43"/>
   <rect x="40" y="27" width="30" height="46" rx="3.5" fill="#fff"/>
   <rect x="74" y="27" width="14" height="46" rx="3.5" fill="#fff" fill-opacity="0.43"/>
-  <text x="55" y="50.5" text-anchor="middle" dominant-baseline="central" fill="#6a5cff"
-        font-family="'Segoe UI Variable Display','Segoe UI',system-ui,sans-serif" font-weight="700" font-size="33">J</text>
+  <path fill="#6a5cff" d="M60.98 56.61 C60.98 58.95 60.28 60.77 58.90 62.09 C57.51 63.40 55.61 64.06 53.18 64.06 C52.19 64.06 51.20 63.88 50.21 63.54 C49.21 63.19 48.19 62.52 47.14 61.53 L50.21 58.15 C50.64 58.64 51.09 59.00 51.56 59.23 C52.03 59.46 52.53 59.57 53.08 59.56 C53.94 59.54 54.61 59.27 55.08 58.76 C55.55 58.24 55.79 57.45 55.79 56.37 L55.79 40.55 L60.98 40.55 L60.98 56.61"/>
   <line x1="20" y1="82" x2="80" y2="82" stroke="#fff" stroke-opacity="0.59" stroke-width="2.5" stroke-linecap="round"/>
 </svg>

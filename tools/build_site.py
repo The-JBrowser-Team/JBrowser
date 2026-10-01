@@ -1143,6 +1143,15 @@ class Site:
         img.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ROOT / "assets" / "jbrowser.png", img / "jbrowser.png")
         shutil.copy2(ROOT / "assets" / "jbrowser.ico", self.out / "favicon.ico")
+        # Web app manifest: browsers and search engines read the site's name and icons from it.
+        icons = [{"src": f"static/img/icons/{name}", "sizes": f"{size}x{size}", "type": "image/png"}
+                 for name, size in (("favicon-48.png", 48), ("favicon-96.png", 96), ("favicon-192.png", 192),
+                                    ("icon-512.png", 512))]
+        write(self.out / "site.webmanifest", json.dumps({
+            "name": "JBrowser", "short_name": "JBrowser",
+            "description": "A spatial, privacy-focused web browser for Windows.",
+            "start_url": "./", "display": "browser", "theme_color": "#8a5cff", "background_color": "#0e0e14",
+            "icons": icons}, indent=1))
         light = HtmlFormatter(style="default").get_style_defs(':root[data-theme="light"] .highlight')
         dark = HtmlFormatter(style="github-dark").get_style_defs(':root[data-theme="dark"] .highlight')
         write(self.out / "static" / "css" / "pygments.css",
@@ -1160,22 +1169,32 @@ class Site:
                 "og_image": self.site_url + "static/img/shots/og-image.jpg", "head_extra": ""}
 
     def software_json_ld(self) -> str:
-        """schema.org SoftwareApplication data for the home page, so search engines know what JBrowser is."""
+        """schema.org data for the home page, so search engines know what JBrowser is: the website (its
+        name), the team behind it (with the logo) and the app (a Windows desktop browser, not one of the
+        mobile apps with a similar name)."""
         d = self.download()
-        data = {
-            "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "JBrowser",
-            "applicationCategory": "BrowserApplication", "operatingSystem": "Windows 10, Windows 11",
-            "description": "A spatial, privacy-focused web browser for Windows: pages side by side on one canvas, "
-                           "separate spaces, built-in ad and tracker blocking. Free and open source.",
-            "url": self.site_url, "downloadUrl": self.site_url + "download/", "softwareVersion": d["version"],
-            "license": "https://www.gnu.org/licenses/gpl-3.0.html", "isAccessibleForFree": True,
-            "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
-            "image": self.site_url + "static/img/shots/og-image.jpg",
-            "screenshot": self.site_url + "static/img/shots/hero-dark-1920.webp",
-            "author": {"@type": "Organization", "name": self.ident.get("COMPANY", "The JBrowser Team"),
-                       "url": self.repo_url},
-            "codeRepository": self.repo_url,
-        }
+        team = self.ident.get("COMPANY", "The JBrowser Team")
+        org_id = self.site_url + "#team"
+        data = {"@context": "https://schema.org", "@graph": [
+            {"@type": "WebSite", "@id": self.site_url + "#website", "url": self.site_url, "name": "JBrowser",
+             "alternateName": ["JBrowser for Windows", "jbrowser.app"], "publisher": {"@id": org_id}},
+            {"@type": "Organization", "@id": org_id, "name": team, "url": self.site_url,
+             "logo": {"@type": "ImageObject", "url": self.site_url + "static/img/icons/icon-512.png",
+                      "width": 512, "height": 512},
+             "sameAs": [self.repo_url]},
+            {"@type": "SoftwareApplication", "name": "JBrowser",
+             "applicationCategory": "BrowserApplication", "applicationSubCategory": "Web browser",
+             "operatingSystem": "Windows 10, Windows 11",
+             "description": "A spatial, privacy-focused web browser for Windows desktops: pages side by side on one "
+                            "canvas, separate spaces, built-in ad and tracker blocking. Free and open source.",
+             "url": self.site_url, "downloadUrl": self.site_url + "download/", "softwareVersion": d["version"],
+             "license": "https://www.gnu.org/licenses/gpl-3.0.html", "isAccessibleForFree": True,
+             "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"},
+             "image": self.site_url + "static/img/shots/og-image.jpg",
+             "screenshot": self.site_url + "static/img/shots/hero-dark-1920.webp",
+             "author": {"@id": org_id}, "publisher": {"@id": org_id},
+             "codeRepository": self.repo_url},
+        ]}
         text = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
         return f'<script type="application/ld+json">{text}</script>'
 

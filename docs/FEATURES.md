@@ -4,6 +4,7 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 
 ### Windows 11 look & feel
 - **Acrylic** by default, or **Mica, Mica Alt** or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
+  The theme you pick holds even when Windows uses the other one (no pale Acrylic behind light text).
 - **Colour tints**: rose, coral, amber, lime, mint, teal, sky, indigo, violet, slate or *No colour* (Settings →
   Appearance, the welcome setup, or "colour" in the Lazy Toolbar). Over Acrylic or Mica it is a light wash; with
   *Solid* the surfaces take on the colour. Incognito spaces are always black.
@@ -20,6 +21,7 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - **Pull to add**: keep scrolling past the first or last card and a "+" grows in the gap; when its ring fills, a new
   card opens at that end. Alt+← on the first card (or Alt+→ on the last) twice does the same from the keyboard.
 - Pan with trackpad swipes, horizontal wheel, **Alt + mouse wheel** anywhere, or by dragging the overview strip.
+  Scrolling eases at the screen's frame rate and keeps up with the input on slower PCs too.
 - **Alt + ← / →** steps focus between cards (smoothly scrolled into view); Ctrl+Tab cycles and wraps around.
 - **Pinned cards** stay at the start of their space (right-click → Pin card).
 - **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**.
@@ -84,7 +86,7 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   (address patterns, `@@` exceptions, `$third-party`, `$domain=`, resource types, `$important`) plus the Peter Lowe and
   NoCoin domain lists. **Element hiding** (`##` rules) removes the empty ad boxes left behind, before the page first
   paints. Per-card blocked counter, per-site protection toggle (an allowed site is left completely alone),
-  third-party-cookie blocking (CAPTCHA providers excepted), **Global Privacy Control** and **Do Not Track** headers +
+  third-party-cookie blocking (CAPTCHA providers, including Google's reCAPTCHA, excepted), **Global Privacy Control** and **Do Not Track** headers +
   JS signals, pop-up blocking, WebRTC IP-leak protection. The lists refresh weekly in the background.
 - **Phishing and malware protection**: pages on the URLhaus and Phishing Army lists are stopped before they load and
   replaced by a warning page ("Go back to safety" / "Continue anyway"). Lists are stored locally and refreshed weekly;
@@ -95,10 +97,13 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   Microsoft, Apple, PayPal, CAPTCHA providers) untouched, so it doesn't look like a bot.
 - **Up to date, as far as sites can tell**: JBrowser presents the newest stable Chrome version (Chrome 155 in
   JBrowser 1.5.2) in its user agent and client hints, instead of its engine's Chromium 140, so sites don't treat it
-  as outdated. Every release records the then-current version, and between releases it keeps up by date.
-- **Google sign-in works**: Google's sign-in server gets a Firefox user agent, as in other Qt WebEngine browsers,
-  because Google refuses embedded browser engines ("This browser or app may not be secure"), and sign-in pages
-  (Google, Microsoft, Apple) are exempt from ad and tracker blocking, which their security checks need.
+  as outdated. Every release records the then-current version, and between releases it keeps up by date. Settings →
+  Advanced can present the engine's own version instead.
+- **Google sign-in works**: while a page is on Google's sign-in page, its space presents itself as Firefox in every
+  way a site can check (user agent, JavaScript, browser hints), then goes back to Chrome, because Google refuses
+  embedded browser engines ("This browser or app may not be secure"). Sign-in pages (Google, Microsoft, Apple) are
+  exempt from ad and tracker blocking, which their security checks need, and Google's own pages aren't filtered when
+  they talk to Google, which keeps "unusual traffic" checks away.
 - **Local files stay private**: a web page saved on your computer can show its own images but can't read your other
   files, as in Chrome.
 - **Tracking codes removed from links** (`utm_*`, `fbclid`, `gclid`, `mc_eid`, …) before the page opens, plus
@@ -117,8 +122,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 ### Built-in utilities
 - **History** vault: search, filter by space and date range, delete entries, 1-click clear.
 - **Archive** (Ctrl+Shift+Y, bottom-right of the sidebar): cards closed in the last 48 hours with their back/forward
-  history; reopen with a click, Ctrl+Shift+T for the latest. Stored locally, never for incognito spaces, and cleared
-  together with browsing history.
+  history, on frosted glass; reopen with a click, Ctrl+Shift+T for the latest. Stored locally, never for incognito
+  spaces, and cleared together with browsing history.
 - **Password manager**: AES-256-GCM encrypted vault, key protected by Windows DPAPI or an optional master password (Scrypt).
   Offers to save/update logins, autofills (isolated script world, so pages can't read it), per-space or global logins,
   password generator, CSV import (Chrome/Edge/Firefox), **encrypted export** (a CSV inside a ZIP locked with a
@@ -130,6 +135,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - **Cookies** and **site permissions** (camera, mic, location, notifications, clipboard, screen share…) managers, per space.
 - **Settings** (Ctrl+, or click the logo): General, Appearance, Search, Privacy and security, Clear browsing data,
   Passwords, Performance, Network and DNS, Downloads, Advanced, Reset and About, with a search box that filters options.
+  Advanced has the graphics acceleration mode (Automatic / Compatible / Off, for graphics drivers that glitch), how
+  JBrowser introduces itself to websites, and the optional note about videos JBrowser can't play.
   Clear browsing data works by time range (last hour to all time) and space, and can run automatically on exit.
   Reset offers "restore default settings" or a full factory reset.
 - **Bookmarks bar** (Ctrl+Shift+B), bookmarks manager with Netscape HTML import/export.
