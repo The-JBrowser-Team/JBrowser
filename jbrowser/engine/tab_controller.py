@@ -15,6 +15,7 @@ from PyQt6.QtWebEngineCore import (QWebEngineCertificateError, QWebEnginePage, Q
 from jbrowser.core.urls import is_local_host, strip_www
 from jbrowser.engine.js import BRIDGE_WORLD, CLEAR_SITE_STORAGE_JS
 from jbrowser.engine.page import BrowserPage, PageBridge
+from jbrowser.engine.signin import is_rejection_url
 from jbrowser.models.infobar import InfoAction, InfoBarSpec
 from jbrowser.models.space import Space
 from jbrowser.models.tab import Tab
@@ -213,6 +214,26 @@ class TabController(QObject):
             self.refresh_login_count()
         if not self.page.isLoading():
             self._spa_timer.start()
+        if is_rejection_url(url) and self.ctx.settings.get("advanced.identity") != "firefox":
+            self._offer_firefox_identity()
+
+    def _offer_firefox_identity(self) -> None:
+        """Google still refused the sign-in ("This browser or app may not be secure"): offer the identity
+        that worked when nothing else did, Firefox everywhere, and try again."""
+        def use_firefox():
+            self.ctx.settings.set("advanced.identity", "firefox")
+            QTimer.singleShot(0, restart)
+
+        def restart():
+            if not self.disposed:
+                self.page.setUrl(QUrl("https://accounts.google.com/"))
+
+        self.infobar.emit(InfoBarSpec(
+            "google-rejected",
+            "Google didn't accept this browser for signing in. JBrowser can introduce itself as Firefox to every "
+            "site, which Google accepts. You can change it back in Settings → Advanced.",
+            icon="warning", kind="warning",
+            actions=[InfoAction("Use Firefox and try again", use_firefox, primary=True)]))
 
     def _on_title(self, title: str) -> None:
         if self._blocked_url:

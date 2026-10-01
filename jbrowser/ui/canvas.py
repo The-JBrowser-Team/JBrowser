@@ -865,22 +865,21 @@ class Canvas(QWidget):
                 self.update()
 
     def _background(self) -> QColor:
-        """The window's backdrop wash with the canvas tint over it, as one colour. The canvas paints
-        every one of its pixels with it (WA_OpaquePaintEvent), so Qt no longer repaints the window
-        underneath on every frame of scrolling, which halves the work on large or high-DPI screens."""
+        """The window's backdrop layers (base colour, tint) with the canvas tint over them, as one
+        colour. The canvas paints every one of its pixels with it (WA_OpaquePaintEvent), so Qt no longer
+        repaints the window underneath on every frame of scrolling, which halves the work on large or
+        high-DPI screens."""
         th = theme()
         if not th.translucent:
             return th.c("canvas_solid")
-        wash = th.backdrop_wash()
-        canvas = th.c("canvas")
-        key = (wash.rgba() if wash is not None else None, canvas.rgba())
+        layers = th.backdrop_layers() + [th.c("canvas")]
+        key = tuple(c.rgba() for c in layers)
         if key != self._bg_key:
             img = QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
             img.fill(Qt.GlobalColor.transparent)
             p = QPainter(img)
-            if wash is not None:
-                p.fillRect(0, 0, 1, 1, wash)
-            p.fillRect(0, 0, 1, 1, canvas)
+            for c in layers:
+                p.fillRect(0, 0, 1, 1, c)
             p.end()
             self._bg_key, self._bg = key, img.pixelColor(0, 0)
         return QColor(self._bg)

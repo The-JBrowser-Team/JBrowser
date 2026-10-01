@@ -2,28 +2,10 @@
 <html lang="en">
 <head>
 {% include _head.html %}
-<script>
-  /* The shining-logo intro: once per visit, and never with reduced motion. The overlay times itself in
-     CSS (home.css), so it always leaves, even if a script fails. */
-  (function () {
-    try {
-      if (matchMedia("(prefers-reduced-motion: reduce)").matches || sessionStorage.getItem("jb-intro")) return;
-      sessionStorage.setItem("jb-intro", "1");
-      document.documentElement.classList.add("intro-on");
-    } catch (e) {}
-  })();
-</script>
 <link rel="preload" as="image" href="{{root}}static/img/shots/hero-dark-1920.webp" imagesrcset="{{root}}static/img/shots/hero-dark-1280.webp 1280w, {{root}}static/img/shots/hero-dark-1920.webp 1920w" imagesizes="(max-width: 1240px) 100vw, 1200px">
 <link rel="stylesheet" href="{{root}}static/css/home.css">
 </head>
 <body class="home">
-<div class="intro" aria-hidden="true">
-  <div class="intro-mark">
-    <img src="{{root}}static/img/icons/icon-512.png" alt="" width="128" height="128">
-    <span class="intro-shine"></span>
-  </div>
-  <span class="intro-word">JBrowser</span>
-</div>
 {% include _topbar.html %}
 <main id="main">
 
@@ -31,7 +13,7 @@
 <section class="hero">
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="wrap hero-copy">
-    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: smoother, sturdier, easier sign-in <span aria-hidden="true">→</span></a>
+    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: steadier windows, frosted menus <span aria-hidden="true">→</span></a>
     <h1 class="reveal">Welcome to the internet <span class="grad">- again.</span></h1>
     <p class="lead reveal">Your pages side by side on one calm canvas. Private by default. Made for Windows&nbsp;11.</p>
     <div class="cta reveal">

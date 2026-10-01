@@ -14,6 +14,7 @@ sign-in page itself loads with the consistent identity.
 from __future__ import annotations
 
 import logging
+import re
 import time
 from typing import Callable
 
@@ -24,21 +25,32 @@ from jbrowser.engine import identity
 
 log = logging.getLogger(__name__)
 
-SIGNIN_HOSTS = ("accounts.google.com",)
-RESTORE_DELAY_MS = 4000      # sign-in bounces between Google's servers: don't flip back and forth
+# Google's sign-in servers, including the country ones (accounts.google.co.uk, ...) and the YouTube hop
+# that finishes every sign-in (accounts.youtube.com/accounts/SetSID).
+SIGNIN_HOST = re.compile(r"^accounts\.(?:google\.[a-z]{2,3}(?:\.[a-z]{2})?|youtube\.com)$")
+# After the last sign-in page Google still bounces through a few servers to hand the sign-in to its
+# other sites. Presenting Chrome again in the middle of that hand-off could undo the sign-in.
+RESTORE_DELAY_MS = 12000
 RENAVIGATE_GAP = 30.0        # s: load a sign-in page again at most this often (see _on_url)
 
 
 def is_signin_url(url: QUrl) -> bool:
-    return url.scheme() in ("https", "http") and url.host().lower() in SIGNIN_HOSTS
+    return url.scheme() in ("https", "http") and bool(SIGNIN_HOST.match(url.host().lower()))
+
+
+def is_rejection_url(url: QUrl) -> bool:
+    """Google's "Couldn't sign you in. This browser or app may not be secure" page."""
+    return is_signin_url(url) and "rejected" in url.path().lower()
 
 
 class SigninIdentity(QObject):
     """Keeps track of which pages are on a sign-in server and switches their profiles' identity."""
 
-    def __init__(self, restore: Callable[[QWebEngineProfile], None], parent: QObject | None = None):
+    def __init__(self, restore: Callable[[QWebEngineProfile], None], parent: QObject | None = None,
+                 always_firefox: Callable[[], bool] = lambda: False):
         super().__init__(parent)
         self._restore_profile = restore          # applies the normal (Chrome) identity again
+        self._always_firefox = always_firefox    # Settings → Advanced: every space presents Firefox anyway
         self._on_signin: dict[int, QWebEngineProfile] = {}    # id(page) -> its profile
         self._firefox: dict[int, QWebEngineProfile] = {}      # id(profile) -> profile presenting Firefox
         self._renavigated: dict[int, float] = {}
@@ -60,7 +72,7 @@ class SigninIdentity(QObject):
         Returns False when the navigation has to wait: Chromium can't change a page's identity from
         inside that callback, so the space switches to Firefox a moment later and then the page
         loads ``url`` again. Google never sees a request from the half-switched browser."""
-        if not (is_main and is_signin_url(url)):
+        if not (is_main and is_signin_url(url)) or self._always_firefox():
             return True
         profile = page.profile()
         self._on_signin[id(page)] = profile
@@ -80,6 +92,8 @@ class SigninIdentity(QObject):
     def _on_url(self, page: QWebEnginePage, url: QUrl) -> None:
         if not is_signin_url(url):
             self._leave(id(page))
+            return
+        if self._always_firefox():
             return
         self._on_signin[id(page)] = page.profile()
         if id(page.profile()) in self._firefox:

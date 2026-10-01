@@ -8,8 +8,7 @@ from __future__ import annotations
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QDialog, QLabel, QVBoxLayout, QWidget
 
-from jbrowser.platform import win
-from jbrowser.ui.theme import theme
+from jbrowser.ui.backdrop import Backdrop
 
 
 class JDialog(QDialog):
@@ -24,16 +23,10 @@ class JDialog(QDialog):
         # caption colour (a translucent client area can't blend with Mica under a native
         # frame when windows are composited through Direct3D).
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.backdrop = Backdrop(self, "frame")      # light/dark title bar in step with the theme
         self.root = QVBoxLayout(self)
         self.root.setContentsMargins(20, 18, 20, 16)
         self.root.setSpacing(12)
-
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        hwnd = int(self.winId())
-        th = theme()
-        win.set_dark_title(hwnd, th.dark)
-        win.set_caption_colors(hwnd, th.c("dialog_solid"), th.c("text"))
 
 
 def heading(text: str, sub: bool = False) -> QLabel:

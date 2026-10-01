@@ -14,9 +14,10 @@ from PyQt6.QtWebEngineWidgets import QWebEngineView
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from jbrowser.core.urls import pretty_url
+from jbrowser.engine.signin import is_rejection_url
 from jbrowser.models.space import Space
-from jbrowser.platform import win
 from jbrowser.services.privacy import PageInterceptor
+from jbrowser.ui.backdrop import Backdrop
 from jbrowser.ui.icons import app_icon, draw_glyph
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import IconButton
@@ -48,6 +49,7 @@ class PopupWindow(QWidget):
         self.ui = ui
         self.space = space
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.backdrop = Backdrop(self, "frame")      # light/dark title bar in step with the theme
         self.setWindowIcon(app_icon())
         self.setWindowTitle("JBrowser popup")
         self.resize(560, 680)
@@ -82,13 +84,10 @@ class PopupWindow(QWidget):
         self.page.iconChanged.connect(lambda ic: self.setWindowIcon(ic if not ic.isNull() else app_icon()))
         self._bar = bar
 
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        hwnd = int(self.winId())
-        win.set_dark_title(hwnd, theme().dark)
-        win.set_caption_colors(hwnd, theme().c("dialog_solid"), theme().c("text"))
-
     def _on_url(self, url: QUrl) -> None:
+        if is_rejection_url(url) and self.ctx.settings.get("advanced.identity") != "firefox":
+            self.ctx.hooks.toast("Google didn't accept this browser. Settings → Advanced → How JBrowser introduces "
+                                 "itself → Firefox lets the sign-in through.", "warning")
         self.address.setText(pretty_url(url))
         self.address.setToolTip(url.toString())
         self._secure = url.scheme() == "https"

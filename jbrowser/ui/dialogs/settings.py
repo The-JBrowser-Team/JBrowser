@@ -903,10 +903,13 @@ class SettingsWindow(ChromeWindow):
                                                                     ("off", "Off (slower, no glitches)")]),
                                  _button("Restart now", lambda: (self.close(), self.ui.restart())))),
             SettingCard("globe", "How JBrowser introduces itself to websites",
-                        "JBrowser tells sites it's the newest Chrome, so none treat it as outdated. If Google keeps "
-                        "asking “I'm not a robot”, try the engine's own version, which matches what's really inside.",
+                        "JBrowser tells sites it's the newest Chrome, so none treat it as outdated, and switches to "
+                        "Firefox by itself while you sign in to Google. If Google keeps asking “I'm not a robot”, try "
+                        "the engine's own version. If Google still won't let you sign in, choose Firefox: every "
+                        "site then sees Firefox, all the time.",
                         self._combo("advanced.identity", [("current", "Newest Chrome (recommended)"),
-                                                          ("engine", "Engine version")])),
+                                                          ("engine", "Engine version"),
+                                                          ("firefox", "Firefox (for Google sign-in trouble)")])),
             self._toggle_card("advanced.media_notice", "info", "Explain videos JBrowser can't play",
                               "Shows a note when a video or sound is in a format JBrowser can't play yet (such as "
                               "H.264), so you know to open it in another browser."),

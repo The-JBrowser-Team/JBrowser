@@ -4,8 +4,8 @@ from __future__ import annotations
 import os
 
 from PyQt6.QtCore import QTimer, QUrl
-from PyQt6.QtGui import QDesktopServices
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QTextBrowser, QWidget
+from PyQt6.QtGui import QDesktopServices, QGuiApplication
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QProgressBar, QPushButton, QSizePolicy, QTextBrowser, QWidget
 
 from jbrowser import RELEASES_PAGE, __version__
 from jbrowser.ui.dialogs.base import JDialog, heading
@@ -14,6 +14,12 @@ from jbrowser.ui.dialogs.base import JDialog, heading
 class UpdateDialog(JDialog):
     def __init__(self, ctx, ui, parent: QWidget | None = None):
         super().__init__("Update JBrowser", parent, (620, 520), modal=False)
+        # A fixed size in proportion to the screen. (A long status line, such as an error or the
+        # installer's path, used to widen the layout, and the window grew with it.)
+        screen = (parent.screen() if parent is not None else None) or QGuiApplication.primaryScreen()
+        avail = screen.availableGeometry()
+        self.setFixedSize(max(520, min(760, int(avail.width() * 0.38))),
+                          max(420, min(640, int(avail.height() * 0.55))))
         self.ctx, self.ui = ctx, ui
         self.updater = ctx.updater
         info = self.updater.latest
@@ -34,7 +40,10 @@ class UpdateDialog(JDialog):
         self.root.addWidget(self.progress)
         self.status = QLabel(self)
         self.status.setProperty("hint", True)
+        self.status.setWordWrap(True)
+        self.status.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         self.root.addWidget(self.status)
+        self.sub.setSizePolicy(QSizePolicy.Policy.Ignored, QSizePolicy.Policy.Preferred)
         row = QHBoxLayout()
         self.skip_btn = QPushButton("Skip this version", self)
         self.later_btn = QPushButton("Later", self)

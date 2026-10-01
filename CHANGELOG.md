@@ -5,6 +5,36 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [1.6.2] - 2026-10-02
+
+### Fixed
+- **Windows that keep their colours, rebuilt.** On some PCs the window still turned pale behind dark text (or the
+  other way round), left a stale rectangle over the title bar after maximising, stopped dragging after switching
+  between light and dark, or flashed black or white and stopped responding when Settings opened. The way JBrowser
+  looks after its windows was redesigned rather than patched:
+  - one part of JBrowser now owns each window's frosted backdrop and light/dark mode. It sets them when they change,
+    puts the mode back after anything that can disturb it, and nothing else: it no longer reads the state back from
+    Windows, rebuilds the backdrop, refreshes the window frame on activation (which could interrupt dragging) or
+    restyles the whole app when Windows reports a hiccup (the loop behind the black or white flashing);
+  - JBrowser paints its own base colour under its content, so dark stays dark and light stays light whatever Windows
+    draws behind the window;
+  - the new colours reach Qt before the new light/dark mode does, so Qt never sees a half-switched theme;
+  - menus run their action after they have closed, so opening Settings from the menu no longer overlaps with the
+    menu's own event loop.
+- **Google sign-in, more of it.** JBrowser now keeps presenting Firefox through the whole sign-in hand-off (Google's
+  country sign-in servers and YouTube's sign-in step included) and waits longer before going back to Chrome. If Google
+  still says "Couldn't sign you in", JBrowser offers to introduce itself as Firefox everywhere, and tries again.
+- **The update window keeps its size.** It is sized to your screen and no longer grows with long messages.
+
+### Added
+- **Settings → Advanced → How JBrowser introduces itself → Firefox**: every site sees Firefox, all the time. For PCs
+  where Google refuses the sign-in whatever else JBrowser does.
+
+### Changed
+- **Frosted menus.** Right-click menus and the ··· menu are translucent, like the window and the Archive.
+- **Website:** the full-screen logo animation is gone; the small JBrowser logo in the top bar catches the light when
+  you arrive (and when you point at it).
+
 ## [1.6.1] - 2026-10-01
 
 ### Fixed

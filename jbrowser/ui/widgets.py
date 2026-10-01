@@ -709,7 +709,9 @@ def menu_action(menu, text: str, callback=None, glyph: str | None = None, *, che
         act.setShortcutVisibleInContextMenu(True)
     act.setEnabled(enabled)
     if callback is not None:
-        act.triggered.connect(lambda _checked=False, cb=callback: cb())
+        # Run once the menu has closed: menus run their own event loop (QMenu.exec), and opening a
+        # window such as Settings from inside it made activation and window state changes overlap.
+        act.triggered.connect(lambda _checked=False, cb=callback: QTimer.singleShot(0, cb))
     menu.addAction(act)
     return act
 

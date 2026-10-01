@@ -4,7 +4,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 
 ### Windows 11 look & feel
 - **Acrylic** by default, or **Mica, Mica Alt** or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
-  The theme you pick holds even when Windows uses the other one (no pale Acrylic behind light text).
+  The theme you pick holds even when Windows uses the other one: JBrowser paints its own base colour under the
+  frosted glass, so the window never turns pale behind light text (or dark behind dark text).
+- **Frosted menus**: right-click menus, the ··· menu and the Archive are translucent too.
 - **Colour tints**: rose, coral, amber, lime, mint, teal, sky, indigo, violet, slate or *No colour* (Settings →
   Appearance, the welcome setup, or "colour" in the Lazy Toolbar). Over Acrylic or Mica it is a light wash; with
   *Solid* the surfaces take on the colour. Incognito spaces are always black.
@@ -100,8 +102,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   JBrowser 1.5.2) in its user agent and client hints, instead of its engine's Chromium 140, so sites don't treat it
   as outdated. Every release records the then-current version, and between releases it keeps up by date. Settings →
   Advanced can present the engine's own version instead.
-- **Google sign-in works**: while a page is on Google's sign-in page, its space presents itself as Firefox in every
-  way a site can check (user agent, JavaScript, browser hints), then goes back to Chrome, because Google refuses
+- **Google sign-in works**: while a page is on Google's sign-in pages, its space presents itself as Firefox in every
+  way a site can check (user agent, JavaScript, browser hints), then goes back to Chrome; if Google still refuses,
+  JBrowser offers to present Firefox everywhere (Settings → Advanced). This is needed because Google refuses
   embedded browser engines ("This browser or app may not be secure"). Sign-in pages (Google, Microsoft, Apple) are
   exempt from ad and tracker blocking, which their security checks need, and Google's own pages aren't filtered when
   they talk to Google, which keeps "unusual traffic" checks away.

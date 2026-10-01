@@ -16,44 +16,6 @@
 @media (prefers-reduced-motion: reduce) { .js-reveal .reveal { opacity: 1; transform: none; filter: none; } }
 .home { --spring: cubic-bezier(.16, 1.12, .3, 1); }
 
-/* ---------------------------------------------------------------- intro: the logo shines, then the page appears */
-.intro { display: none; }
-.intro-on .intro {
-  position: fixed; inset: 0; z-index: 1000; display: grid; place-content: center; justify-items: center; gap: 22px;
-  background: var(--bg); animation: intro-out .6s var(--ease) 1.5s forwards;
-}
-.intro-on .intro::before {
-  content: ""; position: absolute; left: 50%; top: 50%; width: 560px; height: 560px; margin: -300px 0 0 -280px;
-  border-radius: 50%; pointer-events: none;
-  background: radial-gradient(closest-side, rgba(138, 92, 255, .38), rgba(255, 92, 157, .14) 55%, transparent);
-  animation: intro-glow 1.8s var(--ease) both;
-}
-.intro-mark {
-  position: relative; width: 144px; height: 144px; border-radius: 38px;
-  filter: drop-shadow(0 22px 48px rgba(110, 80, 255, .5));
-  animation: intro-pop .8s var(--spring) both;
-}
-.intro-mark img { display: block; width: 100%; height: 100%; }
-.intro-shine {
-  position: absolute; inset: 0;
-  -webkit-mask: url(../img/icons/icon-512.png) center / contain no-repeat;
-  mask: url(../img/icons/icon-512.png) center / contain no-repeat;
-  background: linear-gradient(115deg, transparent 0 40%, rgba(255, 255, 255, .15) 44%, rgba(255, 255, 255, .78) 50%,
-                              rgba(255, 255, 255, .15) 56%, transparent 60% 100%);
-  background-size: 280% 100%; background-position: 130% 0;
-  animation: intro-shine 1s cubic-bezier(.45, 0, .2, 1) .5s both;
-}
-.intro-word {
-  position: relative; font: 700 26px var(--font-display); letter-spacing: .02em; color: var(--text);
-  animation: intro-word .9s var(--ease) .35s both;
-}
-@keyframes intro-pop { from { opacity: 0; transform: scale(.72) rotate(-6deg); } }
-@keyframes intro-shine { to { background-position: -30% 0; } }
-@keyframes intro-word { from { opacity: 0; letter-spacing: .3em; filter: blur(6px); } }
-@keyframes intro-glow { from { opacity: 0; transform: scale(.6); } 60% { opacity: 1; } to { opacity: .85; transform: scale(1.08); } }
-@keyframes intro-out { to { opacity: 0; visibility: hidden; transform: scale(1.04); } }
-@media (prefers-reduced-motion: reduce) { .intro-on .intro { display: none; } }
-
 /* ---------------------------------------------------------------- hero */
 .hero { position: relative; overflow: hidden; padding: 84px 0 0; text-align: center; }
 .hero-glow {

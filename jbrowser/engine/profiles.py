@@ -53,7 +53,8 @@ class ProfileManager(QObject):
         self._interceptors: dict[str, ProfileInterceptor] = {}
         self._incognito: set[str] = set()
         self._fp_seed = secrets.randbits(31)   # fingerprint noise key, new every session
-        self.signin = SigninIdentity(self._apply_identity, self)   # Firefox while signing in to Google
+        self.signin = SigninIdentity(self._apply_identity, self,   # Firefox while signing in to Google
+                                     lambda: ctx.settings.get("advanced.identity") == "firefox")
         self._wipe_pending_profiles()
         self._clear_on_start()
         self._remove_stray_default_dirs()
@@ -222,8 +223,13 @@ class ProfileManager(QObject):
 
     # -------------------------------------------------------------- settings
     def _apply_identity(self, prof: QWebEngineProfile) -> None:
-        """The version JBrowser presents (Settings → Advanced): the newest Chrome, or the engine's own."""
-        identity.apply(prof, identity.version_for(self.ctx.settings.get("advanced.identity")))
+        """The browser JBrowser presents (Settings → Advanced): the newest Chrome, the engine's own
+        version, or Firefox everywhere (for PCs where Google still refuses the sign-in)."""
+        choice = self.ctx.settings.get("advanced.identity")
+        if choice == "firefox":
+            identity.apply_firefox(prof)
+        else:
+            identity.apply(prof, identity.version_for(choice))
 
     def _apply_settings(self, prof: QWebEngineProfile) -> None:
         s = self.ctx.settings

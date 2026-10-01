@@ -27,6 +27,7 @@ DARK = {
     "sleep": "rgba(160,170,255,0.85)", "minimap": "rgba(255,255,255,0.10)",
     "window_tint": "rgba(10,10,14,0.16)", "layer": "rgba(32,32,38,0.70)", "layer_solid": "#232329",
     "card_hover": "rgba(255,255,255,0.045)", "focus_ring": "rgba(255,255,255,0.22)",
+    "backdrop_base": "rgba(24,24,30,0.58)", "menu": "rgba(36,36,43,0.80)",
 }
 LIGHT = {
     "window": "#f3f3f3", "text": "#1a1a1d", "text2": "rgba(0,0,0,0.62)", "text3": "rgba(0,0,0,0.42)",
@@ -42,6 +43,7 @@ LIGHT = {
     "sleep": "rgba(90,100,200,0.85)", "minimap": "rgba(0,0,0,0.10)",
     "window_tint": "rgba(255,255,255,0.12)", "layer": "rgba(251,251,253,0.76)", "layer_solid": "#f9f9fb",
     "card_hover": "rgba(0,0,0,0.03)", "focus_ring": "rgba(0,0,0,0.22)",
+    "backdrop_base": "rgba(246,246,249,0.55)", "menu": "rgba(250,250,252,0.80)",
 }
 
 
@@ -62,7 +64,8 @@ _OUTLINE_GREY = ("#8b9099", "#9aa0a8")   # the outline without a tint (dark, lig
 # Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
 _INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
               "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
-              "canvas": "rgba(0,0,0,0.42)", "window_tint": "rgba(0,0,0,0.62)"}
+              "canvas": "rgba(0,0,0,0.42)", "window_tint": "rgba(0,0,0,0.62)",
+              "backdrop_base": "rgba(8,8,10,0.62)", "menu": "rgba(20,20,23,0.86)"}
 
 
 def mix(base: QColor, other: QColor, amount: float) -> QColor:
@@ -159,8 +162,6 @@ class Theme(QObject):
         if follow_system:
             self._request_scheme(None)                  # so _system_dark() reads Windows' own setting
         self.dark = self.incognito or (self._system_dark() if mode == "system" else mode == "dark")
-        if not follow_system:
-            self._request_scheme(self.dark)
         self.tokens = dict(DARK if self.dark else LIGHT)
         tint = TINTS.get(self.settings.get("appearance.tint") or "")
         self.tint = QColor(tint[1]) if tint and not self.incognito else None
@@ -180,10 +181,17 @@ class Theme(QObject):
         elif not self.dark and accent.lightness() > 170:
             accent = accent.darker(135)
         self.accent = accent
-        self.translucent = self.settings.get("appearance.material") != "solid" and win.IS_WINDOWS
+        # Translucent or solid follows the setting and what Windows can do, never a momentary answer
+        # from Windows: flipping the whole look on a failed call restyled every widget and could
+        # leave the window black or white.
+        self.translucent = self.settings.get("appearance.material") != "solid" and win.backdrop_supported()
         self._colors = {k: parse_color(v) for k, v in self.tokens.items()}
         self._colors["accent"] = QColor(accent)
         self.apply()
+        # Only now tell Qt the scheme: it re-applies light/dark to every window frame when the scheme
+        # changes, judging by the palette, which must already be the new one.
+        if not follow_system:
+            self._request_scheme(self.dark)
         self.changed.emit()
 
     def c(self, token: str) -> QColor:
@@ -215,6 +223,16 @@ class Theme(QObject):
         if self.incognito or self.tint is not None:
             return self.c("window_tint")
         return None
+
+    def backdrop_layers(self) -> list[QColor]:
+        """What a translucent window paints over the system backdrop, bottom first: JBrowser's own
+        base colour, then the tint wash. The base keeps dark windows dark and light ones light
+        whatever Windows draws behind them; the frosted backdrop still shows through."""
+        layers = [self.c("backdrop_base")]
+        wash = self.backdrop_wash()
+        if wash is not None:
+            layers.append(wash)
+        return layers
 
     def surface(self, token: str) -> QColor:
         """Surface color honoring the solid (no Mica) material."""
@@ -261,6 +279,10 @@ class Theme(QObject):
         a_soft = f"rgba({self.accent.red()},{self.accent.green()},{self.accent.blue()},0.22)"
         a_hover = self.accent.lighter(112).name() if self.dark else self.accent.darker(110).name()
         dialog_bg = t["dialog_solid"]
+        # Menus are frosted glass over Acrylic (Windows rounds them and draws their outline); a
+        # menu made while the Solid material was chosen keeps an opaque background.
+        menu_bg = t["menu"] if self.translucent else t["dialog_solid"]
+        menu_border = "none" if self.translucent else f"1px solid {t['panel_border']}"
         from jbrowser.ui.icons import glyph_png
         check_png = glyph_png("check", self.accent_text(), 14)
         arrow_png = glyph_png("chev_down", self.c("text2"), 12)
@@ -270,8 +292,7 @@ class Theme(QObject):
 * {{ outline: none; }}
 QToolTip {{ background: {t['tooltip']}; color: {t['text']}; border: 1px solid {t['panel_border']};
             padding: 5px 8px; }}
-QMenu {{ background: {t['dialog_solid']}; color: {t['text']}; border: 1px solid {t['panel_border']};
-         padding: 5px; }}
+QMenu {{ background: {menu_bg}; color: {t['text']}; border: {menu_border}; padding: 5px; }}
 QMenu::item {{ padding: 6px 26px 6px 12px; border-radius: 6px; margin: 1px 2px; }}
 QMenu::item:selected {{ background: {t['hover']}; }}
 QMenu::item:disabled {{ color: {t['text3']}; }}

@@ -30,6 +30,13 @@
     try { t = localStorage.getItem("jb-theme"); } catch (e) {}
     if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", t);
+    /* The logo in the top bar catches the light once per visit (site.css, .logo-shine). */
+    try {
+      if (!sessionStorage.getItem("jb-shine")) {
+        sessionStorage.setItem("jb-shine", "1");
+        document.documentElement.classList.add("logo-shine");
+      }
+    } catch (e) {}
   })();
 </script>
 <link rel="stylesheet" href="{{root}}static/css/site.css">

@@ -99,6 +99,24 @@ agent to Firefox in DevTools fixed it, so JBrowser now makes that switch itself
 
 Other pages of that space present Firefox for those few moments too, which is harmless.
 <!-- endif -->
+<!-- if >= 1.6.2 -->
+
+[[changed 1.6.2]] **The whole hand-off, and a way out.**
+
+- The sign-in servers are a pattern, `SIGNIN_HOST`: `accounts.google.com`, the country ones
+  (`accounts.google.co.uk`, …) and `accounts.youtube.com`, which every sign-in passes through to hand the session to
+  YouTube. The space waits 12 seconds (`RESTORE_DELAY_MS`) after the last of them before presenting Chrome again, so
+  the identity can't change in the middle of the hand-off.
+- *Settings → Advanced → How JBrowser introduces itself* has a third choice, **Firefox** (`advanced.identity =
+  "firefox"`): every space presents Firefox all the time (`identity.apply_firefox()`), which is what DevTools' Firefox
+  override does everywhere. `SigninIdentity` then has nothing to switch.
+- If Google still shows its rejection page (`is_rejection_url()`: a sign-in server with `rejected` in the path), the
+  card offers that choice in an info bar (*Use Firefox and try again*), and a sign-in popup shows a toast pointing to
+  it.
+- A "Sign in with Google" popup opened by a site (`window.open`) reaches the sign-in page without
+  `acceptNavigationRequest` seeing its first navigation; `urlChanged` catches it and loads it again as Firefox. The
+  popup keeps `window.opener`, so the site still hears back from Google.
+<!-- endif -->
 <!-- if >= 1.5.2 -->
 
 [[new 1.5.2]] **Sign-in pages get no blocking.** With the filter lists loaded, EasyPrivacy blocked two requests on

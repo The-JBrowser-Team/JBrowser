@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (QFrame, QHBoxLayout, QLabel, QLineEdit, QListWidget
                              QStyledItemDelegate, QVBoxLayout, QWidget)
 
 from jbrowser.core.urls import pretty_url
-from jbrowser.platform import win
+from jbrowser.ui.backdrop import Backdrop
 from jbrowser.ui.icons import draw_emoji, draw_glyph
 from jbrowser.ui.theme import mix, theme
 
@@ -174,7 +174,7 @@ class ArchivePopup(QFrame):
         self.hover_remove = False
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self._glass = False            # Acrylic behind the popup (see showEvent)
+        self.backdrop = Backdrop(self, "popup")      # Acrylic behind the popup (ui/backdrop.py)
         self.setFixedSize(380, 480)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 14, 14, 12)
@@ -266,18 +266,11 @@ class ArchivePopup(QFrame):
         self.show()
         self.search.setFocus()
 
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        th = theme()
-        # Translucent like the main window: Acrylic unless the Solid material is chosen.
-        self._glass = th.translucent and win.apply_popup_backdrop(int(self.winId()), th.dark)
-        self.update()
-
     def paintEvent(self, _e) -> None:
         th = theme()
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self._glass:
+        if self.backdrop.active:     # Acrylic behind the popup, like the main window
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
             p.fillRect(self.rect(), Qt.GlobalColor.transparent)
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)

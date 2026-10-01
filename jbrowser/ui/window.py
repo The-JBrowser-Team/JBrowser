@@ -5,12 +5,14 @@ import logging
 
 from PyQt6.QtCore import QEvent, QPoint, QRect, Qt, QTimer
 from PyQt6.QtGui import QCursor, QGuiApplication, QPainter
-from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QSystemTrayIcon, QVBoxLayout, QWidget)
+from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QMenu, QSystemTrayIcon, QVBoxLayout,
+                             QWidget)
 
 from jbrowser import APP_NAME
 from jbrowser.context import AppContext, UiHooks
 from jbrowser.platform import win
 from jbrowser.ui.actions import register_commands
+from jbrowser.ui.backdrop import Backdrop, caption_hit
 from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
@@ -34,10 +36,9 @@ class RootWidget(QWidget):
         if th.translucent:
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
             p.fillRect(self.rect(), Qt.GlobalColor.transparent)
-            wash = th.backdrop_wash()          # colour tint or incognito black over the backdrop
-            if wash is not None:
-                p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-                p.fillRect(self.rect(), wash)
+            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+            for layer in th.backdrop_layers():  # JBrowser's base colour, then the tint (or incognito black)
+                p.fillRect(self.rect(), layer)
         else:
             p.fillRect(self.rect(), th.c("window"))
         p.end()
@@ -110,7 +111,7 @@ class MainWindow(QMainWindow):
         self.ctx = ctx
         self.was_maximized = False
         self._immersive: tuple | None = None
-        self._backdrop_done = False
+        self._was_fullscreen = False
         self._shut_down = False
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(app_icon())
@@ -163,7 +164,8 @@ class MainWindow(QMainWindow):
         self._peek_timer.timeout.connect(self._maybe_peek)
 
         th = theme()
-        th.changed.connect(self.apply_backdrop)
+        self.backdrop = Backdrop(self)
+        self.native.on_system_change = self.backdrop.schedule
         th.changed.connect(self.update)
         # Incognito spaces are always black; everything else follows the chosen theme and tint.
         ctx.state.activeSpaceChanged.connect(lambda sp, _prev: th.set_incognito(bool(sp and sp.incognito)))
@@ -206,44 +208,7 @@ class MainWindow(QMainWindow):
             self.show()
 
     # ------------------------------------------------------------- backdrop
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        if not self._backdrop_done:
-            self._backdrop_done = True
-            self.apply_backdrop()
-
-    _FRAME_CHECK_EVENTS = (QEvent.Type.ApplicationPaletteChange, QEvent.Type.WindowActivate,
-                           QEvent.Type.WindowDeactivate)
-
-    def event(self, e) -> bool:
-        if e.type() == QEvent.Type.WinIdChange and self._backdrop_done:
-            # The native window was recreated (e.g. surface type change): DWM state is per-HWND.
-            QTimer.singleShot(0, self.apply_backdrop)
-        elif e.type() in self._FRAME_CHECK_EVENTS and self._backdrop_done:
-            QTimer.singleShot(0, self._check_frame)
-        return super().event(e)
-
-    def _check_frame(self) -> None:
-        """Put the window's light/dark state back if anything changed it (Qt re-applies its own on
-        palette changes), and rebuild the backdrop so no part keeps the wrong material."""
-        if not self._backdrop_done or self._shut_down:
-            return
-        if win.dark_frame(int(self.winId())) not in (None, theme().dark):
-            log.info("Window light/dark state was changed outside JBrowser; restoring it")
-            self.apply_backdrop(rebuild=True)
-
-    def apply_backdrop(self, rebuild: bool = False) -> None:
-        if not self._backdrop_done:
-            return
-        hwnd = int(self.winId())
-        material = self.ctx.settings.get("appearance.material")
-        ok = win.apply_backdrop(hwnd, material, theme().dark, rebuild)
-        translucent = ok and material != "solid"
-        if translucent != theme().translucent:
-            theme().translucent = translucent
-            theme().apply()
-        win.refresh_frame(hwnd)
-        self.update()
+    # The system material and the window's light/dark mode belong to self.backdrop (ui/backdrop.py).
 
     # ----------------------------------------------------------- native frame
     def nativeEvent(self, event_type, message):
@@ -261,17 +226,7 @@ class MainWindow(QMainWindow):
             return win.HTCLIENT
         if self.lazy.isVisible() or self.hotkeys.isVisible():
             return win.HTCLIENT
-        w = self.childAt(local)
-        while w is not None and w.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents):
-            w = w.parentWidget()
-        if w is None:
-            return win.HTCLIENT
-        mb = self.titlebar.max_btn
-        if w is mb:
-            return win.HTMAXBUTTON
-        if w.property("dragRegion"):
-            return win.HTCAPTION
-        return win.HTCLIENT
+        return caption_hit(self, local, self.titlebar.max_btn)
 
     def changeEvent(self, e) -> None:
         if e.type() == QEvent.Type.WindowStateChange:
@@ -285,17 +240,19 @@ class MainWindow(QMainWindow):
                     QTimer.singleShot(200, lambda: self.toasts.show("Press F11 to exit full screen", "fullscreen"))
             for c in self.stack.canvases.values():
                 QTimer.singleShot(0, c.refresh_visibility)
-            # Qt re-applies the saved window style when leaving full screen; force a new
-            # WM_NCCALCSIZE so the native caption never reappears, and restore the backdrop.
-            QTimer.singleShot(0, self._refresh_native_frame)
-            QTimer.singleShot(250, self._refresh_native_frame)
+            # Qt re-applies the saved window style when leaving full screen: force a new WM_NCCALCSIZE
+            # so the native caption never reappears. Only then: a frame refresh at other times (an
+            # activation, a theme change) could interrupt the user dragging the window.
+            fs = bool(self.windowState() & Qt.WindowState.WindowFullScreen)
+            if self._was_fullscreen and not fs:
+                QTimer.singleShot(0, self._refresh_native_frame)
+                QTimer.singleShot(250, self._refresh_native_frame)
+            self._was_fullscreen = fs
         super().changeEvent(e)
 
     def _refresh_native_frame(self) -> None:
-        if self._backdrop_done and not self._shut_down:
-            hwnd = int(self.winId())
-            win.refresh_frame(hwnd)
-            self.apply_backdrop(rebuild=win.dark_frame(hwnd) not in (None, theme().dark))
+        if not self._shut_down and self.testAttribute(Qt.WidgetAttribute.WA_WState_Created):
+            win.refresh_frame(int(self.winId()))
 
     # ------------------------------------------------------------- lifecycle
     def _card(self, tab_id: str) -> WebCard | None:
@@ -360,6 +317,14 @@ class MainWindow(QMainWindow):
         t = ev.type()
         if self._alt_drag is not None and t in (QEvent.Type.MouseMove, QEvent.Type.MouseButtonRelease):
             return self._alt_drag_event(t, ev)
+        if t == QEvent.Type.Polish and isinstance(obj, QMenu) and not obj.property("jbGlass"):
+            # Menus on frosted glass, like the window (QMenu polishes itself before its native window
+            # exists, which is when a window can still be made translucent).
+            obj.setProperty("jbGlass", True)
+            if theme().translucent:
+                obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+                Backdrop(obj, "popup")
+            return False
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip):
             # Native Windows 11 rounded corners + border for menus, combo popups and tooltips.

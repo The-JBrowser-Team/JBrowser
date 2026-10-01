@@ -91,6 +91,26 @@ h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; letter-spac
 .topbar-inner { display: flex; align-items: center; gap: 28px; height: 100%; max-width: var(--wrap); margin: 0 auto; padding: 0 24px; }
 .brand { display: inline-flex; align-items: center; gap: 10px; color: var(--text); font: 600 18px var(--font-display); }
 .brand:hover { text-decoration: none; }
+/* The logo catches the light once when you arrive (html.logo-shine, set once per visit by _head.html),
+   and again when you point at it. */
+.brand-mark { position: relative; display: block; width: 30px; height: 30px; border-radius: 8px; overflow: hidden; flex: none; }
+.brand-mark img { display: block; width: 100%; height: 100%; }
+.brand-mark-sm { width: 28px; height: 28px; border-radius: 7px; }
+.brand-mark::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, .2) 42%, rgba(255, 255, 255, .9) 50%,
+                              rgba(255, 255, 255, .2) 58%, transparent 70%);
+  background-size: 320% 100%; background-position: 150% 0;
+}
+.logo-shine .brand-mark { animation: brand-glow 1.6s var(--ease) .25s both; }
+.logo-shine .brand-mark::after { animation: brand-shine 1.15s cubic-bezier(.4, 0, .2, 1) .45s both; }
+.brand:hover .brand-mark::after { animation: brand-shine .9s cubic-bezier(.4, 0, .2, 1) both; }
+@keyframes brand-shine { from { background-position: 150% 0; } to { background-position: -50% 0; } }
+@keyframes brand-glow {
+  0% { box-shadow: 0 0 0 0 rgba(138, 92, 255, 0); transform: scale(.88); }
+  45% { box-shadow: 0 0 22px 4px rgba(138, 92, 255, .55); transform: scale(1.06); }
+  100% { box-shadow: 0 0 0 0 rgba(138, 92, 255, 0); transform: scale(1); }
+}
 .brand em { font-style: normal; font-weight: 500; color: var(--text-3); margin-left: 2px; }
 .topnav { display: flex; gap: 4px; margin-right: auto; }
 .topnav a { color: var(--text-2); padding: 6px 12px; border-radius: 8px; font-size: 15px; }

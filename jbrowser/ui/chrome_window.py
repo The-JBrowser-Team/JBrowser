@@ -6,16 +6,20 @@ custom caption provides drag, Snap Layouts and minimise / maximise / close.
 """
 from __future__ import annotations
 
-from PyQt6.QtCore import QEvent, QPoint, QRectF, Qt, QTimer
+import logging
+
+from PyQt6.QtCore import QEvent, QPoint, QRectF, Qt
 from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from jbrowser.platform import win
+from jbrowser.ui.backdrop import Backdrop, caption_hit
 from jbrowser.ui.icons import app_icon, paint_logo
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import IconButton
 
 CAPTION_H = 40
+log = logging.getLogger(__name__)
 
 
 class _Caption(QWidget):
@@ -60,7 +64,6 @@ class ChromeWindow(QWidget):
         self.resize(*size)
         self.setMinimumSize(520, 380)
         self.nav_width = nav_width
-        self._backdrop_done = False
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
         outer.setSpacing(0)
@@ -78,7 +81,9 @@ class ChromeWindow(QWidget):
         self.native = win.NativeFrame(lambda: int(self.winId()), self.devicePixelRatioF, self._hit_test,
                                       c.max_btn.set_force_hover, c.max_btn.set_force_pressed, self._toggle_max)
         self.native.resizable = lambda: not self.isFullScreen()
-        theme().changed.connect(self._on_theme)
+        self.backdrop = Backdrop(self)               # the material and light/dark mode (ui/backdrop.py)
+        self.native.on_system_change = self.backdrop.schedule
+        theme().changed.connect(self.update)
         if parent is not None:
             g = parent.geometry()
             self.move(g.x() + (g.width() - size[0]) // 2, g.y() + max(20, (g.height() - size[1]) // 2))
@@ -88,64 +93,20 @@ class ChromeWindow(QWidget):
         self.showNormal() if self.isMaximized() else self.showMaximized()
 
     def _hit_test(self, local: QPoint) -> int:
-        w = self.childAt(local)
-        while w is not None and w.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents):
-            w = w.parentWidget()
-        if w is None:
-            return win.HTCLIENT
-        if w is self.caption.max_btn:
-            return win.HTMAXBUTTON
-        if w.property("dragRegion"):
-            return win.HTCAPTION
-        return win.HTCLIENT
+        return caption_hit(self, local, self.caption.max_btn)
 
     def nativeEvent(self, event_type, message):
         try:
             handled, result = self.native.handle(int(message))
-        except Exception:
+        except Exception:  # never let an exception escape a window procedure
+            log.exception("nativeEvent failed")
             return False, 0
         return (True, result) if handled else (False, 0)
-
-    def apply_backdrop(self, rebuild: bool = False) -> None:
-        if not self._backdrop_done:
-            return
-        th = theme()
-        hwnd = int(self.winId())
-        win.apply_backdrop(hwnd, th.settings.get("appearance.material"), th.dark, rebuild)
-        win.refresh_frame(hwnd)
-        self.update()
-
-    def _check_frame(self) -> None:
-        """Restore the light/dark state if something else changed it (see MainWindow._check_frame)."""
-        if self._backdrop_done and win.dark_frame(int(self.winId())) not in (None, theme().dark):
-            self.apply_backdrop(rebuild=True)
-
-    def showEvent(self, e) -> None:
-        super().showEvent(e)
-        if not self._backdrop_done:
-            self._backdrop_done = True
-            self.apply_backdrop()
-
-    def event(self, e) -> bool:
-        if e.type() == QEvent.Type.WinIdChange and self._backdrop_done:
-            QTimer.singleShot(0, self.apply_backdrop)
-        elif e.type() in (QEvent.Type.ApplicationPaletteChange, QEvent.Type.WindowActivate,
-                          QEvent.Type.WindowDeactivate) and self._backdrop_done:
-            QTimer.singleShot(0, self._check_frame)
-        return super().event(e)
 
     def changeEvent(self, e) -> None:
         if e.type() == QEvent.Type.WindowStateChange:
             self.caption.max_btn.set_glyph("restore" if self.isMaximized() else "max")
-            QTimer.singleShot(0, self._after_state_change)
         super().changeEvent(e)
-
-    def _after_state_change(self) -> None:
-        self.apply_backdrop(rebuild=win.dark_frame(int(self.winId())) not in (None, theme().dark))
-
-    def _on_theme(self) -> None:
-        self.apply_backdrop()
-        self.update()
 
     def keyPressEvent(self, e) -> None:
         if e.key() == Qt.Key.Key_Escape:
@@ -162,7 +123,8 @@ class ChromeWindow(QWidget):
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
             p.fillRect(self.rect(), Qt.GlobalColor.transparent)
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-            p.fillRect(self.rect(), th.c("window_tint"))
+            for layer in th.backdrop_layers():     # JBrowser's base colour, then the tint
+                p.fillRect(self.rect(), layer)
         else:
             p.fillRect(self.rect(), th.c("window"))
         # Content layer: slightly raised surface, rounded where it meets the navigation pane.

@@ -78,10 +78,15 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.6.1 (latest) · 1 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.1)
+### 1.6.2 (latest) · 2 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.2)
 
-- **Scrolling up and down no longer slides to the next card** when a page reaches its top or bottom. Only sideways
-  scrolling (or Shift + wheel, or Alt + wheel) moves along the canvas.
+- **Windows that keep their colours**: the window look was redesigned so it can't turn pale, stop dragging, or flash
+  black or white when switching themes or opening Settings.
+- **Google sign-in**: Firefox is kept through the whole sign-in, and a new *Firefox* identity (Settings → Advanced)
+  for PCs where Google still refuses.
+- **Frosted menus**, and an update window that keeps its size.
+
+**1.6.1** (1 October 2026): scrolling up and down no longer slides to the next card.
 
 **1.6.0** (1 October 2026):
 

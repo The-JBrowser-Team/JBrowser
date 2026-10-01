@@ -38,6 +38,9 @@ WM_NCRBUTTONUP = 0x00A5
 WM_NCMOUSELEAVE = 0x02A2
 WM_SETTINGCHANGE = 0x001A
 WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320
+WM_THEMECHANGED = 0x031A
+WM_DWMCOMPOSITIONCHANGED = 0x031E
+_SYSTEM_CHANGE_MESSAGES = (WM_SETTINGCHANGE, WM_THEMECHANGED, WM_DWMCOMPOSITIONCHANGED, WM_DWMCOLORIZATIONCOLORCHANGED)
 
 HTCLIENT = 1
 HTCAPTION = 2
@@ -99,8 +102,6 @@ if IS_WINDOWS:
     _user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
     _dwm.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
     _dwm.DwmSetWindowAttribute.restype = ctypes.c_long
-    _dwm.DwmGetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
-    _dwm.DwmGetWindowAttribute.restype = ctypes.c_long
     _dwm.DwmExtendFrameIntoClientArea.argtypes = [wintypes.HWND, ctypes.POINTER(MARGINS)]
     _dwm.DwmExtendFrameIntoClientArea.restype = ctypes.c_long
     _shell32.SHAppBarMessage.argtypes = [wintypes.DWORD, ctypes.POINTER(APPBARDATA)]
@@ -126,15 +127,22 @@ def set_dark_title(hwnd: int, dark: bool) -> None:
         _set_dword_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, int(dark))
 
 
-def dark_frame(hwnd: int) -> bool | None:
-    """Whether Windows currently draws this window (frame and backdrop) dark; None if unknown."""
-    if not IS_WINDOWS:
-        return None
-    v = ctypes.c_int(0)
-    for attr in (DWMWA_USE_IMMERSIVE_DARK_MODE, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD):
-        if _dwm.DwmGetWindowAttribute(hwnd, attr, ctypes.byref(v), ctypes.sizeof(v)) == 0:
-            return bool(v.value)
-    return None
+_backdrop_supported: bool | None = None
+
+
+def backdrop_supported() -> bool:
+    """Whether this Windows can draw a system backdrop (Mica / Acrylic) behind a window: Windows 11, or
+    Windows 10 with pywinstyles' blur. Decided once; JBrowser's look never depends on a single call."""
+    global _backdrop_supported
+    if _backdrop_supported is None:
+        if not IS_WINDOWS:
+            _backdrop_supported = False
+        elif WIN_BUILD >= 22000:
+            _backdrop_supported = True
+        else:
+            import importlib.util
+            _backdrop_supported = importlib.util.find_spec("pywinstyles") is not None
+    return _backdrop_supported
 
 
 def _colorref(c: QColor) -> int:
@@ -155,16 +163,11 @@ def set_corner_preference(hwnd: int, preference: int = DWMWCP_ROUND) -> None:
         _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, preference)
 
 
-def apply_backdrop(hwnd: int, material: str, dark: bool, rebuild: bool = False) -> bool:
+def apply_backdrop(hwnd: int, material: str, dark: bool) -> bool:
     """Apply a Windows 11 system backdrop. Returns True when a translucent material is active.
-
-    ``rebuild`` makes Windows recreate the material for the whole window. Use it when the window
-    was drawn with the wrong light/dark state: otherwise parts drawn before (e.g. the area of the
-    window before it was maximised) keep the old, wrong material."""
+    (ui/backdrop.py decides when; the result is only logged, never used to change the look.)"""
     if not IS_WINDOWS:
         return False
-    if rebuild and material != "solid" and WIN_BUILD >= 22523:
-        _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS["solid"])
     set_dark_title(hwnd, dark)
     _set_dword_attr(hwnd, 2, 2)  # DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED (full screen may disable it)
     _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
@@ -252,6 +255,8 @@ class NativeFrame:
         self.resizable: Callable[[], bool] = lambda: True
         # Right-click on a drag region: show the app's own menu instead of the system menu.
         self.on_caption_menu: Callable[[], None] | None = None
+        # Windows changed a setting that can reset a window's light/dark state (ui/backdrop.py).
+        self.on_system_change: Callable[[], None] | None = None
 
     def _set_hover(self, value: bool) -> None:
         if value != self._max_hover:
@@ -348,6 +353,9 @@ class NativeFrame:
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(0, self.on_caption_menu)   # never run a menu inside the window procedure
             return True, 0
+        if m in _SYSTEM_CHANGE_MESSAGES and self.on_system_change:
+            from PyQt6.QtCore import QTimer
+            QTimer.singleShot(0, self.on_system_change)      # after Qt has handled the message too
         return False, 0
 
 

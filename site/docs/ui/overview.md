@@ -36,7 +36,36 @@ The window has no native title bar but keeps every native behaviour. `NativeFram
 `WM_NCHITTEST` (resize edges, the caption, and `HTMAXBUTTON` over the maximise button so Windows 11 shows the Snap
 Layouts flyout), rounded corners and the drop shadow. `apply_backdrop()` asks DWM for Mica, Mica Alt or Acrylic
 (`DWMWA_SYSTEMBACKDROP_TYPE`); translucent pixels in the window then show the backdrop.
-<!-- if >= 1.6.0 -->
+<!-- if >= 1.6.2 -->
+
+[[changed 1.6.2]] **One owner for each window's look.** DWM draws the material light or dark according to the
+window's `DWMWA_USE_IMMERSIVE_DARK_MODE`, and more than one party sets it: JBrowser, and Qt, which re-applies its own
+idea of light/dark to every window frame when the application palette or colour scheme changes
+(`QWindowsWindow::windowEvent`, `ApplicationPaletteChange`; Qt judges by the colour scheme *and* the palette at that
+moment). 1.6.0 reacted to that by reading the attribute back, rebuilding the material and refreshing the frame on
+activation, and the main window switched JBrowser between its translucent and solid look whenever a DWM call failed.
+On some PCs those reactions fed each other: pale windows, a stale rectangle over the title bar, a caption that
+stopped dragging (a frame refresh during activation interrupts a drag), black or white flashes and a frozen app (a
+restyle loop). [ui/backdrop.py](source:jbrowser/ui/backdrop.py) replaces all of it:
+
+- **`Backdrop(window, kind)`** owns one top-level window: `"window"` (frameless windows with a material: the main
+  window and `ChromeWindow`s), `"popup"` (the Archive and every `QMenu`: Acrylic over the whole window) or `"frame"`
+  (dialogs with a native title bar: the mode and the caption colours). It applies the material and the mode when
+  they change, and refreshes the frame once per native window so `WM_NCCALCSIZE` takes over.
+- After anything that can disturb the mode (palette changes, activation, window state changes, `WinIdChange`, and
+  Windows settings broadcasts that `NativeFrame` reports through `on_system_change`), it **sets the mode again**,
+  coalesced into one deferred call. Setting the same value changes nothing on screen, so nothing can loop. It never
+  reads the state back, never rebuilds the material and never restyles the app.
+- **`Theme.translucent`** depends only on the setting and `win.backdrop_supported()` (Windows 11, or Windows 10 with
+  pywinstyles), never on a single DWM call.
+- **`Theme.backdrop_layers()`**: translucent windows paint JBrowser's own base colour (`backdrop_base`, about 55–60 %
+  opaque) and then the tint over the backdrop, so a window stays dark or light whatever DWM draws behind it.
+- **`Theme.refresh()`** applies the new palette before telling Qt the colour scheme (`_request_scheme()`), so Qt's
+  re-application finds the matching palette.
+- `caption_hit()` does the caption hit test for both window kinds and never raises: an exception there used to make
+  the window procedure fall back to "client area", and the window stopped dragging.
+- Menu actions (`menu_action()`) run after the menu has closed, outside `QMenu.exec()`'s event loop.
+<!-- elif >= 1.6.0 -->
 
 [[new 1.6.0]] **Keeping the backdrop's light/dark state.** DWM draws the material light or dark according to the
 window's `DWMWA_USE_IMMERSIVE_DARK_MODE`. Qt sets that attribute itself whenever the application palette changes

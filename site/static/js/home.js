@@ -23,8 +23,6 @@
   var SHOWCASE = [1280, 1920, "full"];
 
   // ------------------------------------------------------------ reveal on scroll
-  // With the intro (the shining logo, see home.html / home.css) the page appears as the logo fades.
-  var INTRO_MS = root.classList.contains("intro-on") ? 1500 : 0;
   var reveals = Array.prototype.slice.call(document.querySelectorAll(".reveal"));
   // Once revealed, an element drops the reveal transition so its own hover effects are quick again.
   function settle(el) {
@@ -42,7 +40,7 @@
     var sweep = function () {
       reveals.forEach(function (el) { if (el.getBoundingClientRect().top < innerHeight) el.classList.add("in"); });
     };
-    setTimeout(sweep, 3000 + INTRO_MS);
+    setTimeout(sweep, 3000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) setTimeout(sweep, 400); });
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
@@ -60,7 +58,7 @@
       el.style.transitionDelay = delay + "ms";
       settle(el);
     });
-    setTimeout(function () { reveals.forEach(function (el) { io.observe(el); }); }, INTRO_MS);
+    reveals.forEach(function (el) { io.observe(el); });
   } else {
     reveals.forEach(function (el) { el.classList.add("in"); });
   }
