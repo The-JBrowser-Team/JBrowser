@@ -30,6 +30,17 @@
     try { t = localStorage.getItem("jb-theme"); } catch (e) {}
     if (t !== "dark" && t !== "light") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.setAttribute("data-theme", t);
+    /* Elements that fade in as you scroll (home.css, .js-reveal) start hidden from the very first paint:
+       hiding them only once home.js runs meant that on a first visit the browser could skip the hidden
+       state altogether, and nothing faded in. If home.js never runs, everything simply shows. */
+    try {
+      if ("IntersectionObserver" in window && !matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.documentElement.classList.add("js-reveal");
+        setTimeout(function () {
+          if (!window.jbRevealReady) document.documentElement.classList.remove("js-reveal");
+        }, 4000);
+      }
+    } catch (e) {}
     /* The logo in the top bar catches the light once per visit (site.css, .logo-shine). */
     try {
       if (!sessionStorage.getItem("jb-shine")) {

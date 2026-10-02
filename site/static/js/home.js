@@ -34,7 +34,8 @@
     });
   }
   if ("IntersectionObserver" in window && !reduced) {
-    root.classList.add("js-reveal");
+    window.jbRevealReady = true;
+    root.classList.add("js-reveal");          // normally already set in <head>, before the first paint
     // Safety net: whatever is on screen but still hidden after 3 s (a tab that was in the background)
     // simply appears; things further down keep their animation.
     var sweep = function () {
@@ -43,7 +44,12 @@
     setTimeout(sweep, 3000);
     document.addEventListener("visibilitychange", function () { if (!document.hidden) setTimeout(sweep, 400); });
     var io = new IntersectionObserver(function (entries) {
-      entries.forEach(function (e) { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } });
+      entries.forEach(function (e) {
+        if (!e.isIntersecting) return;
+        io.unobserve(e.target);
+        // on the next frame, so the hidden state has been drawn and the fade always plays
+        requestAnimationFrame(function () { e.target.classList.add("in"); });
+      });
     }, { threshold: 0.12, rootMargin: "0px 0px -40px 0px" });
     var heroIndex = 0;
     reveals.forEach(function (el) {
@@ -58,7 +64,10 @@
       el.style.transitionDelay = delay + "ms";
       settle(el);
     });
-    reveals.forEach(function (el) { io.observe(el); });
+    // Start watching once a frame with everything hidden has reached the screen.
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () { reveals.forEach(function (el) { io.observe(el); }); });
+    });
   } else {
     reveals.forEach(function (el) { el.classList.add("in"); });
   }

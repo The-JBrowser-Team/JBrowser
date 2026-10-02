@@ -1034,7 +1034,8 @@ class Site:
         self.ident = identity(work.read("jbrowser/__init__.py") or "")
         self.repo = self.ident.get("GITHUB_REPO", "The-JBrowser-Team/JBrowser")
         self.repo_url = f"https://github.com/{self.repo}"
-        self.youtube_url = self.ident.get("YOUTUBE_URL", "https://www.youtube.com/@TheJBrowserTeam")
+        self.youtube_url = self.ident.get("YOUTUBE_URL", "https://www.youtube.com/@TheJBrowserTeam")   # the channel
+        self.youtube_video = "https://www.youtube.com/watch?v=-OmvBaOwKBk"                           # JBrowser 2.0
         owner, name = self.repo.split("/")
         # The site's public address: the JBROWSER_SITE_URL variable (the SITE_URL repository variable in
         # pages.yml, e.g. https://jbrowser.app/), or the GitHub Pages address of the repository.
@@ -1162,7 +1163,8 @@ class Site:
         root = root_of(page)
         d = self.download()
         return {"root": root, "title": esc(title), "description": esc(description), "repo_url": self.repo_url,
-                "youtube_url": self.youtube_url, "year": str(datetime.now().year),
+                "youtube_url": self.youtube_url, "youtube_video": self.youtube_video,
+                "year": str(datetime.now().year),
                 "company": esc(self.ident.get("COMPANY", "The JBrowser Team")),
                 "latest_version": d["version"], "exe_url": esc(d["exe_url"]), "exe_name": esc(d["exe_name"]),
                 "exe_size": d["size"], "release_date": d["date"], "release_url": esc(d["release_url"]),

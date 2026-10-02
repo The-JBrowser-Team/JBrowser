@@ -84,7 +84,7 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ### 2.0.0 (latest) · 2 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.0)
 
-**JBrowser 2.0 is here**, the biggest update yet.
+**JBrowser 2.0 is here**, the biggest update yet. [▶ Watch it in 60 seconds on YouTube](https://www.youtube.com/watch?v=-OmvBaOwKBk)
 
 - **Stack cards in columns**: up to three cards on top of each other. Drag a card onto another, or press the new stack
   button on the ribbon (Alt+Shift+S) to choose a new page, an open card, a favourite or a bookmark. Cards in a column
