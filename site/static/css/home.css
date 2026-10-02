@@ -107,6 +107,8 @@
 .v2-copy .section-title { margin: 6px 0 12px; }
 .v2-lead { font-size: 18px; color: var(--text-2); max-width: 40em; margin: 0 0 22px; }
 .v2-copy .fineprint { margin: 14px 0 0; }
+.v2-copy .cta { flex-wrap: wrap; }
+.yt-cta svg { color: #ff0033; }
 .v2-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
 .v2-card {
   display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--surface);

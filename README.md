@@ -13,7 +13,8 @@
   <a href="https://jbrowser.app/"><b>Website</b></a> ·
   <a href="https://jbrowser.app/download/"><b>Download</b></a> ·
   <a href="https://jbrowser.app/changelog/"><b>Changelog</b></a> ·
-  <a href="https://jbrowser.app/docs/"><b>Developer docs</b></a>
+  <a href="https://jbrowser.app/docs/"><b>Developer docs</b></a> ·
+  <a href="https://www.youtube.com/@TheJBrowserTeam"><b>YouTube</b></a>
 </p>
 
 <p align="center">
@@ -21,6 +22,7 @@
   <a href="LICENSE"><img alt="Licence: GPL v3" src="https://img.shields.io/badge/licence-GPL%20v3-blue"></a>
   <img alt="Windows 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-0078D4">
   <img alt="Python 3.14" src="https://img.shields.io/badge/Python-3.14-3776AB">
+  <a href="https://www.youtube.com/@TheJBrowserTeam"><img alt="YouTube: @TheJBrowserTeam" src="https://img.shields.io/badge/YouTube-%40TheJBrowserTeam-FF0000?logo=youtube&logoColor=white"></a>
 </p>
 
 JBrowser replaces the tab strip with an **infinite horizontal canvas of web cards** and organises them into
@@ -32,7 +34,8 @@ PyQt6 / Qt WebEngine (Chromium).
   <img src="site/static/img/shots/hero-dark-1920.webp" width="900" alt="JBrowser on Windows 11: the sidebar with favourites and spaces, and two pages side by side on the canvas">
 </p>
 
-Made with ❤️ by the JBrowser Team. © 2026 The JBrowser Team.
+Made with ❤️ by the JBrowser Team. © 2026 The JBrowser Team. See JBrowser in action on
+[YouTube](https://www.youtube.com/@TheJBrowserTeam).
 
 ## Download
 

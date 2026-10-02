@@ -124,6 +124,12 @@ h1, h2, h3, h4 { font-family: var(--font-display); line-height: 1.2; letter-spac
 .icon-btn:hover { background: var(--surface-2); color: var(--text); }
 .icon-btn svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
 .theme-toggle .i-moon { display: none; }
+/* YouTube: the play button takes YouTube's red when you point at it */
+.yt-btn .yt-play { fill: currentColor; }
+.yt-btn:hover { color: #ff0033; }
+:root[data-theme="dark"] .yt-btn:hover { color: #ff4e5f; }
+.footer-social { display: flex; gap: 6px; margin: 12px 0 0 -9px; }
+.footer-social .gh { fill: currentColor; stroke: none; }
 :root[data-theme="dark"] .theme-toggle .i-sun { display: none; }
 :root[data-theme="dark"] .theme-toggle .i-moon { display: block; }
 

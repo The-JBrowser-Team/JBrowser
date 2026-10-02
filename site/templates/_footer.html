@@ -2,7 +2,16 @@
   <div class="footer-inner">
     <div class="footer-brand">
       <img src="{{root}}static/img/logo.svg" alt="" width="36" height="36">
-      <div><strong>JBrowser</strong><p>Welcome to the internet - again.</p></div>
+      <div><strong>JBrowser</strong><p>Welcome to the internet - again.</p>
+        <div class="footer-social">
+          <a class="icon-btn yt-btn" href="{{youtube_url}}" aria-label="JBrowser on YouTube" title="JBrowser on YouTube">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.6" y="5.4" width="18.8" height="13.2" rx="4.2"/><path class="yt-play" d="M10.1 9.3v5.4l4.6-2.7z"/></svg>
+          </a>
+          <a class="icon-btn" href="{{repo_url}}" aria-label="JBrowser on GitHub" title="JBrowser on GitHub">
+            <svg class="gh" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.5a9.5 9.5 0 0 0-3 18.52c.48.09.65-.2.65-.46v-1.6c-2.64.57-3.2-1.27-3.2-1.27-.43-1.1-1.06-1.4-1.06-1.4-.86-.59.07-.58.07-.58.95.07 1.45.98 1.45.98.85 1.45 2.22 1.03 2.76.79.09-.61.33-1.03.6-1.27-2.1-.24-4.32-1.05-4.32-4.68 0-1.03.37-1.88.98-2.54-.1-.24-.42-1.2.09-2.5 0 0 .8-.26 2.62.97a9.1 9.1 0 0 1 4.76 0c1.82-1.23 2.62-.97 2.62-.97.52 1.3.19 2.26.1 2.5.61.66.97 1.51.97 2.54 0 3.64-2.22 4.44-4.33 4.67.34.3.64.88.64 1.78v2.64c0 .26.17.56.66.46A9.5 9.5 0 0 0 12 2.5z"/></svg>
+          </a>
+        </div>
+      </div>
     </div>
     <nav class="footer-cols" aria-label="Footer">
       <div><p>Get JBrowser</p>
@@ -15,6 +24,11 @@
         <a href="{{repo_url}}">Source code</a>
         <a href="{{repo_url}}/blob/main/CONTRIBUTING.md">Contributing</a>
         <a href="{{repo_url}}/issues/new/choose">Report a bug</a>
+      </div>
+      <div><p>Follow</p>
+        <a href="{{youtube_url}}">YouTube</a>
+        <a href="{{repo_url}}">GitHub</a>
+        <a href="{{repo_url}}/releases.atom">Release feed</a>
       </div>
       <div><p>Project</p>
         <a href="{{repo_url}}/blob/main/SECURITY.md">Security policy</a>

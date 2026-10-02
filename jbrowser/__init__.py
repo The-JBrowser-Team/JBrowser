@@ -16,6 +16,7 @@ __version__ = "2.0.0"
 GITHUB_REPO = "The-JBrowser-Team/JBrowser"
 HOMEPAGE = f"https://github.com/{GITHUB_REPO}"
 RELEASES_PAGE = f"{HOMEPAGE}/releases"
+YOUTUBE_URL = "https://www.youtube.com/@TheJBrowserTeam"    # videos of new versions (website, README)
 
 # Named mutex held while JBrowser runs; the installer uses it to detect a running copy.
 APP_MUTEX = "JBrowser.AppMutex"
