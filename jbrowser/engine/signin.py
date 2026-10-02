@@ -10,6 +10,10 @@ So while any page of a space (a card or a sign-in popup) is on Google's sign-in 
 profile presents Firefox everywhere a site can look (identity.apply_firefox), and a few seconds after
 the last one leaves it goes back to Chrome. The switch happens before the navigation is sent, so the
 sign-in page itself loads with the consistent identity.
+
+Where even that fails, "Fix and sign in again" (TabController._offer_signin_fix) presents Firefox to
+every site until the sign-in has worked: ``signedIn`` fires once Google has handed out its session
+cookies and the last sign-in page has been left, and ProfileManager then goes back to Chrome.
 """
 from __future__ import annotations
 
@@ -18,7 +22,8 @@ import re
 import time
 from typing import Callable
 
-from PyQt6.QtCore import QObject, QTimer, QUrl
+from PyQt6.QtCore import QObject, QTimer, QUrl, pyqtSignal
+from PyQt6.QtNetwork import QNetworkCookie
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 
 from jbrowser.engine import identity
@@ -32,6 +37,10 @@ SIGNIN_HOST = re.compile(r"^accounts\.(?:google\.[a-z]{2,3}(?:\.[a-z]{2})?|youtu
 # other sites. Presenting Chrome again in the middle of that hand-off could undo the sign-in.
 RESTORE_DELAY_MS = 12000
 RENAVIGATE_GAP = 30.0        # s: load a sign-in page again at most this often (see _on_url)
+# Google's session cookies: set on .google.com only once the password (and any second step) was accepted.
+SESSION_COOKIES = {b"SID", b"__Secure-1PSID", b"__Secure-3PSID", b"SAPISID"}
+# Pages Google only shows after a successful sign-in (the hand-off to its other sites).
+SUCCESS_PATH = re.compile(r"/(?:accounts/)?(?:SetSID|CheckCookie)\b", re.IGNORECASE)
 
 
 def is_signin_url(url: QUrl) -> bool:
@@ -43,8 +52,19 @@ def is_rejection_url(url: QUrl) -> bool:
     return is_signin_url(url) and "rejected" in url.path().lower()
 
 
+def is_success_url(url: QUrl) -> bool:
+    return is_signin_url(url) and bool(SUCCESS_PATH.search(url.path()))
+
+
+def is_session_cookie(cookie: QNetworkCookie) -> bool:
+    domain = cookie.domain().lower().lstrip(".")
+    return bytes(cookie.name()) in SESSION_COOKIES and (domain == "google.com" or domain.endswith(".google.com"))
+
+
 class SigninIdentity(QObject):
     """Keeps track of which pages are on a sign-in server and switches their profiles' identity."""
+
+    signedIn = pyqtSignal()     # a Google sign-in worked and its last page was left a while ago
 
     def __init__(self, restore: Callable[[QWebEngineProfile], None], parent: QObject | None = None,
                  always_firefox: Callable[[], bool] = lambda: False):
@@ -54,6 +74,8 @@ class SigninIdentity(QObject):
         self._on_signin: dict[int, QWebEngineProfile] = {}    # id(page) -> its profile
         self._firefox: dict[int, QWebEngineProfile] = {}      # id(profile) -> profile presenting Firefox
         self._renavigated: dict[int, float] = {}
+        self._visited: set[int] = set()          # id(profile): a page of it is signing in right now
+        self._succeeded = False                  # Google accepted a sign-in since the last signedIn
         self._timer = QTimer(self)
         self._timer.setSingleShot(True)
         self._timer.setInterval(RESTORE_DELAY_MS)
@@ -72,11 +94,14 @@ class SigninIdentity(QObject):
         Returns False when the navigation has to wait: Chromium can't change a page's identity from
         inside that callback, so the space switches to Firefox a moment later and then the page
         loads ``url`` again. Google never sees a request from the half-switched browser."""
-        if not (is_main and is_signin_url(url)) or self._always_firefox():
+        if not (is_main and is_signin_url(url)):
             return True
         profile = page.profile()
         self._on_signin[id(page)] = profile
-        if id(profile) in self._firefox:
+        self._visited.add(id(profile))
+        if is_success_url(url):
+            self._succeeded = True
+        if id(profile) in self._firefox or self._always_firefox():
             return True
         QTimer.singleShot(0, lambda p=page, u=QUrl(url): self._switch_and_load(p, u))
         return False
@@ -93,10 +118,11 @@ class SigninIdentity(QObject):
         if not is_signin_url(url):
             self._leave(id(page))
             return
-        if self._always_firefox():
-            return
         self._on_signin[id(page)] = page.profile()
-        if id(page.profile()) in self._firefox:
+        self._visited.add(id(page.profile()))
+        if is_success_url(url):
+            self._succeeded = True
+        if self._always_firefox() or id(page.profile()) in self._firefox:
             return
         # The page got there without passing acceptNavigationRequest first, so it may have loaded as
         # Chrome: switch, and load it again (once). Deferred: this signal comes from inside Chromium.
@@ -122,6 +148,13 @@ class SigninIdentity(QObject):
         self._renavigated.pop(pid, None)
         self._leave(pid)
 
+    def on_cookie(self, profile: QWebEngineProfile, cookie: QNetworkCookie) -> None:
+        """Every cookie a profile receives (cheap check). Google's session cookies arriving while one of the
+        profile's pages is signing in mean the sign-in worked. (Cookies loaded from disk at start-up don't
+        count: no page is signing in then.)"""
+        if id(profile) in self._visited and is_session_cookie(cookie):
+            self._succeeded = True
+
     def _restore_idle(self) -> None:
         busy = {id(p) for p in self._on_signin.values()}
         for key, profile in list(self._firefox.items()):
@@ -132,10 +165,16 @@ class SigninIdentity(QObject):
                 except RuntimeError:          # the profile was deleted meanwhile
                     continue
                 log.info("Sign-in finished: the space presents Chrome again")
+        self._visited &= busy
+        if not busy and self._succeeded:
+            self._succeeded = False
+            log.info("Google sign-in succeeded")
+            self.signedIn.emit()
 
     def forget_profile(self, profile: QWebEngineProfile) -> None:
         """The profile is going away (its space was closed)."""
         self._firefox.pop(id(profile), None)
+        self._visited.discard(id(profile))
         for pid, prof in list(self._on_signin.items()):
             if prof is profile:
                 del self._on_signin[pid]

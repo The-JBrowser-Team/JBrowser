@@ -18,7 +18,11 @@ a = Analysis(
     pathex=[],
     binaries=[],
     datas=[("assets/jbrowser.ico", "assets"), ("assets/jbrowser.png", "assets"),
-           ("assets/sounds/intro.wav", "assets/sounds"), ("assets/sounds/click.wav", "assets/sounds")],
+           ("assets/sounds/intro.wav", "assets/sounds"), ("assets/sounds/click.wav", "assets/sounds"),
+           # Reading mode: Mozilla Readability (Apache-2.0), loaded by jbrowser/engine/reader.py
+           ("jbrowser/engine/vendor/readability/Readability.js", "jbrowser/engine/vendor/readability"),
+           ("jbrowser/engine/vendor/readability/Readability-readerable.js", "jbrowser/engine/vendor/readability"),
+           ("jbrowser/engine/vendor/readability/LICENSE.md", "jbrowser/engine/vendor/readability")],
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],

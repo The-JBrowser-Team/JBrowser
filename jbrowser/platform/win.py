@@ -36,6 +36,8 @@ WM_NCLBUTTONDBLCLK = 0x00A3
 WM_NCRBUTTONDOWN = 0x00A4
 WM_NCRBUTTONUP = 0x00A5
 WM_NCMOUSELEAVE = 0x02A2
+WM_SYSCOMMAND = 0x0112
+SC_MINIMIZE, SC_MAXIMIZE, SC_RESTORE = 0xF020, 0xF030, 0xF120
 WM_SETTINGCHANGE = 0x001A
 WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320
 WM_THEMECHANGED = 0x031A
@@ -100,6 +102,8 @@ if IS_WINDOWS:
     _user32.GetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int]
     _user32.SetWindowLongPtrW.restype = ctypes.c_ssize_t
     _user32.SetWindowLongPtrW.argtypes = [wintypes.HWND, ctypes.c_int, ctypes.c_ssize_t]
+    _user32.PostMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
+    _user32.PostMessageW.restype = wintypes.BOOL
     _dwm.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
     _dwm.DwmSetWindowAttribute.restype = ctypes.c_long
     _dwm.DwmExtendFrameIntoClientArea.argtypes = [wintypes.HWND, ctypes.POINTER(MARGINS)]
@@ -206,6 +210,17 @@ def refresh_frame(hwnd: int) -> None:
         _user32.SetWindowPos(hwnd, None, 0, 0, 0, 0, SWP_FRAMECHANGED_FLAGS)
 
 
+def set_transitions(hwnd: int, enabled: bool) -> None:
+    """Windows' minimise / maximise / restore animations for this window (DWMWA_TRANSITIONS_FORCEDISABLED)."""
+    if IS_WINDOWS:
+        _set_dword_attr(hwnd, 3, 0 if enabled else 1)
+
+
+def post_syscommand(hwnd: int, command: int) -> None:
+    if IS_WINDOWS:
+        _user32.PostMessageW(hwnd, WM_SYSCOMMAND, command, 0)
+
+
 def is_maximized(hwnd: int) -> bool:
     return bool(IS_WINDOWS and _user32.IsZoomed(hwnd))
 
@@ -257,6 +272,10 @@ class NativeFrame:
         self.on_caption_menu: Callable[[], None] | None = None
         # Windows changed a setting that can reset a window's light/dark state (ui/backdrop.py).
         self.on_system_change: Callable[[], None] | None = None
+        # Minimise / maximise / restore asked for by Windows (taskbar, Win+arrow keys, caption double-click).
+        # Returns True when the window takes it over and sends the command again itself (MainWindow.transition).
+        self.on_transition: Callable[[int], bool] | None = None
+        self.passing: int | None = None     # a command sent again by the window: let Windows carry it out
 
     def _set_hover(self, value: bool) -> None:
         if value != self._max_hover:
@@ -353,6 +372,15 @@ class NativeFrame:
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(0, self.on_caption_menu)   # never run a menu inside the window procedure
             return True, 0
+        if m == WM_SYSCOMMAND and self.on_transition is not None:
+            cmd = msg.wParam & 0xFFF0
+            if cmd in (SC_MINIMIZE, SC_MAXIMIZE, SC_RESTORE):
+                if self.passing == cmd:
+                    self.passing = None
+                    return False, 0
+                if self.on_transition(cmd):
+                    return True, 0
+            return False, 0
         if m in _SYSTEM_CHANGE_MESSAGES and self.on_system_change:
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.on_system_change)      # after Qt has handled the message too

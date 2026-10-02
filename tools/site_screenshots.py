@@ -3,8 +3,9 @@
 Runs JBrowser from source with a throw-away profile, puts a full-screen gradient behind a
 1600 x 1000 window and captures it from the screen, so Acrylic shows the gradient through the
 glass, at the display's full resolution. It shoots the canvas, the Gallery, the Lazy Toolbar, a
-split view, the site information panel, the ten colour tints (over a neutral backdrop, where the
-light wash shows honestly), light mode, an incognito space and the welcome. The pictures go to
+split view, the site information panel, stacked cards and the stack picker, reading mode, the ten
+colour tints (over a neutral backdrop, where the light wash shows honestly), light mode, an
+incognito space and the welcome. The pictures go to
 ``site/static/img/shots/`` as WebP (1280 px, 1920 px and full size) plus ``og-image.jpg`` for link
 previews.
 
@@ -36,6 +37,7 @@ HOME = ["https://www.openstreetmap.org/#map=13/-33.8600/151.2100", "https://en.w
         "https://github.com/The-JBrowser-Team/JBrowser", "https://developer.mozilla.org/en-US/"]
 WORK = ["https://docs.python.org/3/", "https://www.python.org/"]
 OTHER = ["https://en.wikipedia.org/wiki/Great_Barrier_Reef"]
+READING = "https://en.wikipedia.org/wiki/Coral_reef"       # an article that opens with text (reading mode)
 INCOGNITO = ["https://en.wikipedia.org/wiki/Milky_Way", "https://www.openstreetmap.org/#map=5/64.5/17.0"]
 FAVOURITES = [("https://github.com/", "GitHub"), ("https://en.wikipedia.org/", "Wikipedia"),
               ("https://developer.mozilla.org/", "MDN"), ("https://www.openstreetmap.org/", "OpenStreetMap")]
@@ -227,6 +229,44 @@ def capture() -> None:
         win.lazy.edit.deselect()
         win.lazy.edit.end(False)
 
+    def stacked() -> None:
+        """2.0: two cards stacked in a column next to a half-width card."""
+        halves(home)
+        st.stack_tab(home.tabs[1].id, home.tabs[0].id)
+        st.set_active_tab(home.tabs[0].id)
+        canvas(home).scroll_to(0, animated=False)
+
+    def picker() -> None:
+        st.set_active_tab(home.tabs[2].id)
+        canvas(home).open_stack_picker(home.tabs[2].id)
+        if canvas(home).picker is not None:
+            canvas(home).picker.input.setText("wiki")
+
+    def unstacked() -> None:
+        canvas(home).close_stack_picker(animated=False)
+        for t in list(home.tabs):
+            if t.stack:
+                st.unstack(t.id)
+        halves(home)
+
+    def open_article() -> None:
+        st.set_active_tab(home.tabs[0].id)
+        ui.open_url(QUrl(READING), "new", space_id=home.id)
+
+    def reading() -> None:
+        article = next(t for t in home.tabs if t.url.startswith(READING))
+        for t in home.tabs:
+            t.update(width=0.62 if t is article else 0.38)
+        st.set_active_tab(article.id)
+        canvas(home).ensure_visible(article.id, align="left", animated=False)
+        ui.set_reading(article.id, True)
+
+    def end_reading() -> None:
+        for t in list(home.tabs):
+            if t.url.startswith(READING):
+                ui.close_tab(t.id, remember=False)
+        halves(home)
+
     def incognito_cards() -> None:
         win.lazy.close_overlay()
         for u in INCOGNITO:
@@ -265,6 +305,9 @@ def capture() -> None:
         (700, split), (3400, lambda: cap("split_dark")), (200, lambda: halves(home)),
         (600, lambda: (st.set_active_tab(home.tabs[2].id), canvas(home).ensure_visible(home.tabs[2].id, animated=False))),
         (1500, site_info), (1200, lambda: cap("site_info_dark")), (200, close_popups),
+        (600, stacked), (2600, lambda: cap("stack_dark")), (300, picker),
+        (1400, lambda: cap("stack_picker_dark", keep_focus=True)), (300, unstacked),
+        (300, open_article), (6000, reading), (2600, lambda: cap("reading_dark")), (300, end_reading),
         (600, lambda: halves(home)), (200, lambda: stage.set_backdrop("neutral")),
         *[step for key in TINTS for step in ((250, lambda k=key: s.set("appearance.tint", k)),
                                              (1100, lambda k=key: cap(f"tint_{k}")))],
@@ -326,7 +369,7 @@ def run_capture(profile: Path) -> int:
 
 # ------------------------------------------------------------------------------ conversion
 def convert() -> None:
-    """PNG originals in SHOTS → WebP files for the site (run in its own process)."""
+    """PNG originals in SHOTS â†’ WebP files for the site (run in its own process)."""
     from PyQt6.QtCore import QRect, Qt
     from PyQt6.QtGui import QGuiApplication, QImage
 
@@ -345,7 +388,8 @@ def convert() -> None:
         total += path.stat().st_size
 
     showcase = ["hero_dark", "hero_light", "gallery_all_dark", "gallery_all_light", "lazy_toolbar_dark", "split_dark",
-                "site_info_dark", "work_dark", "incognito", "welcome_look", "welcome_gallery"]
+                "site_info_dark", "work_dark", "incognito", "welcome_look", "welcome_gallery", "stack_dark",
+                "stack_picker_dark", "reading_dark"]
     for name in showcase:
         img = QImage(str(SHOTS / f"{name}.png"))
         if img.isNull():

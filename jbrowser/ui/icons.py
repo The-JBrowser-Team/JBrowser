@@ -39,6 +39,8 @@ GLYPHS = {
 GLYPHS.update({"colour": "", "gallery": "", "drag": "", "layers": "", "expand": "",
                "collapse": ""})
 
+GLYPHS.update({"stack": "", "reading": ""})   # DockBottom, ReadingMode
+
 _font_family: str | None = None
 
 

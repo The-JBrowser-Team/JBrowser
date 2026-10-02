@@ -60,8 +60,9 @@ not code-signed yet, Windows may say "Windows protected your PC": click *More in
 
 ## Highlights
 
-- **Spatial canvas.** Cards sit side by side and can be resized, split and reordered. Keep scrolling past either end
-  to pull in a new card.
+- **Spatial canvas.** Cards sit side by side and can be resized, split, reordered and **stacked in columns** of up to
+  three. Keep scrolling past either end to pull in a new card.
+- **Reading mode** (F9). Articles without the clutter, in serif or sans-serif, in four colour themes.
 - **Spaces.** *Home*, *Work*, *Other*, or your own spaces. Each has its own cookies and storage, and you can open
   incognito spaces too. Favourites and pinned cards sit above them.
 - **Gallery.** See every card of a space, or of all spaces, at a glance; filter, open, close and move them.
@@ -69,8 +70,8 @@ not code-signed yet, Windows may say "Windows protected your PC": click *More in
   100+ commands.
 - **Private by default.** Ad and tracker blocking (EasyList and EasyPrivacy), phishing and malware protection,
   fingerprinting protection, secure DNS (Quad9), HTTPS-first and link cleaning.
-- **Built in.** An encrypted password manager, downloads, history, the Archive of recently closed cards, DevTools,
-  user scripts and per-space proxies.
+- **Built in.** An encrypted password manager, protected downloads (keep-or-delete warnings, or a strict mode that
+  blocks risky files), history, the Archive of recently closed cards, DevTools, user scripts and per-space proxies.
 - **Light on memory.** Out-of-sight cards stop rendering, and idle cards hibernate.
 - **Updates itself.** New versions arrive from GitHub Releases and are verified before they install.
 
@@ -78,13 +79,25 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 1.6.2 (latest) · 2 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v1.6.2)
+### 2.0.0 (latest) · 2 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.0)
 
-- **Windows that keep their colours**: the window look was redesigned so it can't turn pale, stop dragging, or flash
-  black or white when switching themes or opening Settings.
-- **Google sign-in**: Firefox is kept through the whole sign-in, and a new *Firefox* identity (Settings → Advanced)
-  for PCs where Google still refuses.
-- **Frosted menus**, and an update window that keeps its size.
+**JBrowser 2.0 is here**, the biggest update yet.
+
+- **Stack cards in columns**: up to three cards on top of each other. Drag a card onto another, or press the new stack
+  button on the ribbon (Alt+Shift+S) to choose a new page, an open card, a favourite or a bookmark. Cards in a column
+  share one width.
+- **Reading mode** (F9): articles without ads or clutter, with your choice of font, colours and text size. JBrowser
+  suggests it once when you're reading an article, and never again if you say so.
+- **Download protection levels**: *Standard* warns about risky files and lets you keep or delete them; *Strict* blocks
+  them. Covers programs, dangerous sites and sites without HTTPS.
+- **A cleaner ribbon**: the shield now sits in the address bar, the Downloads button appears only when you download
+  something and shows the percentage, and a whole download row opens its file.
+- **Google sign-in fixes itself**: *Fix and sign in again*, and JBrowser switches back by itself once you're in.
+- **No colour warp** when minimising or maximising, favourites that reopen at the width you left them, and plainer
+  language everywhere.
+
+**1.6.2** (2 October 2026): windows that keep their colours, Google sign-in through the whole hand-off, frosted
+menus, an update window that keeps its size.
 
 **1.6.1** (1 October 2026): scrolling up and down no longer slides to the next card.
 
@@ -219,5 +232,7 @@ It builds on these projects, each under its own licence:
 - [cryptography](https://cryptography.io/) (Apache 2.0 or BSD)
 - [requests](https://requests.readthedocs.io/) (Apache 2.0)
 - [pywinstyles](https://github.com/Akascape/py-window-styles) (CC0)
+- [Mozilla Readability](https://github.com/mozilla/readability) for reading mode (Apache 2.0, included unmodified in
+  [jbrowser/engine/vendor/readability](jbrowser/engine/vendor/readability))
 
 The sound effects are credited in [assets/sounds/CREDITS.txt](assets/sounds/CREDITS.txt).

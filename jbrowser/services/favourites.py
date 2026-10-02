@@ -23,6 +23,7 @@ class Favourite:
     url: str
     title: str = ""
     id: str = field(default_factory=lambda: uuid.uuid4().hex[:12])
+    width: float = 0.0          # the width its card had when last closed (0: the default for new cards)
 
     @property
     def host(self) -> str:
@@ -43,8 +44,12 @@ class FavouritesService(QObject):
         if isinstance(raw, list):
             for d in raw:
                 if isinstance(d, dict) and d.get("url"):
+                    try:
+                        width = max(0.0, min(1.0, float(d.get("width") or 0.0)))
+                    except (TypeError, ValueError):
+                        width = 0.0
                     self._items.append(Favourite(url=d["url"], title=d.get("title", ""), id=d.get("id") or
-                                                 uuid.uuid4().hex[:12]))
+                                                 uuid.uuid4().hex[:12], width=width))
         self._save_timer = QTimer(self)
         self._save_timer.setSingleShot(True)
         self._save_timer.setInterval(500)
@@ -84,9 +89,16 @@ class FavouritesService(QObject):
         if fav is None:
             return
         for k, v in fields.items():
-            if k in ("url", "title"):
+            if k in ("url", "title", "width"):
                 setattr(fav, k, v)
         self._changed()
+
+    def remember_width(self, fid: str, width: float) -> None:
+        """A card opened from this favourite was closed: it opens this wide next time."""
+        fav = self.get(fid)
+        if fav is not None and abs(fav.width - width) > 0.001:
+            fav.width = round(max(0.1, min(1.0, width)), 4)
+            self._changed()
 
     def move(self, fid: str, index: int) -> None:
         fav = self.get(fid)

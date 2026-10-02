@@ -15,7 +15,7 @@ from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from jbrowser.core.commands import CommandRegistry
 from jbrowser.core.motion import Motion
 from jbrowser.core.settings import Settings
-from jbrowser.core.urls import looks_like_url, strip_www, to_url
+from jbrowser.core.urls import is_local_host, looks_like_url, strip_www, to_url
 from jbrowser.core.workers import stop_worker
 from jbrowser.engine.js import CLEAR_SITE_STORAGE_JS
 from jbrowser.engine.lifecycle import LifecycleManager
@@ -104,9 +104,14 @@ class AppContext(QObject):
         self.threats.proxy_provider = self.proxy.requests_proxies
         self.downloads.tab_resolver = self.engine.tab_for_page
         self.downloads.referrer_resolver = self._referrer_for_page
+        self.downloads.threat_check = self.threats.match
+        self.downloads.local_check = lambda u: is_local_host(u.host()) or self.privacy.dev_target(u.host()) is not None
         self.pipeline.flushed.connect(self.session.on_tabs_flushed)
         # The Archive follows browsing history: deleting history deletes the matching closed cards.
         self.state.tabArchived.connect(self.archive.add_closed)
+        # A favourite reopens as wide as its card was when it was closed (the Archive keeps widths too).
+        self.state.tabRemoved.connect(lambda tab, _sp: self.favourites.remember_width(tab.favourite_id, tab.width)
+                                      if tab.favourite_id else None)
         self.history.cleared.connect(self.archive.purge_range)
         self.history.hostDeleted.connect(self.archive.purge_host)
         self.history.urlsDeleted.connect(self.archive.purge_urls)

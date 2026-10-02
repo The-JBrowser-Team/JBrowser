@@ -4,9 +4,9 @@ from __future__ import annotations
 import unicodedata
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QPoint, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
+from PyQt6.QtCore import QEvent, QPoint, QPointF, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QColor, QFont, QFontMetrics, QPainter, QPainterPath, QPen
-from PyQt6.QtWidgets import QAbstractButton, QHBoxLayout, QSizePolicy, QWidget
+from PyQt6.QtWidgets import QAbstractButton, QHBoxLayout, QSizePolicy, QToolTip, QWidget
 
 from jbrowser.core.urls import is_local_host, strip_www
 from jbrowser.models.tab import Tab
@@ -57,6 +57,7 @@ class AddressPill(QWidget):
     spaceClicked = pyqtSignal(QPoint)
     starClicked = pyqtSignal()
     securityClicked = pyqtSignal(QPoint)
+    shieldClicked = pyqtSignal(QPoint)
 
     def __init__(self, ctx: "AppContext", parent: QWidget):
         super().__init__(parent)
@@ -68,10 +69,17 @@ class AddressPill(QWidget):
         self._hover = False
         self._hover_zone = ""
         self.tab: Tab | None = None
+        self._blocked = 0                 # trackers blocked on this page (the shield's count)
+        self._protected = True            # False: protections are off for this site (warning colour)
 
     def set_tab(self, tab: Tab | None) -> None:
         self.tab = tab
         self.update()
+
+    def set_shield(self, blocked: int, protected: bool) -> None:
+        if (blocked, protected) != (self._blocked, self._protected):
+            self._blocked, self._protected = blocked, protected
+            self.update()
 
     def _chip_font(self) -> QFont:
         f = QFont(self.font())
@@ -92,14 +100,46 @@ class AddressPill(QWidget):
     def _star_rect(self) -> QRectF:
         return QRectF(self.width() - 34, 3, 30, self.height() - 6)
 
+    def _shield_rect(self) -> QRectF:
+        """Privacy protections, just left of the star (moved here from the ribbon in 2.0)."""
+        star = self._star_rect()
+        if self.tab is None or not self.tab.url:
+            return QRectF(star)           # no star on an empty card: the shield takes its place
+        return QRectF(star.left() - 30, star.top(), 30, star.height())
+
     def _zone(self, pos) -> str:
         if self._space_rect().contains(pos):
             return "space"
-        if self.tab is not None and self.tab.url and self._security_rect().contains(pos):
+        has_url = self.tab is not None and bool(self.tab.url)
+        if has_url and self._security_rect().contains(pos):
             return "security"
-        if self._star_rect().contains(pos) and self.tab is not None and self.tab.url:
+        if self._shield_rect().contains(pos):
+            return "shield"
+        if self._star_rect().contains(pos) and has_url:
             return "star"
         return "url"
+
+    def event(self, e) -> bool:
+        if e.type() == QEvent.Type.ToolTip:
+            zone = self._zone(QPointF(e.pos()))
+            text = {"space": "Switch space", "security": "Site information and permissions",
+                    "star": "Remove bookmark" if self.tab and self.ctx.bookmarks.find_url(self.tab.url) else
+                    "Bookmark this page (Ctrl+D)",
+                    "shield": self._shield_tip()}.get(zone, "")
+            if text:
+                QToolTip.showText(e.globalPos(), text, self)
+            else:
+                QToolTip.hideText()
+            return True
+        return super().event(e)
+
+    def _shield_tip(self) -> str:
+        if not self._protected:
+            return "Privacy protections are off for this site. Click to change"
+        if self._blocked:
+            return f"Privacy protections: {self._blocked} tracker{'s' if self._blocked != 1 else ''} blocked " \
+                   "on this page"
+        return "Privacy protections"
 
     def mouseMoveEvent(self, e) -> None:
         zone = self._zone(e.position())
@@ -125,6 +165,8 @@ class AddressPill(QWidget):
             self.spaceClicked.emit(self.mapToGlobal(QPoint(int(self._space_rect().left()), self.height())))
         elif zone == "security":
             self.securityClicked.emit(self.mapToGlobal(QPoint(int(self._security_rect().left()), self.height() + 4)))
+        elif zone == "shield":
+            self.shieldClicked.emit(self.mapToGlobal(QPoint(int(self._shield_rect().left()), self.height() + 4)))
         elif zone == "star":
             self.starClicked.emit()
         else:
@@ -154,6 +196,7 @@ class AddressPill(QWidget):
             p.drawText(QRectF(sr.left() + 30, sr.top(), sr.width() - 36, sr.height()), Qt.AlignmentFlag.AlignVCenter,
                        p.fontMetrics().elidedText(sp.name, Qt.TextElideMode.ElideRight, int(sr.width() - 36)))
         p.setFont(self.font())
+        self._paint_shield(p)
         tab = self.tab
         if tab is None or not tab.url:
             x = sr.right() + 10
@@ -185,7 +228,7 @@ class AddressPill(QWidget):
             host, rest = url.toDisplayString(), ""
         if url.port() != -1:
             host += f":{url.port()}"
-        avail = self.width() - x - 42
+        avail = self.width() - x - 72
         fm = p.fontMetrics()
         host_w = min(fm.horizontalAdvance(host), avail)
         p.setPen(th.c("text"))
@@ -199,6 +242,32 @@ class AddressPill(QWidget):
         draw_glyph(p, self._star_rect(), "star_fill" if starred else "star",
                    th.c("accent") if starred else (th.c("text") if self._hover_zone == "star" else th.c("text3")), 13)
         p.end()
+
+    def _paint_shield(self, p: QPainter) -> None:
+        th = theme()
+        r = self._shield_rect()
+        if self._hover_zone == "shield":
+            hp = QPainterPath()
+            hp.addRoundedRect(r.adjusted(2, 1, -2, -1), 7, 7)
+            p.fillPath(hp, th.c("pressed"))
+        color = th.c("warning") if not self._protected else (
+            th.c("text") if self._hover_zone == "shield" else th.c("text3"))
+        draw_glyph(p, r, "shield", color, 13)
+        if self._blocked and self._protected:
+            p.save()
+            f = QFont(self.font())
+            f.setPixelSize(8)
+            f.setWeight(QFont.Weight.DemiBold)
+            p.setFont(f)
+            text = str(self._blocked) if self._blocked < 100 else "99+"
+            w = max(12, QFontMetrics(f).horizontalAdvance(text) + 6)
+            br = QRectF(r.center().x() + 1, r.top() + 1, w, 11)
+            bp = QPainterPath()
+            bp.addRoundedRect(br, 5.5, 5.5)
+            p.fillPath(bp, th.c("accent"))
+            p.setPen(th.accent_text())
+            p.drawText(br, Qt.AlignmentFlag.AlignCenter, text)
+            p.restore()
 
 
 class UpdateChip(QAbstractButton):
@@ -283,6 +352,104 @@ class GalleryButton(QAbstractButton):
         p.end()
 
 
+class DownloadsButton(QAbstractButton):
+    """Ribbon Downloads button. While files download it widens to show the percentage over a progress bar."""
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName("Downloads")
+        self._hover = False
+        self._fraction: float | None = None    # None: nothing downloading · <0: size unknown
+        self._dot: str | None = None            # colour token of the corner dot (warning / accent)
+        self._phase = 0.0                       # moving segment when the size is unknown
+        self._spin = QTimer(self)
+        self._spin.setInterval(33)
+        self._spin.timeout.connect(self._step)
+        f = QFont(self.font())
+        f.setWeight(QFont.Weight.DemiBold)
+        f.setPointSizeF(max(7.0, f.pointSizeF() - 0.5))
+        self._font = f
+        self._wide = BTN + QFontMetrics(f).horizontalAdvance("100%") + 6
+        self.setFixedSize(BTN, BTN)
+
+    def set_state(self, fraction: float | None, dot: str | None) -> bool:
+        """Returns True when the button changed width (the ribbon then re-centres the address bar)."""
+        self._fraction, self._dot = fraction, dot
+        wanted = self._wide if fraction is not None else BTN
+        resized = wanted != self.width()
+        if resized:
+            self.setFixedSize(wanted, BTN)
+        if fraction is not None and fraction < 0 and self.isVisible():
+            self._spin.start()
+        else:
+            self._spin.stop()
+        self.update()
+        return resized
+
+    def _step(self) -> None:
+        self._phase = (self._phase + 0.025) % 1.0
+        self.update()
+
+    def hideEvent(self, e) -> None:
+        self._spin.stop()
+        super().hideEvent(e)
+
+    def showEvent(self, e) -> None:
+        super().showEvent(e)
+        if self._fraction is not None and self._fraction < 0:
+            self._spin.start()
+
+    def enterEvent(self, e) -> None:
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, e) -> None:
+        self._hover = False
+        self.update()
+
+    def sizeHint(self) -> QSize:
+        return self.size()
+
+    def paintEvent(self, _e) -> None:
+        th = theme()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(2, 2, -2, -2)
+        if self._hover or self.isDown():
+            bg = QPainterPath()
+            bg.addRoundedRect(r, 7, 7)
+            p.fillPath(bg, th.c("pressed" if self.isDown() else "hover"))
+        fg = th.c("text") if self._hover else th.c("text2")
+        frac = self._fraction
+        if frac is None:
+            draw_glyph(p, QRectF(self.rect()), "download", fg, 14)
+        else:
+            draw_glyph(p, QRectF(r.left() + 2, 0, BTN - 6, self.height() - 3), "download", th.c("accent"), 13)
+            p.setFont(self._font)
+            p.setPen(th.c("text"))
+            label = f"{int(frac * 100)}%" if frac >= 0 else "…"
+            p.drawText(QRectF(r.left() + BTN - 6, 0, r.width() - BTN + 4, self.height() - 3),
+                       Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, label)
+            track = QRectF(r.left() + 6, r.bottom() - 4, r.width() - 12, 3)
+            tp = QPainterPath()
+            tp.addRoundedRect(track, 1.5, 1.5)
+            p.fillPath(tp, th.c("divider"))
+            if frac >= 0:
+                fill = QRectF(track.left(), track.top(), max(3.0, track.width() * min(1.0, frac)), track.height())
+            else:                                   # unknown size: a segment slides along the track
+                seg = track.width() * 0.3
+                fill = QRectF(track.left() + (track.width() - seg) * self._phase, track.top(), seg, track.height())
+            fp = QPainterPath()
+            fp.addRoundedRect(fill, 1.5, 1.5)
+            p.fillPath(fp, th.c("accent"))
+        if self._dot:
+            d = QPainterPath()
+            d.addEllipse(QRectF(self.width() - 11, 4, 7, 7))
+            p.fillPath(d, th.c(self._dot))
+        p.end()
+
+
 def _group(parent: QWidget, *buttons: QWidget) -> QWidget:
     """A tight cluster of related buttons (like Chrome's toolbar sections)."""
     box = QWidget(parent)
@@ -317,15 +484,19 @@ class TitleBar(QWidget):
         lay.addStretch(1)
         # The address pill is not in the layout: it is centred on the ribbon in _place_pill().
         self.pill = AddressPill(ctx, self)
-        self.layout_btn = IconButton("columns", "Card layout and split views", self, size=BTN, glyph_px=14)
-        self.shield = IconButton("shield", "Privacy protections", self, size=BTN, glyph_px=14)
-        self.downloads = IconButton("download", "Downloads (Ctrl+J)", self, size=BTN, glyph_px=14)
+        # Stacking and layouts share one button: click to stack a card below, right-click for layouts.
+        self.stack_btn = IconButton("stack", "Stack a card below this one (Alt+Shift+S)\n"
+                                    "Right-click for layouts and split views", self, size=BTN, glyph_px=14)
+        self.stack_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        self.reading_btn = IconButton("reading", "Reading mode (F9)", self, size=BTN, glyph_px=14, checkable=True)
+        self.downloads = DownloadsButton(self)
+        self.downloads.setToolTip("Downloads (Ctrl+J)")
         self.menu_btn = IconButton("more", "Menu", self, size=BTN, glyph_px=14)
         self.update_chip = UpdateChip(self)
         self.update_chip.clicked.connect(ui.show_update_dialog)
         self.gallery_btn = GalleryButton(self)
         self.gallery_btn.clicked.connect(lambda: ui.toggle_gallery())
-        self.tool_group = _group(self, self.update_chip, self.gallery_btn, self.layout_btn, self.shield,
+        self.tool_group = _group(self, self.update_chip, self.gallery_btn, self.stack_btn, self.reading_btn,
                                  self.downloads, self.menu_btn)
         lay.addWidget(self.tool_group)
         lay.addSpacing(12)
@@ -343,14 +514,15 @@ class TitleBar(QWidget):
         self.pill.spaceClicked.connect(ui.show_spaces_menu)
         self.pill.starClicked.connect(ui.toggle_bookmark)
         self.pill.securityClicked.connect(lambda pos: ui.show_site_info(None, pos))
-        self.layout_btn.clicked.connect(lambda: ui.show_layout_menu(self.layout_btn.mapToGlobal(
-            QPoint(0, self.layout_btn.height()))))
-        self.shield.clicked.connect(lambda: ui.show_shield_menu(None, self.shield.mapToGlobal(
-            QPoint(0, self.shield.height()))))
+        self.pill.shieldClicked.connect(lambda pos: ui.show_shield_menu(None, pos))
+        self.stack_btn.clicked.connect(lambda: ui.open_stack_picker())
+        self.stack_btn.customContextMenuRequested.connect(lambda _pos: ui.show_layout_menu(
+            self.stack_btn.mapToGlobal(QPoint(0, self.stack_btn.height()))))
+        self.reading_btn.clicked.connect(lambda: ui.toggle_reading())
         self.downloads.clicked.connect(lambda: ctx.commands.run("downloads.show"))
         self.menu_btn.clicked.connect(lambda: ui.show_main_menu(self.menu_btn.mapToGlobal(
             QPoint(self.menu_btn.width(), self.menu_btn.height()))))
-        self.min_btn.clicked.connect(lambda: self.window().showMinimized())
+        self.min_btn.clicked.connect(ui.minimize)
         self.max_btn.clicked.connect(ui.toggle_maximize)
         self.close_btn.clicked.connect(lambda: self.window().close())
 
@@ -358,14 +530,18 @@ class TitleBar(QWidget):
         st.activeTabChanged.connect(lambda *_: self.refresh())
         st.activeSpaceChanged.connect(lambda *_: self.refresh())
         st.spaceUpdated.connect(lambda *_: self.refresh())
+        for sig in (st.tabAdded, st.tabRemoved, st.tabMoved):
+            sig.connect(lambda *_: self._refresh_stack())
         ctx.pipeline.flushed.connect(self._on_flush)
         ctx.bookmarks.changed.connect(self.pill.update)
-        ctx.downloads.activeCountChanged.connect(lambda *_: self._on_downloads())
-        ctx.downloads.updated.connect(lambda *_: self._on_downloads())
+        dl = ctx.downloads
+        for sig in (dl.activeCountChanged, dl.updated, dl.added, dl.removed):
+            sig.connect(lambda *_: self._on_downloads())
         ctx.settings.changed.connect(self._on_setting)
         ctx.updater.stateChanged.connect(self._on_update_state)
         self._apply_home()
         self.refresh()
+        self._on_downloads()
 
     def _on_update_state(self, state: str) -> None:
         info = self.ctx.updater.latest
@@ -382,6 +558,8 @@ class TitleBar(QWidget):
             self.refresh()
         elif key.startswith("toolbar.home"):
             self._apply_home()
+        elif key == "toolbar.downloads_button":
+            self._on_downloads()
 
     def _apply_home(self) -> None:
         s = self.ctx.settings
@@ -418,6 +596,8 @@ class TitleBar(QWidget):
         tab = self.ctx.state.active_tab
         if tab is not None and tab.id in summary:
             self.refresh()
+            if summary[tab.id] & {"stack", "pinned"}:
+                self._refresh_stack()
 
     def refresh(self) -> None:
         tab = self.ctx.state.active_tab
@@ -428,17 +608,56 @@ class TitleBar(QWidget):
         loading = bool(tab and tab.loading)
         self.reload.set_glyph("stop" if loading else "refresh")
         self.reload.setToolTip("Stop (Esc)" if loading else "Reload (F5)")
-        blocked = tab.blocked if tab else 0
-        self.shield.set_badge(str(blocked) if blocked else None)
         protected = bool(self.ctx.settings.get("privacy.block_trackers"))
         if tab is not None and QUrl(tab.url).host() and self.ctx.privacy.is_allowlisted(QUrl(tab.url).host()):
             protected = False
-        self.shield.set_active_color(None if protected else "warning")
+        self.pill.set_shield(tab.blocked if tab else 0, protected)
+        reading = bool(tab and tab.reading)
+        readable = bool(tab and tab.readable)
+        self.reading_btn.setChecked(reading)
+        self.reading_btn.setEnabled(bool(tab and tab.url.startswith(("http://", "https://")) and not tab.sleeping))
+        # Off by default; the glyph turns to the accent colour when the page is an article.
+        self.reading_btn.set_active_color("accent" if readable and not reading else None)
+        self.reading_btn.setToolTip("Leave reading mode (F9)" if reading else
+                                    "Reading mode (F9): this page looks like an article" if readable else
+                                    "Reading mode (F9): works best on articles and other pages with lots of text")
+        self._refresh_stack()
+
+    def _refresh_stack(self) -> None:
+        # Always clickable: when stacking isn't possible, the click explains why (BrowserController).
+        tab = self.ctx.state.active_tab
+        if tab is not None and tab.pinned:
+            tip = "Pinned cards can't be stacked"
+        elif tab is not None and not self.ui.can_stack():
+            tip = "This column is full (3 cards at most)"
+        else:
+            tip = "Stack a card below this one (Alt+Shift+S)"
+        self.stack_btn.setToolTip(tip + "\nRight-click for layouts and split views")
 
     def _on_downloads(self) -> None:
-        active = self.ctx.downloads.active_items()
-        self.downloads.set_progress(self.ctx.downloads.overall_progress() if active else None)
-        self.downloads.set_badge(str(len(active)) if len(active) > 1 else None)
+        dl = self.ctx.downloads
+        active = dl.active_items()
+        mode = self.ctx.settings.get("toolbar.downloads_button")
+        show = mode == "always" or bool(active or dl.session_items() or dl.waiting_items())
+        if active:
+            sized = [i for i in active if i.record.total > 0]
+            fraction = dl.overall_progress() if sized else -1.0
+        else:
+            fraction = None
+        dot = "warning" if dl.waiting_items() else ("accent" if dl.unseen else None)
+        resized = self.downloads.set_state(fraction, dot)
+        n = len(active)
+        tip = "Downloads (Ctrl+J)"
+        if n:
+            tip = f"Downloading {n} file{'s' if n != 1 else ''}" + (
+                f": {int(fraction * 100)}% done" if fraction is not None and fraction >= 0 else "") + " (Ctrl+J)"
+        if dl.waiting_items():
+            tip += "\nA download needs your decision: keep or delete it"
+        self.downloads.setToolTip(tip)
+        if show == self.downloads.isHidden() or resized:
+            self.downloads.setVisible(show)
+            self.tool_group.adjustSize()
+            self._place_pill()
 
     def set_maximized(self, maximized: bool) -> None:
         self.max_btn.set_glyph("restore" if maximized else "max")

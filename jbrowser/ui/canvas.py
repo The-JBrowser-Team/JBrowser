@@ -31,6 +31,7 @@ ADD_BTN = 44
 PULL_DIST = 440.0   # wheel / trackpad travel past an end of the canvas that opens a new card there
 REVEAL = 88.0       # how far the cards slide aside while being pulled
 DRAG_LIFT = 6       # px a card rises while it is being dragged
+SLOT = "__slot__"   # layout key of the empty place in a column (stack picker, or a stacking drop)
 SMOOTH_TAU = 0.055  # s: wheel scrolling covers 95 % of the way to where it is heading in ~0.17 s
 
 # Card shadows: (spread, opacity) layers, resting and lifted (dragged).
@@ -214,9 +215,16 @@ class Canvas(QWidget):
         self._bg_key: tuple | None = None
         self._bg = QColor()
         self.cards: dict[str, WebCard] = {}
-        self._geo: dict[str, tuple[float, float]] = {}
-        self._from: dict[str, tuple[float, float]] = {}
-        self._to: dict[str, tuple[float, float]] = {}
+        # Card id → (x, width, top, height): x and width in px, top and height as fractions of the column.
+        self._geo: dict[str, tuple[float, float, float, float]] = {}
+        self._from: dict[str, tuple[float, float, float, float]] = {}
+        self._to: dict[str, tuple[float, float, float, float]] = {}
+        # The empty place in a column: (card it sits by, row in the column, "picker" | "drop").
+        self._slot: tuple[str, int, str] | None = None
+        self._slot_rect = QRect()
+        self._slot_handoff: tuple[float, float, float, float] | None = None   # where a chosen card grows from
+        self._stack_target: tuple[str, bool] | None = None   # dragging: (card to stack onto, above?)
+        self.picker = None                                    # StackPicker while it is open
         self._offset = float(space.scroll)
         self._target_offset = self._offset
         self._pan_anim: QVariantAnimation | None = None
@@ -273,12 +281,20 @@ class Canvas(QWidget):
         frac = max(0.05, min(1.0, frac))
         return max(MIN_CARD_W, frac * (self._avail() + GAP) - GAP)
 
-    def targets(self) -> dict[str, tuple[float, float]]:
+    def targets(self) -> dict[str, tuple[float, float, float, float]]:
+        """Card id → (x, width, top, height). Cards stacked in a column share x and width and split its
+        height; while the stack picker or a stacking drop is pending, SLOT is the empty place."""
         out = {}
         x = float(MARGIN)
-        for tab in self.space.tabs:
-            w = self.px_width(tab.width)
-            out[tab.id] = (x, w)
+        slot = self._slot
+        for column in self.ctx.state.columns(self.space):
+            w = self.px_width(column[0].width)
+            rows = [t.id for t in column]
+            if slot is not None and slot[0] in rows:
+                rows.insert(max(0, min(slot[1], len(rows))), SLOT)
+            n = len(rows)
+            for i, rid in enumerate(rows):
+                out[rid] = (x, w, i / n, 1 / n)
             x += w + GAP
         return out
 
@@ -286,14 +302,21 @@ class Canvas(QWidget):
         t = targets if targets is not None else self._geo
         if not t:
             return float(self.width())
-        right = max(x + w for x, w in t.values())
+        right = max(g[0] + g[1] for g in t.values())
         return right + MARGIN
+
+    def _rows_px(self, top: float, height: float) -> tuple[float, float]:
+        """A card's top and height in px from its fractions of the column."""
+        span = max(80, self.height() - TOP - BOTTOM) + GAP
+        return TOP + top * span, max(1.0, height * span - GAP)
 
     def max_offset(self, targets: dict | None = None) -> float:
         return max(0.0, self.content_width(targets if targets is not None else self.targets()) - self.width())
 
     def geo(self, tab_id: str) -> tuple[float, float] | None:
-        return self._geo.get(tab_id)
+        """A card's x and width in px (its column's)."""
+        g = self._geo.get(tab_id)
+        return (g[0], g[1]) if g else None
 
     @property
     def offset(self) -> float:
@@ -316,8 +339,8 @@ class Canvas(QWidget):
             self._layout_anim = None
         if animated and motion().enabled and self.isVisible() and self._geo:
             self._from = {}
-            for tid, (x, w) in targets.items():
-                self._from[tid] = self._geo.get(tid, (x + w / 2, 0.0))
+            for tid, (x, w, y, h) in targets.items():
+                self._from[tid] = self._geo.get(tid) or self._entry_geo(tid, (x, w, y, h))
             self._to = targets
             anim = QVariantAnimation(self)
             anim.setDuration(motion().ms(LAYOUT_MS))
@@ -333,12 +356,25 @@ class Canvas(QWidget):
             self._apply()
         self._clamp_offset(targets)
 
+    def _entry_geo(self, tid: str, target: tuple[float, float, float, float]) -> tuple[float, float, float, float]:
+        """Where a card (or the empty slot) appears from: a card chosen in the stack picker grows out of
+        the picker's place, other stacked cards and the slot grow down from the top of their row, and a
+        new column grows out from its centre."""
+        x, w, y, h = target
+        tab = self.ctx.state.tab(tid)
+        if tab is not None and tab.stack and self._slot_handoff is not None:
+            g, self._slot_handoff = self._slot_handoff, None
+            return g
+        if tid == SLOT or (tab is not None and tab.stack):
+            return (x, w, y, 0.0)
+        return (x + w / 2, 0.0, y, h)
+
     def _layout_frame(self, t) -> None:
         t = float(t)
         geo = {}
-        for tid, (tx, tw) in self._to.items():
-            fx, fw = self._from.get(tid, (tx, tw))
-            geo[tid] = (fx + (tx - fx) * t, fw + (tw - fw) * t)
+        for tid, to in self._to.items():
+            fr = self._from.get(tid, to)
+            geo[tid] = tuple(a + (b - a) * t for a, b in zip(fr, to))
         self._geo = geo
         self._apply()
 
@@ -368,13 +404,24 @@ class Canvas(QWidget):
             g = self._geo.get(tid)
             if g is None:
                 continue
-            x, w = g
+            x, w, y, hh = g
             if tid == self._drag_tab:
                 # The dragged card follows the pointer, lifted slightly above the others.
                 card.setGeometry(int(round(self._drag_x - off)), TOP - DRAG_LIFT, max(1, int(round(w))), h)
                 card.raise_()
                 continue
-            card.setGeometry(int(round(x - off)), TOP, max(1, int(round(w))), h)
+            top, height = self._rows_px(y, hh)
+            card.setGeometry(int(round(x - off)), int(round(top)), max(1, int(round(w))), int(round(height)))
+        sg = self._geo.get(SLOT)
+        if sg is not None:
+            top, height = self._rows_px(sg[2], sg[3])
+            self._slot_rect = QRect(int(round(sg[0] - off)), int(round(top)), max(1, int(round(sg[1]))),
+                                    int(round(height)))
+        else:
+            self._slot_rect = QRect()
+        if self.picker is not None and sg is not None:
+            self.picker.setGeometry(self._slot_rect)
+            self.picker.raise_()
         self._place_pull_indicator(h, off)
         self._update_visibility()
         mm_w = min(420, max(160, int(self.width() * 0.32)))
@@ -469,7 +516,7 @@ class Canvas(QWidget):
         g = targets.get(tab_id)
         if g is None:
             return
-        x, w = g
+        x, w = g[0], g[1]
         view_w = self.width()
         cur = self._target_offset
         if align == "left" or w >= view_w - 2 * MARGIN:
@@ -582,10 +629,10 @@ class Canvas(QWidget):
             return
         prog = min(1.0, abs(self._pull) / PULL_DIST)
         if self._pull < 0:
-            first = min(x for x, _w in self._geo.values()) - off
+            first = min(g[0] for g in self._geo.values()) - off
             cx = first / 2
         else:
-            last = max(x + w for x, w in self._geo.values()) - off
+            last = max(g[0] + g[1] for g in self._geo.values()) - off
             cx = last + (self.width() - last) / 2
         ind.move(int(round(cx - ind.W / 2)), int(TOP + h / 2 - ADD_BTN / 2 - 8))
         ind.set_state(prog, self._pull_fired, self._pull_hint)
@@ -682,6 +729,7 @@ class Canvas(QWidget):
 
     def hideEvent(self, e) -> None:
         super().hideEvent(e)
+        self.close_stack_picker(animated=False)
         for tid in list(self._in_view):
             card = self.cards.get(tid)
             self._in_view.discard(tid)
@@ -711,7 +759,7 @@ class Canvas(QWidget):
         return card
 
     def _on_tab_fields(self, tab_id: str, fields: frozenset) -> None:
-        if "width" in fields:
+        if fields & {"width", "stack"}:
             self.schedule_layout()
         if fields & {"sleeping", "title"} and self.minimap.isVisible():
             self.minimap.update()
@@ -722,9 +770,8 @@ class Canvas(QWidget):
         card = self._add_card(tab)
         if card is None:
             return
-        self._geo.setdefault(tab.id, self.targets().get(tab.id, (MARGIN, 0.0)))
-        x, w = self.targets().get(tab.id, (MARGIN, 0.0))
-        self._geo[tab.id] = (x + w / 2, 0.0)  # grow in from its centre
+        target = self.targets().get(tab.id, (float(MARGIN), 0.0, 0.0, 1.0))
+        self._geo[tab.id] = self._entry_geo(tab.id, target)   # grow in (from the picker, if it came from there)
         first_card = len(self.space.tabs) == 1
         self.request_layout(animated=not first_card)
         if first_card:
@@ -772,32 +819,32 @@ class Canvas(QWidget):
     # The card follows the pointer, the others slide aside to show where it will land, and letting go
     # over a space in the sidebar moves the card to that space.
     def _on_drag(self, tab_id: str, global_pos: QPoint) -> None:
+        st = self.ctx.state
         local = self.mapFromGlobal(global_pos)
         content_x = local.x() + self._offset
         g = self._geo.get(tab_id)
         if g is None:
             return
         if self._drag_tab != tab_id:                       # the drag just started
+            self.close_stack_picker()
             self._drag_tab = tab_id
             self._drag_grab = content_x - g[0]
+            tab = st.tab(tab_id)
+            if tab is not None and tab.stack:
+                st.unstack(tab_id)      # a dragged card leaves its stack; dropping it on a card stacks it again
         w = g[1]
         self._drag_x = content_x - self._drag_grab
-        centre = self._drag_x + w / 2
-        targets = self.targets()
-        order = [t.id for t in self.space.tabs]
-        cur = order.index(tab_id) if tab_id in order else -1
-        new_index = cur
-        for i, tid in enumerate(order):
-            if tid == tab_id:
-                continue
-            x, tw = targets[tid]
-            mid = x + tw / 2
-            if i < cur and centre < mid:
-                new_index = min(new_index, i)
-            elif i > cur and centre > mid:
-                new_index = max(new_index, i)
-        if new_index != cur and new_index >= 0:
-            self.ctx.state.move_tab(tab_id, new_index)
+        target = self._stack_target_at(local, tab_id)
+        if target != self._stack_target:
+            self._stack_target = target
+            if target is None:
+                self._slot = None
+            else:
+                column = [t.id for t in st.column_of(target[0])]
+                self._slot = (target[0], column.index(target[0]) + (0 if target[1] else 1), "drop")
+            self.request_layout(animated=True)
+        if target is None:
+            self._reorder_by_columns(tab_id, self._drag_x + w / 2)
         sidebar = self.ui.window.sidebar
         self._drop_space = sidebar.drop_target_at(global_pos, exclude=self.space.id)
         edge = 48
@@ -808,20 +855,110 @@ class Canvas(QWidget):
                 self.scroll_by(24, animated=False)
         self._apply()
 
+    def _stack_target_at(self, local: QPoint, dragged: str) -> tuple[str, bool] | None:
+        """While dragging: the card the dragged one would stack onto, and whether above it. The lower half
+        of a card stacks below it, its top fifth above it; the middle reorders columns as usual."""
+        if self._stack_target is not None and self._slot_rect.contains(local):
+            return self._stack_target                  # over the place that opened for it: keep it
+        for tid, card in self.cards.items():
+            if tid == dragged or not card.isVisible() or not card.geometry().contains(local):
+                continue
+            if not self.ctx.state.can_stack_onto(tid) or self.ctx.state.tab(dragged) is None \
+                    or self.ctx.state.tab(dragged).pinned:
+                return None
+            r = card.geometry()
+            rel = (local.y() - r.top()) / max(1, r.height())
+            if rel >= 0.55:
+                return (tid, False)
+            if rel <= 0.2:
+                return (tid, True)
+            return None
+        return None
+
+    def _reorder_by_columns(self, tab_id: str, centre: float) -> None:
+        """Dragging: move the card past whole columns, never into the middle of one."""
+        st = self.ctx.state
+        cols = st.columns(self.space)
+        cur = next((i for i, c in enumerate(cols) if any(t.id == tab_id for t in c)), -1)
+        if cur < 0:
+            return
+        targets = self.targets()
+        new = cur
+        for i, col in enumerate(cols):
+            if i == cur or col[0].id not in targets:
+                continue
+            x, cw = targets[col[0].id][:2]
+            mid = x + cw / 2
+            if i < cur and centre < mid:
+                new = min(new, i)
+            elif i > cur and centre > mid:
+                new = max(new, i)
+        if new != cur:
+            ref = cols[new][0] if new < cur else cols[new][-1]
+            st.move_tab(tab_id, self.space.index_of(ref.id))
+
     def _on_drag_end(self) -> None:
         tab_id, self._drag_tab = self._drag_tab, None
         target, self._drop_space = self._drop_space, None
+        stack, self._stack_target = self._stack_target, None
         self.ui.window.sidebar.clear_drop_target()
         if not tab_id:
             return
         if target:
+            self._slot = None
             self.ui.move_tab_to_space(tab_id, target)
             return
         g = self._geo.get(tab_id)
         if g is not None:
-            self._geo[tab_id] = (self._drag_x, g[1])      # settle into its slot from where it was dropped
+            self._geo[tab_id] = (self._drag_x, g[1], 0.0, 1.0)   # settle into its place from where it was dropped
+        self._slot = None
+        if stack is not None and not self.ctx.state.stack_tab(tab_id, stack[0], above=stack[1]):
+            self.ui.toast("That column is full (3 cards at most)", "stack")
         self.request_layout(animated=True)
         self.ensure_visible(tab_id)
+
+    # ---------------------------------------------------------- stack picker
+    def open_stack_picker(self, tab_id: str) -> bool:
+        """Open the empty place below a card, with what can be stacked there (ui/stack_picker.py)."""
+        st = self.ctx.state
+        if self._drag_tab or self._solo is not None or not st.can_stack_onto(tab_id):
+            return False
+        from jbrowser.ui.stack_picker import StackPicker
+        self.close_stack_picker(animated=False)
+        column = [t.id for t in st.column_of(tab_id)]
+        self._slot = (tab_id, column.index(tab_id) + 1, "picker")
+        self.picker = StackPicker(self.ctx, self.ui, self, tab_id)
+        self.request_layout(animated=True)
+        self.ensure_visible(tab_id)
+        self.picker.show()
+        self.picker.raise_()
+        self.picker.focus_input()
+        return True
+
+    def close_stack_picker(self, animated: bool = True) -> None:
+        picker, self.picker = self.picker, None
+        if picker is None:
+            return
+        picker.hide()
+        picker.deleteLater()
+        if self._slot is not None and self._slot[2] == "picker":
+            self._slot = None
+            self.request_layout(animated=animated)
+
+    def finish_stack_picker(self, action) -> None:
+        """The picker's choice: the slot closes and ``action`` puts the chosen card there, growing out of
+        the slot's place."""
+        self._slot_handoff = self._geo.get(SLOT)
+        picker, self.picker = self.picker, None
+        if picker is not None:
+            picker.hide()
+            picker.deleteLater()
+        self._slot = None
+        try:
+            action()
+        finally:
+            self.request_layout(animated=True)
+            QTimer.singleShot(0, lambda: setattr(self, "_slot_handoff", None))
 
     def cancel_drag(self) -> None:
         if self._drag_tab:
@@ -833,6 +970,7 @@ class Canvas(QWidget):
         return QRect(self.width() // 2 - 170, self.height() // 2 - 90, 340, 180)
 
     def mousePressEvent(self, e) -> None:
+        self.close_stack_picker()
         if not self.cards and self._empty_rect().contains(e.position().toPoint()):
             self.ui.open_lazy_toolbar("new")
         self.setFocus()
@@ -904,6 +1042,23 @@ class Canvas(QWidget):
             g = QRectF(card.geometry())
             if g.intersects(view):
                 _paint_shadow(p, g, base, tid == self._drag_tab, dpr)
+        if self._slot is not None and self._slot[2] == "drop" and not self._slot_rect.isNull():
+            # Where the dragged card will stack: a soft, outlined place in the column.
+            r = QRectF(self._slot_rect).adjusted(1, 1, -1, -1)
+            path = QPainterPath()
+            path.addRoundedRect(r, 10, 10)
+            p.fillPath(path, th.accent_alpha(0.12))
+            pen = QPen(th.accent_alpha(0.7), 1.6, Qt.PenStyle.DashLine)
+            pen.setDashPattern([5, 4])
+            p.setPen(pen)
+            p.drawPath(path)
+            draw_glyph(p, QRectF(r.center().x() - 14, r.center().y() - 26, 28, 28), "stack", th.c("accent"), 18)
+            f = p.font()
+            f.setPointSizeF(9.5)
+            p.setFont(f)
+            p.setPen(th.c("text2"))
+            p.drawText(QRectF(r.left(), r.center().y() + 4, r.width(), 22), Qt.AlignmentFlag.AlignCenter,
+                       "Stack here")
         if not self.cards:
             r = QRectF(self._empty_rect())
             if self._empty_hover:

@@ -36,6 +36,7 @@
       "ui/sidebar",
       "ui/lazy-toolbar",
       "ui/gallery",
+      "ui/reading-mode",
       "ui/onboarding",
       "ui/motion",
       "ui/dialogs"

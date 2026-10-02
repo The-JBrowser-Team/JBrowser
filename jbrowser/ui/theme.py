@@ -61,6 +61,9 @@ _SOLID_MIX = {"window": (0.20, 0.15), "sidebar_solid": (0.24, 0.19), "canvas_sol
 _WASH_ALPHA = (0.15, 0.10)          # the translucent wash (dark, light): a tint, never a paint job
 _OUTLINE_WASH = (0.30, 0.12)        # how far the active card's outline is washed towards white (dark, light)
 _OUTLINE_GREY = ("#8b9099", "#9aa0a8")   # the outline without a tint (dark, light)
+# Opaque base while the window minimises or maximises (Theme.hold_opaque): Windows 11's own colour
+# behind inactive Mica / Acrylic windows (dark, light), so the hand-over is barely visible.
+TRANSITION_BASE = ("#202020", "#f3f3f3")
 # Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
 _INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
               "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
@@ -74,6 +77,14 @@ def mix(base: QColor, other: QColor, amount: float) -> QColor:
     return QColor.fromRgbF(base.redF() + (other.redF() - base.redF()) * a,
                            base.greenF() + (other.greenF() - base.greenF()) * a,
                            base.blueF() + (other.blueF() - base.blueF()) * a, base.alphaF())
+
+
+def solid(c: QColor) -> QColor:
+    """``c`` fully opaque. For widgets drawn over web pages: Qt composites a partly transparent widget over a
+    page far more see-through than its alpha suggests, so the page's text would show through."""
+    out = QColor(c)
+    out.setAlpha(255)
+    return out
 
 
 def parse_color(value: str) -> QColor:
@@ -98,6 +109,7 @@ class Theme(QObject):
         self.accent = QColor("#4c8dff")
         self.tokens: dict[str, str] = dict(DARK)
         self.translucent = True
+        self.hold_opaque = False         # set by MainWindow.transition while Windows animates the window
         self.tint: QColor | None = None
         self.incognito = False
         self._syncing = False
@@ -232,6 +244,11 @@ class Theme(QObject):
         wash = self.backdrop_wash()
         if wash is not None:
             layers.append(wash)
+        if self.hold_opaque:
+            # While Windows animates a minimise or maximise it draws a snapshot of the window, and on
+            # some PCs it draws the see-through parts of that snapshot with the wrong colours. Under
+            # everything goes the colour Windows itself shows behind an inactive window.
+            layers.insert(0, QColor(TRANSITION_BASE[0 if self.dark else 1]))
         return layers
 
     def surface(self, token: str) -> QColor:

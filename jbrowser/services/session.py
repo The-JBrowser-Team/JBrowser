@@ -49,7 +49,7 @@ class SessionManager(QObject):
         self._periodic.timeout.connect(lambda: self.save_now() if self._dirty else None)
         state.dirty.connect(self.mark_dirty)
 
-    SESSION_FIELDS = frozenset({"url", "title", "width", "zoom", "muted", "pinned"})
+    SESSION_FIELDS = frozenset({"url", "title", "width", "zoom", "muted", "pinned", "stack"})
 
     def mark_dirty(self, *_args) -> None:
         self._dirty = True
@@ -75,6 +75,7 @@ class SessionManager(QObject):
                 hist = self._history(t)
                 tabs.append({"id": t.id, "url": t.url, "title": t.title, "width": round(t.width, 4),
                              "zoom": t.zoom, "muted": t.muted, "pinned": t.pinned, "favourite": t.favourite_id,
+                             "stack": t.stack,
                              "history": base64.b64encode(hist).decode("ascii") if hist else ""})
             spaces.append({"id": sp.id, "name": sp.name, "icon": sp.icon, "color": sp.color,
                            "proxy": sp.proxy, "active_tab": sp.active_tab_id, "scroll": sp.scroll,
@@ -142,7 +143,9 @@ class SessionManager(QObject):
                                    width=float(td.get("width") or 0.5), title=td.get("title", ""),
                                    tab_id=td.get("id"), sleeping=True, history=hist,
                                    zoom=float(td.get("zoom") or 1.0), muted=bool(td.get("muted")),
-                                   pinned=bool(td.get("pinned")), favourite_id=td.get("favourite") or "")
+                                   pinned=bool(td.get("pinned")), favourite_id=td.get("favourite") or "",
+                                   stack=str(td.get("stack") or ""))
+            self.state.normalize_stacks(space)       # skipped cards (blank pages) may have broken a column
             if sd.get("active_tab") and self.state.tab(sd["active_tab"]):
                 self.state.set_active_tab(sd["active_tab"])
         target = self.state.space(data.get("active_space", "")) or (self.state.spaces[0] if self.state.spaces else None)

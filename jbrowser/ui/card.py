@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QUrl, pyqtSignal
+from PyQt6.QtCore import QEvent, QPoint, QRect, QRectF, QSize, Qt, QTimer, QUrl, pyqtSignal
 from PyQt6.QtGui import QContextMenuEvent, QFont, QGuiApplication, QIcon, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWebEngineCore import QWebEnginePage
 from PyQt6.QtWebEngineWidgets import QWebEngineView
@@ -15,7 +15,8 @@ from jbrowser.models.infobar import InfoBarSpec
 from jbrowser.models.tab import Tab
 from jbrowser.ui.icons import GLYPHS, draw_glyph
 from jbrowser.ui.icons import icon as make_icon
-from jbrowser.ui.theme import theme
+from jbrowser.ui.reader_view import ReaderView, ReadingOffer
+from jbrowser.ui.theme import solid, theme
 from jbrowser.ui.widgets import (ElidedLabel, IconButton, InfoBarWidget, ProgressLine, Spinner, menu_action,
                                  submenu)
 
@@ -139,6 +140,7 @@ class CardHeader(QWidget):
         self.sleep_badge.set_active_color("sleep")
         self.shield = IconButton("shield", "Trackers blocked", self, size=26, glyph_px=13)
         self.key = IconButton("key", "Saved passwords", self, size=26, glyph_px=13)
+        self.reading = IconButton("reading", "Reading mode (F9)", self, size=26, glyph_px=13, checkable=True)
         self.zoom = QPushButton("100%", self)
         self.zoom.setFlat(True)
         self.zoom.setFixedHeight(22)
@@ -149,13 +151,14 @@ class CardHeader(QWidget):
         self.reload = IconButton("refresh", "Reload (F5)", self, size=28, glyph_px=12)
         self.more = IconButton("more", "Card menu", self, size=28, glyph_px=13)
         self.close = IconButton("close", "Close card (Ctrl+W)", self, size=28, glyph_px=10)
-        for w in (self.audio, self.sleep_badge, self.shield, self.key, self.zoom, self.back, self.forward,
-                  self.reload, self.more, self.close):
+        for w in (self.audio, self.sleep_badge, self.shield, self.key, self.reading, self.zoom, self.back,
+                  self.forward, self.reload, self.more, self.close):
             lay.addWidget(w)
         self.audio.hide()
         self.sleep_badge.hide()
         self.shield.hide()
         self.key.hide()
+        self.reading.hide()
         self.zoom.hide()
 
     def _is_button_area(self, pos: QPoint) -> bool:
@@ -369,7 +372,7 @@ class StatusBubble(QLabel):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         path = QPainterPath()
         path.addRoundedRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5), 6, 6)
-        p.fillPath(path, theme().c("panel"))
+        p.fillPath(path, solid(theme().c("panel")))     # over the page: see ui/theme.py solid()
         p.setPen(QPen(theme().c("panel_border"), 1))
         p.drawPath(path)
         p.setPen(theme().c("text2"))
@@ -395,6 +398,12 @@ class WebCard(QFrame):
         self._infobars: dict[str, InfoBarWidget] = {}
         self._devtools: QWebEngineView | None = None
         self._fullscreen = False
+        self.reader: ReaderView | None = None          # reading mode (created the first time it's used)
+        self._offer: ReadingOffer | None = None
+        self._offer_timer = QTimer(self)                # "is this article being read?" (see _maybe_offer)
+        self._offer_timer.setSingleShot(True)
+        self._offer_timer.setInterval(9000)
+        self._offer_timer.timeout.connect(self._maybe_offer)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, False)
 
         root = QVBoxLayout(self)
@@ -427,9 +436,9 @@ class WebCard(QFrame):
         h.pressed.connect(self._on_header_pressed)
         h.doubleClicked.connect(lambda: ui.toggle_full_width(self.tab.id))
         h.contextRequested.connect(self.show_menu)
-        h.back.clicked.connect(ctrl.back)
-        h.forward.clicked.connect(ctrl.forward)
-        h.reload.clicked.connect(lambda: ctrl.stop() if self.tab.loading else ctrl.reload())
+        h.back.clicked.connect(lambda: (self._leave_reading(), ctrl.back()))
+        h.forward.clicked.connect(lambda: (self._leave_reading(), ctrl.forward()))
+        h.reload.clicked.connect(lambda: (self._leave_reading(), ctrl.stop() if self.tab.loading else ctrl.reload()))
         h.close.clicked.connect(lambda: ui.close_tab(self.tab.id))
         h.more.clicked.connect(lambda: self.show_menu(h.more.mapToGlobal(QPoint(0, h.more.height()))))
         h.audio.clicked.connect(ctrl.toggle_mute)
@@ -437,7 +446,9 @@ class WebCard(QFrame):
         h.shield.clicked.connect(lambda: ui.show_shield_menu(self.tab.id, h.shield.mapToGlobal(
             QPoint(0, h.shield.height()))))
         h.key.clicked.connect(lambda: ui.show_password_menu(self.tab.id, h.key.mapToGlobal(QPoint(0, h.key.height()))))
+        h.reading.clicked.connect(lambda: ui.toggle_reading(self.tab.id))
         h.zoom.clicked.connect(lambda: ctrl.set_zoom(1.0))
+        ctrl.page.scrollPositionChanged.connect(self._on_page_scrolled)
         self.snapshot.clicked.connect(lambda: ui.activate_card(self.tab.id, Qt.KeyboardModifier.NoModifier, wake=True))
         self.findbar.search.connect(lambda t, b, c: ctrl.find(t, b, c))
         self.findbar.closed.connect(self.close_find)
@@ -500,6 +511,17 @@ class WebCard(QFrame):
         if fields & {"can_back", "can_forward"}:
             h.back.setEnabled(tab.can_back)
             h.forward.setEnabled(tab.can_forward)
+        if fields & {"readable", "reading"}:
+            h.reading.setChecked(tab.reading)
+            h.reading.setToolTip("Leave reading mode (F9)" if tab.reading else "Reading mode (F9)")
+            if not tab.reading:
+                self._hide_reader()
+            if tab.readable and not tab.reading:
+                self._offer_timer.start()
+            else:
+                self._offer_timer.stop()
+                if self._offer is not None:
+                    self._offer.dismiss()
         if "sleeping" in fields:
             self._apply_sleep_state()
         self.update_header_density()
@@ -517,6 +539,7 @@ class WebCard(QFrame):
         h.more.setVisible(w >= 200)
         h.shield.setVisible(medium and tab.blocked > 0)
         h.key.setVisible(medium and tab.saved_logins > 0)
+        h.reading.setVisible(w >= 240 and (tab.readable or tab.reading) and not tab.sleeping)
         h.zoom.setVisible(medium and abs(tab.zoom - 1.0) > 0.001)
         h.sleep_badge.setVisible(tab.sleeping and w >= 220)
 
@@ -526,8 +549,9 @@ class WebCard(QFrame):
                 self.stack.setCurrentWidget(self.snapshot)
             self.snapshot.update()
         else:
-            if self.stack.currentWidget() is not self.splitter:
-                self.stack.setCurrentWidget(self.splitter)
+            live = self.reader if self.tab.reading and self.reader is not None else self.splitter
+            if self.stack.currentWidget() is not live:
+                self.stack.setCurrentWidget(live)
         self.header.update()
 
     def take_snapshot(self) -> None:
@@ -543,7 +567,50 @@ class WebCard(QFrame):
         # A blank picture (the page hadn't painted yet) would outlive it: show the title placeholder instead.
         self.snapshot.pixmap = None if is_blank(pm) else pm
 
+    # ------------------------------------------------------- reading mode
+    def show_reader(self, article: dict) -> None:
+        if self.reader is None:
+            self.reader = ReaderView(self)
+            self.stack.addWidget(self.reader)
+        self.close_find()
+        self.reader.show_article(article, self.tab.url)
+        self.stack.setCurrentWidget(self.reader)
+        if self._offer is not None:
+            self._offer.hide()
+        if self.active:
+            self.reader.focus()
+
+    def _leave_reading(self) -> None:
+        if self.tab.reading:
+            self.tab.update(reading=False)
+
+    def _hide_reader(self) -> None:
+        if self.reader is not None and self.stack.currentWidget() is self.reader:
+            self.stack.setCurrentWidget(self.snapshot if self.tab.sleeping else self.splitter)
+            if self.active:
+                self.focus_view()
+
+    def _on_page_scrolled(self, pos) -> None:
+        # Scrolling a good way into an article is the clearest sign that someone is reading it.
+        if pos.y() > max(400.0, self.view.height() * 0.6) and self._offer_timer.isActive():
+            self._offer_timer.stop()
+            self._maybe_offer()
+
+    def _maybe_offer(self) -> None:
+        tab = self.tab
+        if not (tab.readable and not tab.reading and self.active and self.on_screen and not tab.sleeping
+                and self.ctx.settings.get("reading.offer") and self.view.isVisible()
+                and self.ui.window.isActiveWindow()):
+            return
+        if not self.ui.claim_reading_offer(tab.url):
+            return                      # suggested once already for this page
+        if self._offer is None:
+            self._offer = ReadingOffer(self)
+        self._offer.present()
+
     def enter_sleep(self) -> None:
+        if self.tab.reading:
+            self.tab.update(reading=False)
         self.take_snapshot()
         self.close_find()
         self.stack.setCurrentWidget(self.snapshot)   # hides the live view → page becomes invisible
@@ -551,7 +618,7 @@ class WebCard(QFrame):
         self.header.update()
 
     def exit_sleep(self) -> None:
-        self.stack.setCurrentWidget(self.splitter)
+        self.stack.setCurrentWidget(self.reader if self.tab.reading and self.reader is not None else self.splitter)
         self.header.update()
 
     # --------------------------------------------------------------- focus
@@ -559,6 +626,10 @@ class WebCard(QFrame):
         if active != self.active:
             self.active = active
             self.update()
+            if active and self.tab.readable and not self.tab.reading:
+                self._offer_timer.start()
+            elif not active and self._offer is not None:
+                self._offer.dismiss()
 
     def set_selected(self, selected: bool, multi: bool) -> None:
         if selected != self.selected or multi != self.multi_selected:
@@ -674,6 +745,8 @@ class WebCard(QFrame):
     def resizeEvent(self, e) -> None:
         super().resizeEvent(e)
         self.update_header_density()
+        if self._offer is not None and self._offer.isVisible():
+            self._offer.place()
 
     def teardown(self) -> None:
         """Detach from the engine before deletion (views go before pages)."""
@@ -686,5 +759,8 @@ class WebCard(QFrame):
                 self.ctrl.page.setDevToolsPage(None)
             except RuntimeError:
                 pass
+        self._offer_timer.stop()
+        if self.reader is not None:
+            self.reader.dispose()
         self.hide()
         self.deleteLater()

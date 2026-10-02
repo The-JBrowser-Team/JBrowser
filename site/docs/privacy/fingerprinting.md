@@ -117,6 +117,22 @@ Other pages of that space present Firefox for those few moments too, which is ha
   `acceptNavigationRequest` seeing its first navigation; `urlChanged` catches it and loads it again as Firefox. The
   popup keeps `window.opener`, so the site still hears back from Google.
 <!-- endif -->
+<!-- if >= 2.0.0 -->
+
+[[changed 2.0.0]] **"Fix and sign in again", and back to Chrome afterwards.** The rejection info bar (and a bar in
+sign-in popups) now offers **Fix and sign in again** instead of naming the user agent. It calls
+`ProfileManager.start_signin_fix()`, which remembers the current identity in `advanced.identity_fix` and switches
+`advanced.identity` to `"firefox"`; a card starts again at `accounts.google.com`, a popup at the first address of its
+flow (so the site still receives the result).
+
+`SigninIdentity` keeps tracking sign-in pages even while every space presents Firefox, and decides that a sign-in
+**worked** when Google's session cookies (`SID`, `__Secure-1PSID`, `__Secure-3PSID`, `SAPISID` on `.google.com`)
+arrive for a profile with a page on a sign-in server (`on_cookie()`, connected to every profile's cookie store; cookies
+loaded from disk at start-up don't count), or when a page passes Google's `SetSID` / `CheckCookie` step. Once the last
+sign-in page has been left for `RESTORE_DELAY_MS`, it emits `signedIn`; `ProfileManager._on_signed_in()` restores the
+identity from `advanced.identity_fix`, clears it and shows a toast. Choosing an identity by hand in Settings also ends
+the fix.
+<!-- endif -->
 <!-- if >= 1.5.2 -->
 
 [[new 1.5.2]] **Sign-in pages get no blocking.** With the filter lists loaded, EasyPrivacy blocked two requests on

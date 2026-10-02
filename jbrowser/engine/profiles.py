@@ -52,9 +52,11 @@ class ProfileManager(QObject):
         self._profiles: dict[str, QWebEngineProfile] = {}
         self._interceptors: dict[str, ProfileInterceptor] = {}
         self._incognito: set[str] = set()
+        self._reader: QWebEngineProfile | None = None    # reading mode's own profile (reader_profile)
         self._fp_seed = secrets.randbits(31)   # fingerprint noise key, new every session
         self.signin = SigninIdentity(self._apply_identity, self,   # Firefox while signing in to Google
                                      lambda: ctx.settings.get("advanced.identity") == "firefox")
+        self.signin.signedIn.connect(self._on_signed_in)
         self._wipe_pending_profiles()
         self._clear_on_start()
         self._remove_stray_default_dirs()
@@ -116,6 +118,28 @@ class ProfileManager(QObject):
     def get(self, space_id: str) -> QWebEngineProfile | None:
         return self._profiles.get(space_id)
 
+    def reader_profile(self) -> QWebEngineProfile:
+        """The profile reading mode shows articles in (ui/reader_view.py): in memory only, without JBrowser's
+        page scripts (the article page has no ads to hide or forms to fill) and without cookies, so pictures
+        load the same for everyone. It presents the same browser as the spaces."""
+        prof = self._reader
+        if prof is None:
+            prof = QWebEngineProfile(self)
+            prof.setHttpCacheType(QWebEngineProfile.HttpCacheType.MemoryHttpCache)
+            prof.setPersistentPermissionsPolicy(QWebEngineProfile.PersistentPermissionsPolicy.StoreInMemory)
+            self._apply_identity(prof)
+            prof.setHttpAcceptLanguage(accept_language())
+            prof.cookieStore().setCookieFilter(lambda _req: False)
+            ws = prof.settings()
+            ws.setAttribute(WA.PluginsEnabled, False)
+            ws.setAttribute(WA.JavascriptCanOpenWindows, False)
+            ws.setAttribute(WA.LocalStorageEnabled, False)
+            ws.setAttribute(WA.DnsPrefetchEnabled, False)
+            ws.setAttribute(WA.HyperlinkAuditingEnabled, False)
+            ws.setAttribute(WA.AutoLoadIconsForPage, False)
+            self._reader = prof
+        return prof
+
     def all(self) -> list[QWebEngineProfile]:
         return list(self._profiles.values())
 
@@ -153,6 +177,7 @@ class ProfileManager(QObject):
         prof.setUrlRequestInterceptor(interceptor)
         privacy = self.ctx.privacy
         prof.cookieStore().setCookieFilter(lambda req, p=privacy: p.allow_cookie(req))
+        prof.cookieStore().cookieAdded.connect(lambda c, p=prof: self.signin.on_cookie(p, c))
         prof.downloadRequested.connect(
             lambda req, sid=space.id, inc=space.incognito: self.ctx.downloads.handle(req, sid, inc))
         prof.setNotificationPresenter(self.ctx.present_notification)
@@ -185,6 +210,9 @@ class ProfileManager(QObject):
             prof.deleteLater()
         self._profiles.clear()
         self._interceptors.clear()
+        if self._reader is not None:
+            self._reader.deleteLater()
+            self._reader = None
 
     # --------------------------------------------------------------- scripts
     def _install_base_scripts(self, prof: QWebEngineProfile) -> None:
@@ -231,6 +259,24 @@ class ProfileManager(QObject):
         else:
             identity.apply(prof, identity.version_for(choice))
 
+    def start_signin_fix(self) -> None:
+        """"Fix and sign in again": present Firefox to every site until the Google sign-in has worked,
+        then go back to the identity used before (see _on_signed_in)."""
+        s = self.ctx.settings
+        current = s.get("advanced.identity")
+        if current != "firefox":
+            s.set("advanced.identity_fix", current or "current")
+            s.set("advanced.identity", "firefox")
+
+    def _on_signed_in(self) -> None:
+        s = self.ctx.settings
+        before = s.get("advanced.identity_fix")
+        if not before or s.get("advanced.identity") != "firefox":
+            return
+        s.set("advanced.identity_fix", "")
+        s.set("advanced.identity", before)
+        self.ctx.hooks.toast("You're signed in to Google. JBrowser is back to its usual settings", "check")
+
     def _apply_settings(self, prof: QWebEngineProfile) -> None:
         s = self.ctx.settings
         ws = prof.settings()
@@ -272,9 +318,13 @@ class ProfileManager(QObject):
         elif key.startswith(("privacy.", "appearance.force_dark_web")):
             self._apply_settings_all()
         elif key == "advanced.identity":
+            if _value != "firefox" and self.ctx.settings.get("advanced.identity_fix"):
+                self.ctx.settings.set("advanced.identity_fix", "")    # changed by hand: the fix is over
             for prof in self._profiles.values():
                 if not self.signin.is_firefox(prof):   # a sign-in in progress keeps Firefox until it ends
                     self._apply_identity(prof)
+            if self._reader is not None:
+                self._apply_identity(self._reader)
 
     # --------------------------------------------------------------- data
     def clear_cache(self, space_id: str | None = None) -> None:

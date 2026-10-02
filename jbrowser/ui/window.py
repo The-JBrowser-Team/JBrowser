@@ -12,7 +12,7 @@ from jbrowser import APP_NAME
 from jbrowser.context import AppContext, UiHooks
 from jbrowser.platform import win
 from jbrowser.ui.actions import register_commands
-from jbrowser.ui.backdrop import Backdrop, caption_hit
+from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit
 from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
@@ -166,6 +166,10 @@ class MainWindow(QMainWindow):
         th = theme()
         self.backdrop = Backdrop(self)
         self.native.on_system_change = self.backdrop.schedule
+        self.transitions = WindowTransitions(self, self.native, self._repaint_all)   # no colour warp
+        self.transition = self.transitions.run
+        ctx.settings.changed.connect(lambda k, _v: self._apply_transitions() if k == "appearance.window_animations"
+                                     else None)
         th.changed.connect(self.update)
         # Incognito spaces are always black; everything else follows the chosen theme and tint.
         ctx.state.activeSpaceChanged.connect(lambda sp, _prev: th.set_incognito(bool(sp and sp.incognito)))
@@ -177,7 +181,8 @@ class MainWindow(QMainWindow):
         lc.woke.connect(self._on_woke)
         lc.sleepBlocked.connect(self.ui.on_sleep_blocked)
         ctx.downloads.window_provider = lambda: self
-        ctx.downloads.confirm_dangerous = self.ui.confirm_dangerous_download
+        ctx.downloads.flagged.connect(self.ui.ask_about_download)
+        ctx.downloads.blocked.connect(self.ui.on_download_blocked)
         ctx.updater.available.connect(self.ui.on_update_available)
         ctx.downloads.added.connect(self._on_download_added)
         ctx.downloads.finished.connect(lambda item: self.toasts.show(f"Downloaded {item.record.filename}", "check"))
@@ -228,6 +233,22 @@ class MainWindow(QMainWindow):
             return win.HTCLIENT
         return caption_hit(self, local, self.titlebar.max_btn)
 
+    # --------------------------------------------------- minimise / maximise
+    # self.transition (ui/backdrop.py WindowTransitions) paints the window opaque while Windows animates.
+    def _repaint_all(self) -> None:
+        if not self._shut_down:
+            self.update()
+            for c in self.stack.canvases.values():
+                c.update()
+
+    def _apply_transitions(self) -> None:
+        if self.testAttribute(Qt.WidgetAttribute.WA_WState_Created):
+            win.set_transitions(int(self.winId()), bool(self.ctx.settings.get("appearance.window_animations")))
+
+    def showEvent(self, e) -> None:
+        super().showEvent(e)
+        self._apply_transitions()
+
     def changeEvent(self, e) -> None:
         if e.type() == QEvent.Type.WindowStateChange:
             self.titlebar.set_maximized(self.isMaximized())
@@ -274,7 +295,8 @@ class MainWindow(QMainWindow):
             card.exit_sleep()
 
     def _on_download_added(self, item) -> None:
-        self.toasts.show(f"Downloading {item.record.filename}", "download")
+        if not item.record.held and item.record.state != "blocked":   # those get their own message
+            self.toasts.show(f"Downloading {item.record.filename}", "download")
         ctrl = self.ctx.engine.controller(item.tab_id) if item.tab_id else None
         if ctrl is None:
             return
@@ -301,7 +323,7 @@ class MainWindow(QMainWindow):
 
     def _on_dns(self, mode: str, ok: bool) -> None:
         if not ok and mode != "system":
-            self.toasts.show("Secure DNS could not be enabled in this Qt build", "warning", 4000)
+            self.toasts.show("Secure DNS isn't available in this version of JBrowser", "warning", 4000)
 
     # --------------------------------------------------------- input routing
     @staticmethod

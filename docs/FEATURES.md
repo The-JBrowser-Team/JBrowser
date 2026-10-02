@@ -13,7 +13,12 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - Segoe UI throughout, with restrained weights; a 12-hour clock centred in the sidebar header, and the logo doubles
   as the Settings button.
 - Custom title bar that keeps native behaviour: drag, double-click maximise, Aero Snap, **Snap Layouts flyout** on the maximise button, rounded corners, shadow, resize edges.
-  Buttons are grouped like Chrome: navigation · address pill · tools · window controls.
+  Buttons are grouped like Chrome: navigation · address pill (with the privacy shield and the star on its right) ·
+  tools (Gallery, stack, reading mode, Downloads, menu) · window controls. The Downloads button appears once you
+  download something and shows the percentage while files download (Settings → Appearance can always show it).
+- **No colour warp** when minimising, maximising or restoring: the window paints itself solid while Windows animates
+  it, and *Animate minimising and maximising* (Settings → Appearance) turns Windows' animation off for PCs that still
+  flicker.
 - Alpha-layered surfaces over the backdrop; natively rounded menus and tooltips; Segoe Fluent Icons throughout.
 - **Fluid Animations** (Settings → Appearance, on by default): turn it off and every transition becomes instant.
   On first run it follows the Windows "Animation effects" accessibility setting.
@@ -29,7 +34,12 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - **Pinned cards** stay at the start of their space (right-click → Pin card).
 - **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**.
 - Multi-select with **Ctrl + Click / Shift + Click** on card headers (or in the sidebar list), **Ctrl + Shift + A** selects all.
-- Split presets: **50 / 50** (Alt+Shift+D), **33 / 33 / 33** (Alt+Shift+T), **25 % × 4** (Alt+Shift+Q), focus 80 %.
+- **Stack cards in columns** (new in 2.0): up to three cards on top of each other. Drag a card onto the lower part of
+  another (its top edge puts it above), or press the **stack** button on the ribbon (Alt+Shift+S): a space opens below
+  the card to pick a new page, an open card, a favourite or a bookmark, and to set the column's width. Cards in a
+  column always share one width. Drag a card out, or Alt+Shift+U, to take it out. Columns are saved with the session.
+- Split presets: **50 / 50** (Alt+Shift+D), **33 / 33 / 33** (Alt+Shift+T), **25 % × 4** (Alt+Shift+Q), focus 80 %,
+  from the stack button's right-click menu. Columns move and split as one.
 - **Drag a card by its ribbon** to reorder it (the card lifts and the others make room), or drop it onto a space in
   the sidebar to move it there. **Alt + drag** anywhere on a card does the same. Double-click a ribbon to toggle full
   width, middle-click to close.
@@ -51,7 +61,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - Switch spaces from the sidebar (click, or **↑ / ↓** when the space list has focus, Ctrl+Shift+E), with **Alt + ↑ / ↓**
   from anywhere, or from the space chip in the address pill. Spaces slide vertically when switching.
 - **Favourites** sit above the spaces as icon tiles and work in every space: clicking one focuses its card in the
-  current space or opens it. Add or remove them from the card menu or the Lazy Toolbar.
+  current space or opens it, as wide as it was when you last closed it. Add or remove them from the card menu or the
+  Lazy Toolbar.
 - The sidebar can be **hidden completely** (Ctrl+B, its hide button, or right-click → Hide sidebar); point at the left
   edge of the window to peek at it.
 - The **New card** button sits at the end of the sidebar's card list, even in an empty space (Settings → Appearance →
@@ -103,8 +114,10 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   as outdated. Every release records the then-current version, and between releases it keeps up by date. Settings →
   Advanced can present the engine's own version instead.
 - **Google sign-in works**: while a page is on Google's sign-in pages, its space presents itself as Firefox in every
-  way a site can check (user agent, JavaScript, browser hints), then goes back to Chrome; if Google still refuses,
-  JBrowser offers to present Firefox everywhere (Settings → Advanced). This is needed because Google refuses
+  way a site can check (user agent, JavaScript, browser hints), then goes back to Chrome. If Google still refuses,
+  **Fix and sign in again** presents Firefox everywhere until the sign-in has worked (Google's session cookies arrive
+  and the last sign-in page is left), then goes back to the usual identity by itself. Settings → Advanced can keep
+  Firefox permanently. This is needed because Google refuses
   embedded browser engines ("This browser or app may not be secure"). Sign-in pages (Google, Microsoft, Apple) are
   exempt from ad and tracker blocking, which their security checks need, and Google's own pages aren't filtered when
   they talk to Google, which keeps "unusual traffic" checks away.
@@ -114,9 +127,11 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   "Copy link without trackers" for sharing.
 - **HTTPS-first (optional)**: http links try the encrypted version first; if it fails, the page opens over http with
   a clear "not encrypted" warning.
-- **Download protection**: programs and scripts (`.exe`, `.msi`, `.ps1`, `.bat`, …) ask before they are kept (louder
-  over insecure connections), and every download is tagged with the Windows **Mark-of-the-Web** so SmartScreen and
-  Office Protected View can check it.
+- **Download protection** (Settings → Downloads): programs and scripts (`.exe`, `.msi`, `.ps1`, `.bat`, …), files
+  from sites on the dangerous-sites list and files from sites without HTTPS are flagged. *Standard* (default) shows a
+  frosted keep-or-delete bubble and saves the file as `name.unconfirmed` until you decide, so it can't be opened by
+  accident; *Delete* removes it safely. *Strict* blocks those downloads; *Off* disables the warnings. Every download
+  is tagged with the Windows **Mark-of-the-Web** so SmartScreen and Office Protected View can check it.
 - **Site information panel** (click the lock or warning in the address pill): connection security, look-alike address
   warnings, trackers blocked, per-site protection, cookies, permissions, zoom, "Clear site data" and **Forget this site**
   (history, cookies, permissions, zoom and storage for that site, in every space).
@@ -133,7 +148,13 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   password generator, CSV import (Chrome/Edge/Firefox), **encrypted export** (a CSV inside a ZIP locked with a
   password you choose, AES-256; 7-Zip, WinRAR and JBrowser itself open it), never-save list, clipboard auto-clear and
   a local **password health check** that flags weak and reused passwords.
-- **Downloads** manager with progress, speed/ETA, pause/resume/cancel, open file / show in folder.
+- **Reading mode** (F9, Alt+Shift+R, or the reading button on the ribbon or a card): the article's text and pictures
+  without the clutter, extracted with Mozilla's Readability in JBrowser's isolated world and shown in a separate,
+  script-free page (strict Content-Security-Policy, own in-memory profile, trackers still blocked). Serif or
+  sans-serif, four colour themes (match JBrowser, light, sepia, dark) and text size; links open in the card. Off by
+  default; JBrowser suggests it once while you read an article, with *Don't show again*.
+- **Downloads** manager with progress (percentage, speed, time left), pause/resume/cancel, keep or delete flagged files,
+  show in folder; click a finished download anywhere on its row to open it.
 - **DevTools** docked inside the card (F12 / Ctrl+Shift+I), **find in page** (Ctrl+F), **zoom** remembered per site
   (Ctrl+= / Ctrl+- / Ctrl+0), print, save page (HTML/MHTML), save as PDF, view source, card screenshots.
 - **Cookies** and **site permissions** (camera, mic, location, notifications, clipboard, screen share…) managers, per space.
@@ -171,4 +192,6 @@ Highlights only: press **Ctrl+/** (or F1) in JBrowser for the full, always-curre
 | Keyboard shortcuts | Ctrl+/, F1 | Quit | Ctrl+Shift+Q |
 | Archive | Ctrl+Shift+Y | Home | Alt+Home |
 | Gallery | Ctrl+Shift+G | Move a card | Alt + drag anywhere on it |
+| Stack a card below | Alt+Shift+S | Take a card out of its column | Alt+Shift+U |
+| Reading mode | F9, Alt+Shift+R | Reading mode text size | Ctrl+= / Ctrl+- (in reading mode) |
 | Add a card at an end | Alt+← on the first card / Alt+→ on the last, twice | Next / previous card (wraps) | Ctrl+Tab / Ctrl+Shift+Tab |

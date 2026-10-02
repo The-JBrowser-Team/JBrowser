@@ -13,6 +13,7 @@ from PyQt6.QtWebEngineCore import (QWebEngineCertificateError, QWebEnginePage, Q
                                    QWebEngineProfile)
 
 from jbrowser.core.urls import is_local_host, strip_www
+from jbrowser.engine import reader
 from jbrowser.engine.js import BRIDGE_WORLD, CLEAR_SITE_STORAGE_JS
 from jbrowser.engine.page import BrowserPage, PageBridge
 from jbrowser.engine.signin import is_rejection_url
@@ -71,6 +72,12 @@ class TabController(QObject):
         self._spa_timer.setSingleShot(True)
         self._spa_timer.setInterval(900)
         self._spa_timer.timeout.connect(self._record_visit)
+        # Reading mode: is the page an article? Checked once it has settled (engine/reader.py).
+        self._reader_timer = QTimer(self)
+        self._reader_timer.setSingleShot(True)
+        self._reader_timer.setInterval(700)
+        self._reader_timer.timeout.connect(self._check_readable)
+        self._reader_url = ""
         self._connect()
         if tab.url and not tab.sleeping:
             self.ensure_loaded()
@@ -214,14 +221,23 @@ class TabController(QObject):
             self.refresh_login_count()
         if not self.page.isLoading():
             self._spa_timer.start()
+        if url.adjusted(QUrl.UrlFormattingOption.RemoveFragment).toString() != self._reader_url:
+            # A different page (also in single-page sites, which change the address without loading).
+            self._reader_url = ""
+            if self.tab.readable or self.tab.reading:
+                self.tab.update(readable=False, reading=False)
+            if not self.page.isLoading():
+                self._reader_timer.setInterval(1500)
+                self._reader_timer.start()
         if is_rejection_url(url) and self.ctx.settings.get("advanced.identity") != "firefox":
-            self._offer_firefox_identity()
+            self._offer_signin_fix()
 
-    def _offer_firefox_identity(self) -> None:
-        """Google still refused the sign-in ("This browser or app may not be secure"): offer the identity
-        that worked when nothing else did, Firefox everywhere, and try again."""
-        def use_firefox():
-            self.ctx.settings.set("advanced.identity", "firefox")
+    def _offer_signin_fix(self) -> None:
+        """Google still refused the sign-in ("This browser or app may not be secure"). Offer the fix that
+        works when nothing else does (Firefox to every site, see engine/signin.py) and try again. It undoes
+        itself once the sign-in has worked."""
+        def fix():
+            self.ctx.profiles.start_signin_fix()
             QTimer.singleShot(0, restart)
 
         def restart():
@@ -230,10 +246,10 @@ class TabController(QObject):
 
         self.infobar.emit(InfoBarSpec(
             "google-rejected",
-            "Google didn't accept this browser for signing in. JBrowser can introduce itself as Firefox to every "
-            "site, which Google accepts. You can change it back in Settings → Advanced.",
+            "Google couldn't sign you in with this browser. JBrowser can fix this: press the button and sign "
+            "in again.",
             icon="warning", kind="warning",
-            actions=[InfoAction("Use Firefox and try again", use_firefox, primary=True)]))
+            actions=[InfoAction("Fix and sign in again", fix, primary=True)]))
 
     def _on_title(self, title: str) -> None:
         if self._blocked_url:
@@ -262,9 +278,37 @@ class TabController(QObject):
         self.tab.update(loading=False, progress=100, can_back=h.canGoBack(), can_forward=h.canGoForward())
         if ok:
             self._record_visit()
+            self._reader_timer.setInterval(700)
+            self._reader_timer.start()
         elif not self.disposed:
             # page.url() holds the upgraded https address; requestedUrl() is still the original http one.
             self._https_fallback(self.page.url())
+
+    # ----------------------------------------------------------- reading mode
+    def url_interceptor(self) -> PageInterceptor:
+        return self._interceptor
+
+    def _check_readable(self) -> None:
+        url = self.page.url()
+        if self.disposed or self.page.isLoading() or url.scheme() not in ("http", "https") or self._blocked_url \
+                or self.tab.sleeping or not reader.available():
+            return
+        key = url.adjusted(QUrl.UrlFormattingOption.RemoveFragment).toString()
+
+        def done(result, key=key):
+            if self.disposed or self.page.url().adjusted(QUrl.UrlFormattingOption.RemoveFragment).toString() != key:
+                return
+            self._reader_url = key
+            self.tab.update(readable=result is True)
+        self.page.runJavaScript(reader.readerable_js(), BRIDGE_WORLD, done)
+
+    def extract_article(self, callback: Callable[[dict | None], None]) -> None:
+        """Pull the article out of the page for reading mode. ``callback(article | None)``."""
+        if self.disposed or self.tab.sleeping or not reader.available():
+            callback(None)
+            return
+        self.page.runJavaScript(reader.extract_js(), BRIDGE_WORLD,
+                                lambda result: None if self.disposed else callback(reader.parse_result(result)))
 
     def _track_fallback(self, url: QUrl) -> None:
         """Warn once the http version of a failed https upgrade commits; retract on leaving the site."""
@@ -518,7 +562,7 @@ class TabController(QObject):
                 return
             vault.save_credential(u, username, password, self.space.id)
             self.refresh_login_count()
-            self.ctx.hooks.toast("Password saved to the encrypted vault", "key")
+            self.ctx.hooks.toast("Password saved", "key")
 
         def never():
             if vault.mode == "master" and vault.is_locked and not self.ctx.hooks.unlock_vault():
@@ -650,6 +694,7 @@ class TabController(QObject):
             return
         self.disposed = True
         self._spa_timer.stop()
+        self._reader_timer.stop()
         for req in self._pending:
             try:
                 if isinstance(req, QWebEngineCertificateError):

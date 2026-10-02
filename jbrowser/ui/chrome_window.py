@@ -13,7 +13,7 @@ from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from jbrowser.platform import win
-from jbrowser.ui.backdrop import Backdrop, caption_hit
+from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit
 from jbrowser.ui.icons import app_icon, paint_logo
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import IconButton
@@ -75,7 +75,6 @@ class ChromeWindow(QWidget):
         self.root.setContentsMargins(nav_width + 24, 14, 24, 18)
         self.root.setSpacing(12)
         c = self.caption
-        c.min_btn.clicked.connect(self.showMinimized)
         c.max_btn.clicked.connect(self._toggle_max)
         c.close_btn.clicked.connect(self.close)
         self.native = win.NativeFrame(lambda: int(self.winId()), self.devicePixelRatioF, self._hit_test,
@@ -83,6 +82,8 @@ class ChromeWindow(QWidget):
         self.native.resizable = lambda: not self.isFullScreen()
         self.backdrop = Backdrop(self)               # the material and light/dark mode (ui/backdrop.py)
         self.native.on_system_change = self.backdrop.schedule
+        self.transitions = WindowTransitions(self, self.native)   # minimise / maximise without colour warp
+        c.min_btn.clicked.connect(lambda: self.transitions.run(self.showMinimized))
         theme().changed.connect(self.update)
         if parent is not None:
             g = parent.geometry()
@@ -90,7 +91,7 @@ class ChromeWindow(QWidget):
 
     # --------------------------------------------------------------- frame
     def _toggle_max(self) -> None:
-        self.showNormal() if self.isMaximized() else self.showMaximized()
+        self.transitions.run(self.showNormal if self.isMaximized() else self.showMaximized)
 
     def _hit_test(self, local: QPoint) -> int:
         return caption_hit(self, local, self.caption.max_btn)

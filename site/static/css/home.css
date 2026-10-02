@@ -74,6 +74,73 @@
 .glance b { font: 700 20px var(--font-display); }
 .glance span { color: var(--text-3); font-size: 14px; }
 
+/* "New" pill in the hero's eyebrow (2.0 announcement) */
+.eyebrow-big { padding: 6px 16px 6px 6px; }
+.new-pill {
+  padding: 3px 10px; border-radius: 999px; background: var(--brand); color: #fff; font-size: 12px;
+  letter-spacing: .04em; text-transform: uppercase;
+}
+
+/* ---------------------------------------------------------------- JBrowser 2.0 */
+.v2-banner {
+  position: relative; overflow: hidden; display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 44px;
+  align-items: center; padding: 48px 56px; border-radius: 28px; border: 1px solid var(--border-2);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--brand-1) 16%, var(--surface)),
+                                      color-mix(in srgb, var(--brand-3) 12%, var(--surface)));
+  box-shadow: 0 30px 90px rgba(60, 30, 160, .22);
+}
+.v2-glow {
+  position: absolute; inset: -40%; pointer-events: none; opacity: .5;
+  background: radial-gradient(30% 40% at 20% 50%, rgba(138, 92, 255, .45), transparent 70%),
+              radial-gradient(28% 36% at 85% 30%, rgba(255, 92, 157, .30), transparent 70%);
+  animation: glow-drift 18s ease-in-out infinite alternate;
+}
+.v2-badge {
+  position: relative; display: grid; place-items: center; width: 168px; height: 168px; border-radius: 44px;
+  background: var(--brand); box-shadow: 0 24px 60px rgba(110, 70, 255, .45), inset 0 1px 0 rgba(255, 255, 255, .35);
+  transform: rotate(-6deg); animation: v2-float 6s ease-in-out infinite alternate;
+}
+.v2-badge span { font: 800 68px/1 var(--font-display); color: #fff; letter-spacing: -.04em; }
+@keyframes v2-float { to { transform: rotate(-2deg) translateY(-8px); } }
+@media (prefers-reduced-motion: reduce) { .v2-badge, .v2-glow { animation: none; } }
+.v2-copy { position: relative; }
+.v2-copy .section-title { margin: 6px 0 12px; }
+.v2-lead { font-size: 18px; color: var(--text-2); max-width: 40em; margin: 0 0 22px; }
+.v2-copy .fineprint { margin: 14px 0 0; }
+.v2-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; margin-top: 22px; }
+.v2-card {
+  display: flex; flex-direction: column; border-radius: 22px; overflow: hidden; background: var(--surface);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+  transition: transform .25s var(--ease), border-color .25s, box-shadow .25s;
+}
+.v2-card:hover { transform: translateY(-4px); border-color: color-mix(in srgb, var(--accent) 40%, var(--border));
+  box-shadow: 0 18px 44px rgba(60, 40, 160, .18); }
+.v2-card .shot-button, .v2-card .shot { border-radius: 0; }
+.v2-card .shot { aspect-ratio: 2595 / 1706; object-fit: cover; border-bottom: 1px solid var(--border); }
+.v2-text { padding: 20px 22px 22px; }
+.v2-text h3 { font-size: 20px; margin: 14px 0 6px; }
+.v2-text p { color: var(--text-2); font-size: 15px; margin: 0 0 14px; }
+.v2-text .chips { justify-content: flex-start; }
+.v2-text .chips li { font-size: 13px; padding: 4px 12px; }
+.v2-card:hover .f-icon, .v2-mini:hover .f-icon { transform: scale(1.08) rotate(-4deg); }
+.v2-more { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 18px; }
+.v2-mini {
+  display: flex; gap: 14px; align-items: flex-start; padding: 18px; border-radius: 18px; background: var(--surface);
+  border: 1px solid var(--border); box-shadow: var(--shadow);
+}
+.v2-mini h3 { font-size: 16px; margin: 2px 0 4px; }
+.v2-mini p { font-size: 14px; color: var(--text-2); margin: 0; line-height: 1.5; }
+@media (max-width: 1100px) { .v2-more { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 1000px) {
+  .v2-grid { grid-template-columns: 1fr; }
+  .v2-banner { grid-template-columns: 1fr; padding: 36px 28px; gap: 24px; text-align: center; }
+  .v2-badge { margin: 0 auto; width: 128px; height: 128px; border-radius: 34px; }
+  .v2-badge span { font-size: 52px; }
+  .v2-copy .cta { justify-content: center; }
+  .v2-lead { margin-left: auto; margin-right: auto; }
+}
+@media (max-width: 560px) { .v2-more { grid-template-columns: 1fr; } }
+
 /* ---------------------------------------------------------------- tour */
 .tour-tabs {
   display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 auto 28px; padding: 6px;

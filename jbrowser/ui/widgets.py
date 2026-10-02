@@ -12,7 +12,7 @@ from PyQt6.QtWidgets import (QAbstractButton, QFrame, QGraphicsOpacityEffect, QH
 from jbrowser.core.motion import motion
 from jbrowser.models.infobar import InfoBarSpec
 from jbrowser.ui.icons import draw_glyph
-from jbrowser.ui.theme import theme
+from jbrowser.ui.theme import solid, theme
 
 
 class IconButton(QAbstractButton):
@@ -376,7 +376,7 @@ class Toast(QWidget):
         r = QRectF(self.rect()).adjusted(1, 1, -1, -1)
         path = QPainterPath()
         path.addRoundedRect(r, r.height() / 2, r.height() / 2)
-        p.fillPath(path, th.c("panel"))
+        p.fillPath(path, solid(th.c("panel")))      # toasts usually sit over a web page
         p.setPen(QPen(th.c("panel_border"), 1))
         p.drawPath(path)
         draw_glyph(p, QRectF(12, 0, 22, self.height()), self._glyph, th.c("accent"), 15)

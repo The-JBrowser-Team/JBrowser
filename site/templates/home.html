@@ -13,7 +13,7 @@
 <section class="hero">
   <div class="hero-glow" aria-hidden="true"></div>
   <div class="wrap hero-copy">
-    <a class="eyebrow reveal" href="{{root}}changelog/index.html"><span class="dot"></span>New in {{latest_version}}: steadier windows, frosted menus <span aria-hidden="true">→</span></a>
+    <a class="eyebrow eyebrow-big reveal" href="#v2"><span class="new-pill">New</span>JBrowser 2.0 is here: stacked cards, reading mode, safer downloads <span aria-hidden="true">→</span></a>
     <h1 class="reveal">Welcome to the internet <span class="grad">- again.</span></h1>
     <p class="lead reveal">Your pages side by side on one calm canvas. Private by default. Made for Windows&nbsp;11.</p>
     <div class="cta reveal">
@@ -41,6 +41,88 @@
   </div>
 </section>
 
+<!-- ================================================================ JBrowser 2.0 -->
+<section class="section v2" id="v2" aria-labelledby="v2-title">
+  <div class="wrap">
+    <div class="v2-banner reveal">
+      <div class="v2-glow" aria-hidden="true"></div>
+      <div class="v2-badge" aria-hidden="true"><span>2.0</span></div>
+      <div class="v2-copy">
+        <p class="kicker">Out now · the biggest update yet</p>
+        <h2 class="section-title" id="v2-title">JBrowser <span class="grad">2.0</span> is here.</h2>
+        <p class="v2-lead">Stack your cards into columns, read articles without the clutter, and download with more
+          confidence, all in a cleaner, calmer ribbon. Free, as always.</p>
+        <div class="cta">
+          <a class="btn btn-primary" href="{{exe_url}}" data-latest-exe>Get JBrowser 2.0</a>
+          <a class="btn btn-ghost" href="{{root}}changelog/index.html">Everything that's new</a>
+        </div>
+        <p class="fineprint">Already have JBrowser? It updates itself: look for <b>Update</b> on the ribbon.</p>
+      </div>
+    </div>
+    <div class="v2-grid">
+      <article class="v2-card reveal">
+        <button class="shot-button" type="button" data-zoom aria-label="Enlarge the screenshot of stacked cards">
+          <img class="shot" src="{{root}}static/img/shots/stack-dark-1280.webp"
+               srcset="{{root}}static/img/shots/stack-dark-1280.webp 1280w, {{root}}static/img/shots/stack-dark-1920.webp 1920w, {{root}}static/img/shots/stack-dark-full.webp 2595w"
+               sizes="(max-width: 1000px) 100vw, 400px" width="2595" height="1706" loading="lazy"
+               alt="Two web pages stacked in one column on the left, a third page beside them">
+        </button>
+        <div class="v2-text">
+          <div class="f-icon" style="--c:#5b8cff"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3.5" width="9" height="7.5" rx="1.8"/><rect x="3" y="13" width="9" height="7.5" rx="1.8"/><rect x="14" y="3.5" width="7" height="17" rx="1.8"/></svg></div>
+          <h3>Stack cards</h3>
+          <p>Up to three cards in one column. Drag a card onto another, or press the new stack button. Cards in a
+            column always share one width.</p>
+          <ul class="chips"><li>Alt+Shift+S</li><li>Saved with your session</li></ul>
+        </div>
+      </article>
+      <article class="v2-card reveal">
+        <button class="shot-button" type="button" data-zoom aria-label="Enlarge the screenshot of the stack picker">
+          <img class="shot" src="{{root}}static/img/shots/stack-picker-dark-1280.webp"
+               srcset="{{root}}static/img/shots/stack-picker-dark-1280.webp 1280w, {{root}}static/img/shots/stack-picker-dark-1920.webp 1920w, {{root}}static/img/shots/stack-picker-dark-full.webp 2595w"
+               sizes="(max-width: 1000px) 100vw, 400px" width="2595" height="1706" loading="lazy"
+               alt="The stack picker open under a card, offering a new page, open cards, favourites and bookmarks">
+        </button>
+        <div class="v2-text">
+          <div class="f-icon" style="--c:#a66bff"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="3" width="17" height="7" rx="1.8"/><rect x="3.5" y="13" width="17" height="8" rx="1.8" stroke-dasharray="2.6 2.2"/><path d="M12 15.5v3M10.5 17h3"/></svg></div>
+          <h3>Right where you want it</h3>
+          <p>The stack button opens a space below your card: pick a new page, a card that's already open, a favourite or
+            a bookmark, and set the column's width.</p>
+          <ul class="chips"><li>Right-click for split views</li></ul>
+        </div>
+      </article>
+      <article class="v2-card reveal">
+        <button class="shot-button" type="button" data-zoom aria-label="Enlarge the screenshot of reading mode">
+          <img class="shot" src="{{root}}static/img/shots/reading-dark-1280.webp"
+               srcset="{{root}}static/img/shots/reading-dark-1280.webp 1280w, {{root}}static/img/shots/reading-dark-1920.webp 1920w, {{root}}static/img/shots/reading-dark-full.webp 2595w"
+               sizes="(max-width: 1000px) 100vw, 400px" width="2595" height="1706" loading="lazy"
+               alt="A Wikipedia article in reading mode: large, calm text without menus or sidebars">
+        </button>
+        <div class="v2-text">
+          <div class="f-icon" style="--c:#ff9f43"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5z"/><path d="M12 6.5v13"/></svg></div>
+          <h3>Reading mode</h3>
+          <p>Just the article's text and pictures: no ads, no menus. Serif or sans, four colour themes and any text
+            size. JBrowser suggests it once while you read.</p>
+          <ul class="chips"><li>F9</li><li>Powered by Mozilla Readability</li></ul>
+        </div>
+      </article>
+    </div>
+    <div class="v2-more reveal">
+      <article class="v2-mini"><div class="f-icon" style="--c:#2ecc71"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"/><path d="M12 8v5M12 15.8v.2"/></svg></div>
+        <div><h3>Safer downloads</h3><p>Programs, files from dangerous sites and files from sites without HTTPS are
+          flagged. Keep them or delete them safely, or let strict mode block them.</p></div></article>
+      <article class="v2-mini"><div class="f-icon" style="--c:#1abc9c"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 19.5h15"/></svg></div>
+        <div><h3>A cleaner ribbon</h3><p>The shield moved into the address bar. Downloads appear only when you
+          download something, with the percentage right there.</p></div></article>
+      <article class="v2-mini"><div class="f-icon" style="--c:#ff5c9d"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg></div>
+        <div><h3>Fixes itself</h3><p>Google sign-in trouble? Press <em>Fix and sign in again</em>. No more colour
+          warp when you minimise or maximise.</p></div></article>
+      <article class="v2-mini"><div class="f-icon" style="--c:#5b8cff"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6.5h14M5 11.5h10M5 16.5h12"/></svg></div>
+        <div><h3>Plainer words</h3><p>Settings and messages rewritten to be shorter and easier to read, for
+          everyone.</p></div></article>
+    </div>
+  </div>
+</section>
+
 <!-- ================================================================ tour -->
 <section class="section tour" id="tour">
   <div class="wrap">
@@ -50,8 +132,8 @@
     </div>
     <div class="tour-tabs reveal" role="tablist" aria-label="Features">
       <button role="tab" aria-selected="true" aria-controls="tour-panel" id="tab-canvas" data-shot="split-dark"
-              data-title="An endless canvas" data-text="Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters."
-              data-chips="Alt+Shift+D splits 50/50|Scroll past the end for a new card|Drag cards to reorder"
+              data-title="An endless canvas" data-text="Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters, or stack up to three in a column."
+              data-chips="Alt+Shift+D splits 50/50|Alt+Shift+S stacks a card|Drag cards to reorder"
               data-alt="Three web pages side by side, each a third of the window"><span class="tt-bar"></span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="6" width="7" height="12" rx="1.5"/><rect x="18.5" y="6" width="3" height="12" rx="1.2"/></svg>Canvas</button>
       <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-gallery" data-shot="gallery-all-dark" data-themed="gallery-all"
@@ -65,7 +147,7 @@
               data-alt="The Lazy Toolbar open over the canvas, listing open cards and search suggestions"><span class="tt-bar"></span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M7 10l3 2-3 2M12 14h5"/></svg>Lazy Toolbar</button>
       <button role="tab" aria-selected="false" aria-controls="tour-panel" id="tab-privacy" data-shot="site-info-dark"
-              data-title="Private by default" data-text="Ads and trackers are blocked before they load, and the empty boxes they leave are hidden. Click the lock to see what was stopped."
+              data-title="Private by default" data-text="Ads and trackers are blocked before they load, and the empty boxes they leave are hidden. Click the shield in the address bar to see what was stopped."
               data-chips="EasyList and EasyPrivacy|Phishing and malware protection|Secure DNS (Quad9)"
               data-alt="The site information panel for github.com showing six trackers blocked"><span class="tt-bar"></span>
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2.8l7.5 3v5.7c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V5.8z"/><path d="M8.5 12l2.4 2.4 4.6-4.8"/></svg>Privacy</button>
@@ -83,8 +165,8 @@
     <div class="tour-panel" id="tour-panel" role="tabpanel" aria-labelledby="tab-canvas">
       <div class="tour-caption">
         <h3 id="tour-title">An endless canvas</h3>
-        <p id="tour-text">Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters.</p>
-        <ul class="chips" id="tour-chips"><li>Alt+Shift+D splits 50/50</li><li>Scroll past the end for a new card</li><li>Drag cards to reorder</li></ul>
+        <p id="tour-text">Pages sit side by side instead of hiding behind tabs. Split them into halves, thirds or quarters, or stack up to three in a column.</p>
+        <ul class="chips" id="tour-chips"><li>Alt+Shift+D splits 50/50</li><li>Alt+Shift+S stacks a card</li><li>Drag cards to reorder</li></ul>
       </div>
       <button class="shot-button tour-shot" type="button" data-zoom aria-label="Enlarge this screenshot">
         <img class="shot" id="tour-img" src="{{root}}static/img/shots/split-dark-1920.webp"
@@ -137,7 +219,7 @@
     </div>
     <div class="feature-grid">
       <article class="feature reveal"><div class="f-icon" style="--c:#5b8cff"><svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="5" height="12" rx="1.5"/><rect x="9.5" y="6" width="7" height="12" rx="1.5"/><rect x="18.5" y="6" width="3" height="12" rx="1.2"/></svg></div>
-        <div><h3>Endless canvas</h3><p>Pages side by side, not hidden in tabs.</p></div></article>
+        <div><h3>Endless canvas</h3><p>Pages side by side or stacked, never hidden in tabs.</p></div></article>
       <article class="feature reveal"><div class="f-icon" style="--c:#a66bff"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="5" rx="2"/><rect x="3" y="10.5" width="18" height="5" rx="2"/><rect x="3" y="17" width="18" height="3.5" rx="1.75"/></svg></div>
         <div><h3>Isolated spaces</h3><p>Separate logins for work, home and everything else.</p></div></article>
       <article class="feature reveal"><div class="f-icon" style="--c:#ff5c9d"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="2"/><rect x="13" y="3" width="8" height="8" rx="2"/><rect x="3" y="13" width="8" height="8" rx="2"/><rect x="13" y="13" width="8" height="8" rx="2"/></svg></div>

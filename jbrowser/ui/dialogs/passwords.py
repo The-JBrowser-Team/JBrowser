@@ -471,12 +471,12 @@ class PasswordsDialog(ChromeWindow):
             QMessageBox.warning(self, "Master password", "The passwords did not match.")
             return
         if vault.set_master_password(pw1):
-            self.ui.toast("Vault now protected by your master password", "lock")
+            self.ui.toast("Your passwords are now protected by your master password", "lock")
         self.reload()
 
     def _remove_master(self) -> None:
         if QMessageBox.question(self, "Remove master password",
                                 "Protect the vault with your Windows account instead of a master password?") \
                 == QMessageBox.StandardButton.Yes and self.ctx.vault.remove_master_password():
-            self.ui.toast("Vault protected by Windows (DPAPI)", "key")
+            self.ui.toast("Your passwords are protected by your Windows account", "key")
         self.reload()

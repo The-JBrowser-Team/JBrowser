@@ -28,6 +28,32 @@ animated layout possible.
 Width presets (Alt+1 … Alt+9, Alt+0), splits (50/50, 33×3, 25×4) and *toggle full width* only change `tab.width`
 on the selected cards; the layout follows.
 
+<!-- if >= 2.0.0 -->
+## Columns: stacked cards
+
+[[new 2.0.0]] Up to `MAX_STACK` (3) cards can stack in one **column** ([models/state.py](source:jbrowser/models/state.py)):
+
+- Cards in a column share a `tab.stack` id and sit next to each other in `space.tabs`. `BrowserState.columns(space)`
+  groups contiguous cards with the same id; `column_of()`, `can_stack_onto()`, `stack_tab(tab, onto, above)` and
+  `unstack()` work on them, and `normalize_stacks()` repairs a space after a card is closed or moved (a column of one
+  is no column; extra cards past the limit leave it).
+- Cards in a column always have the same width: `_sync_column_widths()` (on every pipeline flush) gives the whole
+  column the width of the card that changed. New cards land outside columns (`_outside_columns()`), never between two
+  stacked cards; `add_tab(stack_onto=...)` puts a new card just below a given one.
+- The session saves `stack` with each card and restores the columns.
+- `targets()` lays the canvas out by columns: each entry is `(x, width, top, height)`, with `top` and `height` as
+  fractions of the canvas height, so the cards of a column split it evenly.
+- **Dragging:** the lower 45 % of a card (or its top 20 %) under the pointer opens a drop slot, a dashed accent
+  outline where the card will go (`_stack_target_at()`, with hysteresis over the slot); letting go there calls
+  `stack_tab()`. A dragged card first leaves its own column, and columns reorder as a whole
+  (`_reorder_by_columns()`).
+- **The stack picker** ([ui/stack_picker.py](source:jbrowser/ui/stack_picker.py)) opens in a slot below the current
+  card (the ribbon's stack button, Alt+Shift+S, or the card menu): a new page (search or address, with history
+  matches), an open card of the space, a favourite or a bookmark. Choosing one hands the slot's place to the new card,
+  which grows out of it. Its footer sets the column's width and opens the layout menu (split views, widths, focus
+  view), which is also the stack button's right-click menu.
+
+<!-- endif -->
 ## Scrolling and panning
 
 `scroll_to()`, `scroll_by()` and `ensure_visible(tab_id, align)` move the offset, animated with `motion()`. The

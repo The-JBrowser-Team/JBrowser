@@ -7,11 +7,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from PyQt6.QtCore import QRect, Qt, QUrl
+from PyQt6.QtCore import QRect, Qt, QTimer, QUrl
 from PyQt6.QtGui import QPainter
 from PyQt6.QtWebEngineCore import QWebEnginePage, QWebEngineProfile
 from PyQt6.QtWebEngineWidgets import QWebEngineView
-from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PyQt6.QtWidgets import QHBoxLayout, QLabel, QPushButton, QVBoxLayout, QWidget
 
 from jbrowser.core.urls import pretty_url
 from jbrowser.engine.signin import is_rejection_url
@@ -70,6 +70,19 @@ class PopupWindow(QWidget):
         bl.addWidget(self.address, 1)
         bl.addWidget(promote)
         lay.addWidget(bar)
+        # Google refused the sign-in: the same fix as in cards (TabController._offer_signin_fix).
+        self.fix_bar = QWidget(self)
+        fl = QHBoxLayout(self.fix_bar)
+        fl.setContentsMargins(12, 6, 8, 6)
+        msg = QLabel("Google couldn't sign you in with this browser. JBrowser can fix this.", self.fix_bar)
+        msg.setWordWrap(True)
+        fix = QPushButton("Fix and sign in again", self.fix_bar)
+        fix.setProperty("primary", True)
+        fix.clicked.connect(self._fix_signin)
+        fl.addWidget(msg, 1)
+        fl.addWidget(fix)
+        self.fix_bar.hide()
+        lay.addWidget(self.fix_bar)
         self.view = QWebEngineView(self)
         self.page = PopupPage(profile, self)
         self._interceptor = PageInterceptor(ctx.privacy, lambda _h: None, self)
@@ -85,14 +98,22 @@ class PopupWindow(QWidget):
         self._bar = bar
 
     def _on_url(self, url: QUrl) -> None:
-        if is_rejection_url(url) and self.ctx.settings.get("advanced.identity") != "firefox":
-            self.ctx.hooks.toast("Google didn't accept this browser. Settings → Advanced → How JBrowser introduces "
-                                 "itself → Firefox lets the sign-in through.", "warning")
+        self.fix_bar.setVisible(is_rejection_url(url) and self.ctx.settings.get("advanced.identity") != "firefox")
         self.address.setText(pretty_url(url))
         self.address.setToolTip(url.toString())
         self._secure = url.scheme() == "https"
         self._bar.update()
         self._lock.update()
+
+    def _fix_signin(self) -> None:
+        self.fix_bar.hide()
+        self.ctx.profiles.start_signin_fix()
+        h = self.page.history()
+        start = h.itemAt(0).url() if h.count() else QUrl()
+        # Start the sign-in again from the page that opened this window's flow (the site's "Sign in with
+        # Google" address), so the site still receives the result.
+        QTimer.singleShot(0, lambda u=start: self.page.setUrl(u if u.isValid() and not u.isEmpty()
+                                                              else QUrl("https://accounts.google.com/")))
 
     def _on_geometry(self, rect: QRect) -> None:
         if rect.width() > 100 and rect.height() > 100:

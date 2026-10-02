@@ -97,6 +97,9 @@ class Tab(QObject):
         self.pending_history: bytes | None = None
         self.pinned = False            # kept at the start of its space, no close button
         self.favourite_id = ""         # set when the card was opened from a sidebar favourite
+        self.stack = ""                # shared by cards stacked in one column (models/state.py)
+        self.readable = False          # the page looks like an article (engine/reader.py)
+        self.reading = False           # shown in reading mode
         self.last_active = time.monotonic()
         self.created = time.time()
         self.disposed = False

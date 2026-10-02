@@ -88,12 +88,17 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
               shortcuts=[f"Alt+{n}"], icon="columns", keywords=f"width resize {n}0 percent")
     c.add("layout.scale10", "Scale card(s) to 100% (full width)", LAYOUT, lambda: ui.scale_selected(1.0),
           shortcuts=["Alt+0"], icon="fullscreen", keywords="width resize full 100 percent")
-    c.add("layout.split2", "Split view 50 / 50", LAYOUT, lambda: ui.split(2), shortcuts=["Alt+Shift+D"],
-          icon="columns", keywords="dual side by side two")
-    c.add("layout.split3", "Triple columns 33 / 33 / 33", LAYOUT, lambda: ui.split(3), shortcuts=["Alt+Shift+T"],
-          icon="tiles", keywords="three thirds")
-    c.add("layout.split4", "Quad columns 25% × 4", LAYOUT, lambda: ui.split(4), shortcuts=["Alt+Shift+Q"],
-          icon="grid", keywords="four quarters")
+    c.add("layout.split2", "Two columns side by side", LAYOUT, lambda: ui.split(2), shortcuts=["Alt+Shift+D"],
+          icon="columns", keywords="dual split 50 two")
+    c.add("layout.split3", "Three columns", LAYOUT, lambda: ui.split(3), shortcuts=["Alt+Shift+T"],
+          icon="tiles", keywords="triple thirds 33")
+    c.add("layout.split4", "Four columns", LAYOUT, lambda: ui.split(4), shortcuts=["Alt+Shift+Q"],
+          icon="grid", keywords="quad quarters 25")
+    c.add("layout.stack", "Stack a card below", LAYOUT, lambda: ui.open_stack_picker(),
+          shortcuts=["Alt+Shift+S", "Alt+Shift+Down"], icon="stack",
+          keywords="vertical column above below rows split horizontal")
+    c.add("layout.unstack", "Take card out of its column", LAYOUT, lambda: ui.unstack(), shortcuts=["Alt+Shift+U"],
+          icon="columns", keywords="unstack separate")
     c.add("layout.focus80", "Focus view 80%", LAYOUT, lambda: ui.scale_selected(0.8), icon="fullscreen",
           keywords="focus wide")
     c.add("layout.full_toggle", "Toggle full width for card", LAYOUT,
@@ -176,6 +181,11 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
           keywords="help cheat sheet hotkeys")
     c.add("view.force_dark_web", "Force dark mode on web pages", VIEW, lambda: s.toggle("appearance.force_dark_web"),
           icon="moon", state=on_off("appearance.force_dark_web"))
+    c.add("view.reading", "Reading mode", VIEW, lambda: ui.toggle_reading(), shortcuts=["F9", "Alt+Shift+R"],
+          icon="reading", keywords="reader article distraction clutter text",
+          state=lambda: "On" if ctx.state.active_tab is not None and ctx.state.active_tab.reading else None)
+    c.add("view.reading_offer", "Suggest reading mode on articles", VIEW, lambda: s.toggle("reading.offer"),
+          icon="reading", state=on_off("reading.offer"), keywords="reader pop-up popup")
 
     # ----------------------------------------------------------------- tools
     TOOLS = "Tools"
@@ -204,7 +214,7 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
     c.add("privacy.clear_data", "Clear browsing data…", PRIV, lambda: ui.open_dialog("clear_data"),
           shortcuts=["Ctrl+Shift+Del"], icon="clear", keywords="history cache cookies delete")
     c.add("privacy.clear_cache", "Clear cache (all spaces)", PRIV,
-          lambda: (ctx.profiles.clear_cache(), ui.toast("HTTP cache cleared for all spaces", "clear")), icon="clear")
+          lambda: (ctx.profiles.clear_cache(), ui.toast("Cache cleared for all spaces", "clear")), icon="clear")
     c.add("privacy.clear_cache_space", "Clear cache (current space)", PRIV,
           lambda: (ctx.profiles.clear_cache(ctx.state.active_space_id), ui.toast("Cache cleared", "clear")),
           icon="clear")

@@ -32,7 +32,7 @@ DEFAULT_SEARCH_KEYWORDS = [
     {"keyword": "r", "name": "Reddit", "url": "https://www.reddit.com/search/?q={query}"},
 ]
 
-SETTINGS_VERSION = 2
+SETTINGS_VERSION = 3
 
 DEFAULTS: dict[str, Any] = {
     "settings.version": SETTINGS_VERSION,
@@ -41,6 +41,7 @@ DEFAULTS: dict[str, Any] = {
     "appearance.material": "acrylic",        # acrylic | mica | mica_alt | solid
     "appearance.use_accent": True,
     "appearance.animations": True,
+    "appearance.window_animations": True,    # Windows' minimise / maximise animations for the main window
     "appearance.sidebar_collapsed": False,
     "appearance.favorites_bar": True,
     "appearance.force_dark_web": False,
@@ -58,6 +59,11 @@ DEFAULTS: dict[str, Any] = {
     "updates.auto_check": True,
     "updates.last_check": 0,
     "updates.skipped": "",                   # a version the user chose to skip
+    # Reading mode (engine/reader.py, ui/reader_view.py)
+    "reading.offer": True,                   # suggest reading mode on articles ("Don't show again" turns it off)
+    "reading.font": "serif",                 # serif | sans
+    "reading.theme": "auto",                 # auto (follows JBrowser) | light | sepia | dark
+    "reading.zoom": 1.0,
     # Canvas
     "canvas.default_width": 0.5,
     "canvas.show_minimap": True,
@@ -107,11 +113,13 @@ DEFAULTS: dict[str, Any] = {
     # Downloads
     "downloads.directory": "",
     "downloads.ask": False,
-    "downloads.protect": True,
+    "downloads.protection": "standard",      # standard (warn: keep or delete) | strict (block) | off
+    "toolbar.downloads_button": "auto",      # auto (while there are downloads this session) | always
     # Advanced
     "advanced.media_notice": False,           # explain videos in formats the engine can't play (H.264, AAC)
     "advanced.gpu_mode": "auto",              # auto | compatible | off  (applied at start-up)
     "advanced.identity": "current",           # current: newest Chrome · engine: engine's version · firefox
+    "advanced.identity_fix": "",              # set by "Fix and sign in again": the identity to return to
     # Zoom
     "zoom.sites": {},
     # Profiles scheduled for deletion on next start
@@ -146,6 +154,10 @@ class Settings(QObject):
         if version < 2:
             # 1.1 defaults: Acrylic material.
             self._values["appearance.material"] = "acrylic"
+        if version < 3:
+            # 2.0: the on/off "warn about dangerous files" switch became three protection levels.
+            if self._values.pop("downloads.protect", True) is False:
+                self._values["downloads.protection"] = "off"
         self._values["settings.version"] = SETTINGS_VERSION
 
     def reset_to_defaults(self) -> None:

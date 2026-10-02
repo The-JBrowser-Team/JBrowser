@@ -5,6 +5,55 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [2.0.0] - 2026-10-02
+
+JBrowser 2.0 is the biggest update yet: cards can now stack in columns, articles open in a calm reading mode, and
+downloads are watched over more carefully, all in a cleaner ribbon.
+
+### Added
+- **Stack cards in columns.** Put up to three cards on top of each other in one column. Drag a card onto the lower
+  part of another (or its top edge to go above), or press the new **stack** button on the ribbon (**Alt+Shift+S**).
+  The button opens a space right below the current card where you choose what goes there: a new page, a card that is
+  already open, a favourite or a bookmark. Cards in a column always share one width, so changing one changes them
+  all, and the picker sets the column's width in one click. Drag a card out, or press **Alt+Shift+U**, to take it out
+  of its column. Columns are saved with your session. The stack button replaces the old layout button: right-click it
+  (or use the button in the picker) for split views and card widths.
+- **Reading mode.** Shows an article's text and pictures without ads, menus or clutter, in a clear layout with a
+  choice of serif or sans-serif text, four colour themes (matching JBrowser, light, sepia, dark) and adjustable text
+  size. Turn it on with the reading button on the ribbon or on a card, or press **F9**. It's off until you ask for it;
+  when JBrowser sees you reading an article it suggests it once, with **Don't show again** if you'd rather it didn't.
+  Articles are shown in a separate page where no script from the website runs, and trackers stay blocked. (Powered by
+  Mozilla's Readability, the engine behind Firefox Reader View.)
+- **Download protection levels** (Settings › Downloads). JBrowser now warns about programs and scripts, files from
+  sites on its dangerous-sites list, and files from sites without a secure connection (no HTTPS).
+  - **Standard** (the default) warns you and lets you **Keep** the file or **Delete** it. Until you decide, the file is
+    saved so it can't be opened by accident.
+  - **Strict** blocks those downloads entirely.
+  - **Off** turns the warnings off.
+- **Download progress at a glance.** While files download, the Downloads button shows the percentage over a progress
+  bar.
+
+### Changed
+- **A cleaner ribbon.** The privacy shield moved into the right side of the address bar, next to the star. The
+  Downloads button only appears once you download something (Settings › Appearance can show it all the time).
+- **Click anywhere on a finished download** in the Downloads window to open it, not just the small button.
+- **Favourites reopen as wide as you left them.** Closing a card opened from a favourite remembers its width; reopening
+  the favourite opens it at that width again. (Cards brought back from the Archive keep their width too.)
+- **Google sign-in fixes itself.** When Google says it couldn't sign you in, press **Fix and sign in again**. JBrowser
+  then presents itself as Firefox until you've signed in, and goes back to its usual settings by itself afterwards.
+- **Easier to read.** Settings, messages and the welcome tour were rewritten in plainer, shorter language. Advanced
+  options keep their names and explain more.
+- **Solid notifications over pages.** Toasts and the link preview are no longer see-through over web pages, so the
+  page's text can't show through them.
+- **The welcome tour** shows what's new: stacking, reading mode and the shield in the address bar.
+
+### Fixed
+- **No more colour warp when minimising or maximising.** On some PCs the window briefly turned the wrong colour while
+  Windows animated it. JBrowser now paints the window solid for the moment Windows takes its snapshot (from the
+  ribbon buttons, the taskbar, keyboard shortcuts or double-clicking the title bar), repaints once the animation ends,
+  and sets the window's frosted backdrop again when it comes back from the taskbar. If your PC still flickers, Settings
+  › Appearance › **Animate minimising and maximising** turns Windows' animation off for JBrowser.
+
 ## [1.6.2] - 2026-10-02
 
 ### Fixed

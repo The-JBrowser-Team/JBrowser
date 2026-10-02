@@ -35,7 +35,7 @@ if TYPE_CHECKING:
     from jbrowser.ui.window import MainWindow
 
 # Raise this to show the welcome again after an update that it introduces (2: colours and the Gallery).
-ONBOARDING_VERSION = 2
+ONBOARDING_VERSION = 3          # 3: JBrowser 2.0 (stacking, reading mode, the shield in the address bar)
 BRAND = ("#5b8cff", "#8a5cff", "#ff5c9d")
 
 # Intro timeline, matched to the intro sound (silence until 0.8 s, main hits at 1.75 s and
@@ -625,7 +625,7 @@ class Onboarding(QWidget):
         self.min_btn = IconButton("min", "Minimize", self, size=40, glyph_px=9, width=46)
         self.max_btn = IconButton("max", "Maximize", self, size=40, glyph_px=9, width=46)
         self.close_btn = IconButton("close", "Close", self, size=40, glyph_px=9, width=46, variant="close")
-        self.min_btn.clicked.connect(self.win.showMinimized)
+        self.min_btn.clicked.connect(lambda: self.win.transition(self.win.showMinimized))
         self.max_btn.clicked.connect(self.ui.toggle_maximize)
         self.close_btn.clicked.connect(self.win.close)
         self.mute_btn = IconButton("volume", "Sound effects on (click to mute)", self, size=34, glyph_px=14)
@@ -1032,10 +1032,14 @@ class Onboarding(QWidget):
         ("list", "Cards in this space", "Pinned cards stay on top, and the New card row is always there. Drag a card "
                                         "to reorder it, or onto a space to move it. Right-click to pin it or add it to "
                                         "favourites."),
+        ("stack", "Stack cards", "Put up to three cards on top of each other in one column: drag a card onto "
+                                 "the lower part of another, or press this button. Right-click it for layouts."),
+        ("reading", "Reading mode", "On an article, this shows just the text and pictures, without the clutter "
+                                    "(F9). JBrowser suggests it once when you're reading."),
         ("archive", "The Archive", "Closed a card by mistake? It waits here for 48 hours. Ctrl+Shift+T brings "
                                    "back the most recent one."),
-        ("shield", "Protection", "Trackers, fingerprinting and dangerous sites are blocked. Click the shield to "
-                                 "see what was stopped on a page."),
+        ("shield", "Protection", "Trackers, fingerprinting and dangerous sites are blocked. Click the shield in the "
+                                 "address bar to see what was stopped on a page."),
         ("logo", "Settings", "The logo opens Settings. Press Ctrl+/ whenever you want to see every shortcut."),
     ]
 
@@ -1044,8 +1048,8 @@ class Onboarding(QWidget):
         sb = w.sidebar
         return {"section": sb.section, "favourites": sb.favourites if sb.favourites.isVisible() else sb.spaces_label,
                 "pill": w.titlebar.pill, "canvas": w.stack, "gallery": w.titlebar.gallery_btn,
-                "list": sb.list, "archive": sb.archive_btn,
-                "shield": w.titlebar.shield, "logo": sb.header.logo}.get(name)
+                "list": sb.list, "archive": sb.archive_btn, "stack": w.titlebar.stack_btn,
+                "reading": w.titlebar.reading_btn, "shield": w.titlebar.pill, "logo": sb.header.logo}.get(name)
 
     def _target_rect(self, name: str) -> QRectF:
         wid = self._target_widget(name)
@@ -1053,6 +1057,8 @@ class Onboarding(QWidget):
             return QRectF(self.width() / 2 - 60, self.height() / 2 - 40, 120, 80)
         tl = self.mapFromGlobal(wid.mapToGlobal(QPoint(0, 0)))     # not an ancestor: go via global
         r = QRectF(tl.x(), tl.y(), wid.width(), wid.height())
+        if name == "shield":                                       # the shield inside the address bar
+            r = wid._shield_rect().translated(tl.x(), tl.y())
         if name == "list":
             r.setHeight(min(r.height(), 180))
         if name == "canvas":

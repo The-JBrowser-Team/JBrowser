@@ -299,31 +299,28 @@ class SettingsWindow(ChromeWindow):
                          (2 / 3, "Two thirds (66%)"), (0.8, "Wide (80%)"), (1.0, "Full width (100%)")]
         return self._page(
             "General",
-            "The basics. If you are new to JBrowser, start here: every option below explains what it does, and you "
-            "can change anything back at any time.",
+            "The basics. You can change any of these back at any time.",
             SettingCard("home", "Reopen my cards when JBrowser starts",
-                        "When this is on, the cards you had open in each space come back the next time you open "
-                        "JBrowser. Only the cards you can see are loaded straight away; the others wait quietly "
-                        "until you click them, so start-up stays fast. Your spaces and signed-in websites are kept "
-                        "either way.", self._toggle("startup.restore_session")),
+                        "Your cards come back where you left them. Only the ones on screen load straight away, so "
+                        "JBrowser still starts quickly.", self._toggle("startup.restore_session")),
             SettingCard("search", "Search engine",
-                        "The service used when you type words (rather than a web address) into the Lazy Toolbar. "
-                        "You can still search with any engine by typing its keyword first, for example “yt cats” "
-                        "for YouTube (see Search).",
+                        "Used when you type words instead of a web address. To use another engine once, type its "
+                        "keyword first, like “yt cats” for YouTube.",
                         self._combo("search.engine", [(k, v[0]) for k, v in ENGINES.items()])),
             SettingCard("columns", "Width of new cards",
-                        "Cards sit side by side on a long horizontal canvas. This decides how wide a new card is. "
-                        "Half means two cards fit on screen together; full width gives one card the whole screen. "
-                        "Resize any time: select cards and press Alt+1 to Alt+9 (10% to 90%) or Alt+0 (100%).",
+                        "Cards sit side by side. Half fits two on screen; full width gives one card the whole "
+                        "window. To resize a card, select it and press Alt+1 to Alt+9, or Alt+0 for full width.",
                         self._combo("canvas.default_width", width_options)),
-            SettingCard("grid", "Show the overview strip under the cards",
-                        "A thin bar at the bottom of the canvas that shows every card as a small block and "
-                        "highlights the part you are looking at. Click or drag it to jump around quickly.",
+            SettingCard("stack", "Stack cards in a column",
+                        "Put up to three cards on top of each other: drag a card onto the lower part of another, or "
+                        "use the stack button on the ribbon (Alt+Shift+S). Cards in a column always share one width.",
+                        _button("Stack a card now", lambda: (self.close(), self.ui.open_stack_picker()))),
+            SettingCard("grid", "Show the overview strip",
+                        "A thin bar under the cards that shows where you are. Click or drag it to jump around.",
                         self._toggle("canvas.show_minimap")),
-            SettingCard("lightbulb", "How to get around",
-                        "Hold Alt and turn the mouse wheel to slide the canvas sideways. Alt+← and Alt+→ move "
-                        "between cards, Alt+↑ and Alt+↓ switch spaces. Press Ctrl+T to open a new card, Ctrl+K to "
-                        "search everything, and Ctrl+/ to see every keyboard shortcut.",
+            SettingCard("lightbulb", "Getting around",
+                        "Alt + mouse wheel slides between cards. Alt+← and Alt+→ move between cards, Alt+↑ and Alt+↓ "
+                        "switch spaces. Ctrl+T opens a card and Ctrl+K searches everything.",
                         _button("Show shortcuts", lambda: (self.close(), self.ui.open_hotkeys()))),
         )
 
@@ -331,50 +328,71 @@ class SettingsWindow(ChromeWindow):
         self._current_page = "appearance"
         return self._page(
             "Appearance", "How JBrowser looks and moves.",
-            SettingCard("lightning", "Fluid animations",
-                        "Smooth sliding and resizing of cards, the sidebar, menus and the Lazy Toolbar. Turn this "
-                        "off if your computer feels slow or if you prefer less motion on screen; every change will "
-                        "then happen instantly instead of animating.", self._toggle("appearance.animations")),
             SettingCard("sun", "Theme",
-                        "Dark or light colours. “Match Windows” follows the colour mode you picked in Windows "
-                        "Settings and switches automatically when you change it.",
+                        "Dark or light. “Match Windows” switches along with your Windows colour mode.",
                         self._combo("appearance.theme", [("system", "Match Windows"), ("dark", "Dark"),
                                                          ("light", "Light")])),
             SettingCard("tiles", "Window material",
-                        "The see-through effect behind the sidebar and title bar. Acrylic softly blurs whatever is "
-                        "behind the window. Mica gently tints the window with your desktop wallpaper. Mica Alt is a "
-                        "stronger tint. Solid turns transparency off and uses the least graphics power.",
+                        "The see-through look of the window. Acrylic blurs what's behind it, Mica takes a soft tint "
+                        "from your wallpaper (Mica Alt a stronger one), and Solid turns see-through effects off and "
+                        "uses the least graphics power.",
                         self._combo("appearance.material", [("acrylic", "Acrylic (default)"), ("mica", "Mica"),
                                                             ("mica_alt", "Mica Alt"), ("solid", "Solid")])),
             self._tint_card(),
             self._toggle_card("appearance.use_accent", "heart", "Use my Windows accent colour",
-                              "Highlights, buttons and the active card border use the accent colour you chose in "
-                              "Windows. Turn off to use JBrowser's blue."),
+                              "Buttons, highlights and the active card's border use your Windows accent colour. "
+                              "Turn off for JBrowser's blue."),
+            SettingCard("lightning", "Fluid animations",
+                        "Cards, menus and the sidebar slide smoothly. Turn off if your PC feels slow or you prefer "
+                        "less motion: everything then changes instantly.", self._toggle("appearance.animations")),
+            self._toggle_card("appearance.window_animations", "restore", "Animate minimising and maximising",
+                              "Windows' own animation when the window is minimised, maximised or restored. If the "
+                              "window flickers or changes colour at those moments on your PC, turn this off."),
             self._sidebar_card(),
-            self._toggle_card("sidebar.new_card_always", "add", "Always show the “New card” button",
-                              "The “New card” row under the cards in the sidebar. When this is off, it only appears "
-                              "once a space has at least one card."),
+            self._toggle_card("sidebar.new_card_always", "add", "Always show “New card” in the sidebar",
+                              "When off, it only appears once a space has a card."),
             self._toggle_card("appearance.favorites_bar", "bookmarks", "Show the bookmarks bar",
-                              "A row of your bookmarked sites under the ribbon, one click away. Bookmark the current "
-                              "page with Ctrl+D. You can also toggle the bar with Ctrl+Shift+B or by right-clicking "
-                              "the ribbon.", lambda v: self.ui.window.favbar.set_shown(v)),
+                              "Your bookmarked sites under the ribbon, one click away. Ctrl+D bookmarks a page and "
+                              "Ctrl+Shift+B shows or hides the bar.", lambda v: self.ui.window.favbar.set_shown(v)),
             self._home_card(),
-            self._toggle_card("appearance.sounds", "volume", "Sound effects",
-                              "Plays the gentle sounds of the welcome screen. JBrowser never plays sounds while you "
-                              "browse; websites control their own audio."),
+            SettingCard("download", "Downloads button on the ribbon",
+                        "Normally it only appears once you download something, and shows the progress as a "
+                        "percentage. Downloads are always one Ctrl+J away.",
+                        self._combo("toolbar.downloads_button", [("auto", "Show when downloading"),
+                                                                 ("always", "Always show")], width=200)),
+            self._reading_card(),
             self._toggle_card("appearance.force_dark_web", "moon", "Dark mode for websites",
-                              "Asks every website to render with dark colours, even sites that have no dark theme "
-                              "of their own. Some pages may look odd; switch it off again if so."),
+                              "Shows every website in dark colours, even ones without a dark theme. A few pages may "
+                              "look odd; turn it off again if so."),
+            self._toggle_card("appearance.sounds", "volume", "Sound effects",
+                              "The gentle sounds of the welcome screen. JBrowser makes no sounds while you browse."),
         )
+
+    def _reading_card(self) -> SettingCard:
+        font = self._combo("reading.font", [("serif", "Serif text"), ("sans", "Sans-serif text")], width=170)
+        colours = self._combo("reading.theme", [("auto", "Match JBrowser"), ("light", "Light"), ("sepia", "Sepia"),
+                                                ("dark", "Dark")], width=170)
+        box = QWidget()
+        bl = QHBoxLayout(box)
+        bl.setContentsMargins(0, 0, 0, 0)
+        bl.setSpacing(8)
+        bl.addWidget(QLabel("Look"))
+        bl.addWidget(font)
+        bl.addWidget(colours)
+        bl.addStretch(1)
+        return SettingCard("reading", "Suggest reading mode on articles",
+                           "Reading mode shows just the text and pictures of an article, without ads or clutter. "
+                           "Turn it on with the reading button on the ribbon or a card, or press F9. When this "
+                           "setting is on, JBrowser offers it once while you read an article.",
+                           self._toggle("reading.offer"), extra=box)
 
     def _tint_card(self) -> SettingCard:
         picker = TintPicker(self.s.get("appearance.tint") or "none")
         picker.changed.connect(lambda key: self.s.set("appearance.tint", key))
         self._listen(self.s.changed, lambda k, v: picker.set_value(v or "none") if k == "appearance.tint" else None)
         return SettingCard("colour", "Colour tint",
-                           "Gives the window a gentle colour. With Acrylic or Mica it is a light tint over the "
-                           "see-through background; with the Solid material the colour is a little stronger. "
-                           "Incognito spaces always stay black.", extra=picker)
+                           "A gentle colour for the window (a little stronger with the Solid material). Incognito "
+                           "spaces always stay black.", extra=picker)
 
     def _sidebar_card(self) -> SettingCard:
         sw = ToggleSwitch(not self.s.get("appearance.sidebar_collapsed"))
@@ -388,9 +406,8 @@ class SettingsWindow(ChromeWindow):
                 sw.blockSignals(False)
         self._listen(self.s.changed, sync)
         return SettingCard("sidebar", "Show the sidebar",
-                           "The panel on the left with your favourites, spaces and cards. When it is hidden, point "
-                           "at the left edge of the window to peek at it, press Ctrl+B, or right-click the ribbon "
-                           "to bring it back.", sw)
+                           "Your favourites, spaces and cards on the left. When it's hidden, point at the left edge "
+                           "to peek, or press Ctrl+B.", sw)
 
     def _home_card(self) -> SettingCard:
         mode = self._combo("toolbar.home_mode", [("lazy", "Open the Lazy Toolbar"), ("url", "Go to a web page")],
@@ -420,9 +437,8 @@ class SettingsWindow(ChromeWindow):
         bl.addWidget(mode)
         bl.addWidget(url, 1)
         return SettingCard("home", "Show the Home button",
-                           "Adds a Home button next to Back, Forward and Reload on the ribbon. Choose whether it "
-                           "opens the Lazy Toolbar (search or type an address) or takes you to a page you pick. "
-                           "Alt+Home works even when the button is hidden.",
+                           "A Home button next to Back, Forward and Reload. It can open the Lazy Toolbar or a page "
+                           "you choose. Alt+Home works even when the button is hidden.",
                            self._toggle("toolbar.home_button"), extra=box)
 
     def _search(self) -> QWidget:
@@ -443,20 +459,19 @@ class SettingsWindow(ChromeWindow):
                               _button("Restore defaults", self._reset_keywords),
                               _button("Save shortcuts", self._save_keywords, primary=True)))
         return self._page(
-            "Search", "Choose where your searches go and set up shortcuts for your favourite sites.",
+            "Search", "Where your searches go, and shortcuts for searching your favourite sites.",
             SettingCard("search", "Search engine",
-                        "Used whenever you type words into the Lazy Toolbar instead of a web address.",
+                        "Used when you type words instead of a web address.",
                         self._combo("search.engine", [(k, v[0]) for k, v in ENGINES.items()])),
-            SettingCard("sync", "Show search suggestions while I type",
-                        "Shows popular searches from Google as you type, so you can pick one instead of typing it "
-                        "all. To do this, what you type is sent to Google. Suggestions are never requested in "
-                        "incognito spaces.", self._toggle("search.suggestions")),
+            SettingCard("sync", "Suggest searches as I type",
+                        "Popular searches appear as you type. To find them, what you type is sent to Google. Never "
+                        "used in incognito spaces.", self._toggle("search.suggestions")),
             SettingCard("tag", "Keyword shortcuts",
-                        "Type a keyword, a space and your search in the Lazy Toolbar to search a particular site "
-                        "directly. For example “w python” searches Wikipedia and “gh qt” searches GitHub.",
+                        "Type a keyword, a space and your search to search one site directly: “w python” searches "
+                        "Wikipedia, “gh qt” searches GitHub.",
                         extra=table_box),
             SettingCard("history", "Recent searches",
-                        "JBrowser remembers your last searches so you can repeat them quickly. Clear the list here.",
+                        "Your last searches, so you can repeat them quickly.",
                         _button("Clear recent searches", lambda: (s.set("search.recent", []),
                                                                   self.ui.toast("Recent searches cleared", "clear")))),
         )
@@ -513,56 +528,52 @@ class SettingsWindow(ChromeWindow):
         ab.addWidget(_buttons(_button("Turn protection back on for selected", self._remove_allow)))
         return self._page(
             "Privacy and security",
-            "JBrowser blocks tracking and dangerous sites by default. These switches let you fine-tune that.",
+            "JBrowser blocks tracking and dangerous sites from the start. Fine-tune it here.",
             SettingCard("shield", "Block trackers, ads, cryptominers and telemetry",
-                        "Stops websites from loading hidden scripts that follow you from site to site, show ads, "
-                        "secretly use your computer to mine cryptocurrency, or report what you do, and hides the "
-                        "empty ad boxes they leave behind. Pages usually load faster too. The shield in the title "
-                        "bar shows how many were blocked. Uses the EasyList, EasyPrivacy, Peter Lowe and NoCoin "
-                        "lists.",
+                        "Stops hidden scripts that follow you between sites, show ads, secretly mine cryptocurrency "
+                        "or report what you do, and hides the empty ad boxes. Pages often load faster too. The "
+                        "shield in the address bar shows how many were blocked. Lists used: EasyList, EasyPrivacy, "
+                        "Peter Lowe and NoCoin.",
                         self._toggle("privacy.block_trackers"), extra=lists_box),
             SettingCard("warning", "Phishing and malware protection",
-                        "Warns you and stops the page before it loads if a site is on public lists of fake login "
-                        "pages and sites that spread harmful software. The lists are downloaded to this computer and "
-                        "refreshed about once a week; the addresses you visit are checked locally and never sent "
+                        "Stops sites known for fake sign-in pages or harmful software before they load. The lists "
+                        "are kept on this PC and updated weekly; the sites you visit are checked here and never sent "
                         "anywhere.", self._toggle("privacy.threat_protection"), token="warning"),
             SettingCard("fingerprint", "Fingerprinting protection",
-                        "Websites can recognise your computer by quietly measuring how it draws images. JBrowser "
-                        "gives each site slightly different, harmless answers so that measurement cannot be used to "
-                        "follow you. Sign-in and security-check pages (Google, Microsoft, Cloudflare and similar) "
-                        "are left alone, so they don't mistake you for a robot.",
+                        "Some sites recognise your PC by how it draws images. JBrowser gives each site slightly "
+                        "different, harmless answers, so it can't follow you that way. Sign-in and security-check "
+                        "pages are left alone, so they don't take you for a robot.",
                         self._toggle("privacy.fingerprint_protection")),
             SettingCard("link", "Remove tracking codes from links",
-                        "Many links carry extra codes (like “utm_source” or “fbclid”) that tell companies where you "
-                        "came from. JBrowser removes the common ones before the page opens. The page itself works "
-                        "the same.", self._toggle("privacy.strip_tracking")),
+                        "Links often carry codes like “utm_source” or “fbclid” that tell companies where you came "
+                        "from. JBrowser removes the common ones; pages work the same.",
+                        self._toggle("privacy.strip_tracking")),
             SettingCard("people2", "Block third-party cookies",
-                        "Cookies are small files websites store. “Third-party” cookies come from companies other than "
-                        "the site you are on and are mostly used for tracking. Blocking them rarely breaks sites; "
-                        "if a sign-in fails, turn protection off for that site from the address bar.",
+                        "Cookies from companies other than the site you're on, mostly used for tracking. Blocking "
+                        "them rarely breaks anything; if a sign-in fails, turn protection off for that site with the "
+                        "shield in the address bar.",
                         self._toggle("privacy.block_third_party_cookies")),
             self._toggle_card("privacy.gpc", "shield", "Tell websites not to sell or share my data",
-                              "Sends the Global Privacy Control signal with every visit. In some regions (such as "
-                              "California and the EU) websites are legally required to respect it."),
+                              "Sends the Global Privacy Control signal. In places like California and the EU, sites "
+                              "must respect it."),
             self._toggle_card("privacy.dnt", "shield", "Send “Do Not Track”",
-                              "An older request asking websites not to track you. Many sites ignore it, but it does "
-                              "no harm to send."),
+                              "An older request not to be tracked. Many sites ignore it, but it does no harm."),
             self._toggle_card("privacy.https_upgrade", "lock", "Always try the secure version of websites",
-                              "When a link points to an insecure “http” address, JBrowser tries the encrypted “https” "
-                              "version first. If the site does not support it, the page still opens normally."),
+                              "Opens the encrypted (https) version of a site first. If there isn't one, the page "
+                              "opens normally."),
             self._toggle_card("privacy.popup_blocking", "blocked", "Block pop-ups",
-                              "Stops websites from opening new windows on their own. Pop-ups you open by clicking, "
-                              "such as sign-in windows, still work."),
+                              "Sites can't open new windows by themselves. Windows you open by clicking, such as "
+                              "sign-in windows, still work."),
             self._toggle_card("privacy.webrtc_public_only", "network", "Hide my local network address",
-                              "Video-call technology (WebRTC) can reveal addresses inside your home or office network. "
-                              "This keeps them hidden without breaking calls."),
+                              "Video calls (WebRTC) can reveal addresses inside your home or office network. This "
+                              "hides them without breaking calls."),
             self._toggle_card("privacy.block_autoplay", "mute", "Stop videos from playing on their own",
                               "Videos and sounds only start after you click on the page."),
             SettingCard("globe", "Sites with protection turned off",
-                        "Sites you have allowed to use trackers, for example because something did not work. "
-                        "Select a site and turn protection back on.", extra=allow_box),
+                        "Sites you allowed to use trackers, for example because something didn't work. Select one "
+                        "to turn protection back on.", extra=allow_box),
             SettingCard("permissions", "Cookies and site permissions",
-                        "See and remove cookies, and review which sites may use your camera, microphone, location or "
+                        "See and remove cookies, and choose which sites may use your camera, microphone, location or "
                         "notifications.",
                         _buttons(_button("Cookies", lambda: self.ui.open_dialog("cookies")),
                                  _button("Permissions", lambda: self.ui.open_dialog("permissions")))),
@@ -575,15 +586,14 @@ class SettingsWindow(ChromeWindow):
 
     def _refresh_blocklist_label(self) -> None:
         ts = self.s.get("privacy.blocklist_updated") or 0
-        when = time.strftime("%d %b %Y %H:%M", time.localtime(ts)) if ts else "never (built-in list only)"
+        when = time.strftime("%d %b %Y %H:%M", time.localtime(ts)) if ts else "never (using the built-in list)"
         st = self.ctx.stats
         eng = self.ctx.privacy.filters
-        extra = (f" plus {eng.network_count:,} address patterns and {eng.cosmetic_count:,} ad-box hiding rules"
+        extra = (f", {eng.network_count:,} address patterns and {eng.cosmetic_count:,} ad-hiding rules"
                  if eng is not None else "")
         self.blocklist_label.setText(
-            f"{len(self.ctx.privacy.blocklist):,} tracker domains{extra}, and {len(self.ctx.threats):,} dangerous sites "
-            "known. "
-            f"Tracker lists last updated: {when}. This session: {st.get('blocked', 0):,} requests blocked, "
+            f"Lists: {len(self.ctx.privacy.blocklist):,} tracker sites{extra}, and {len(self.ctx.threats):,} "
+            f"dangerous sites. Updated: {when}. This session: {st.get('blocked', 0):,} requests blocked, "
             f"{self.ctx.privacy.stripped:,} tracking codes removed, {st.get('threats', 0):,} dangerous pages stopped.")
 
     def _load_allowlist(self) -> None:
@@ -607,25 +617,21 @@ class SettingsWindow(ChromeWindow):
         for sp in ctx.state.spaces:
             self.clear_space.addItem(f"{sp.icon}  {sp.name}", sp.id)
         options = [
-            ("history", "Browsing history", "The list of pages you have visited, and the closed cards kept in "
-                                            "the Archive.", True),
-            ("downloads", "Download history", "The list of files you downloaded. The files themselves stay "
-                                              "where they are.", True),
-            ("cookies", "Cookies and other site data", "Signs you out of most websites. Websites don't record "
-                                                       "when a cookie was set, so all cookies in the chosen "
-                                                       "spaces are removed.", True),
-            ("cache", "Cached images and files", "Copies of pages kept to load them faster. Some sites may "
-                                                 "load a little slower the next time.", True),
+            ("history", "Browsing history", "Pages you visited, and the closed cards in the Archive.", True),
+            ("downloads", "Download history", "The list of downloads. The files themselves stay.", True),
+            ("cookies", "Cookies and other site data", "Signs you out of most sites. All cookies in the chosen "
+                                                       "spaces are removed, whatever the time range.", True),
+            ("cache", "Cached images and files", "Saved copies that make pages load faster. Some sites may load "
+                                                 "a little slower next time.", True),
             ("searches", "Recent searches", "The searches shown in the Lazy Toolbar.", False),
-            ("passwords", "Saved passwords", "Logins saved during the chosen time range. This cannot be "
-                                             "undone.", False),
-            ("permissions", "Site permissions", "Camera, microphone, location and notification choices you "
-                                                "made for websites.", False),
-            ("zoom", "Zoom levels", "The zoom you set for individual websites.", False),
-            ("favicons", "Site icons", "Small website logos kept for bookmarks and history.", False),
-            ("storage", "Everything websites stored on this computer",
-             "Deep clean of local storage, databases and offline data. Takes effect the next time JBrowser "
-             "starts.", False),
+            ("passwords", "Saved passwords", "Logins saved in the chosen time range. This can't be undone.", False),
+            ("permissions", "Site permissions", "Your camera, microphone, location and notification choices.",
+             False),
+            ("zoom", "Zoom levels", "The zoom you set for each site.", False),
+            ("favicons", "Site icons", "Small site logos kept for bookmarks and history.", False),
+            ("storage", "Everything websites stored on this PC",
+             "A deep clean of site storage, databases and offline data. Finishes the next time JBrowser starts.",
+             False),
         ]
         self.clear_checks: dict[str, QCheckBox] = {}
         box = QWidget()
@@ -661,15 +667,14 @@ class SettingsWindow(ChromeWindow):
             ol.addWidget(cb)
         return self._page(
             "Clear browsing data",
-            "Delete what JBrowser has saved while you browsed. Pick a time range and what to remove, then press "
-            "Clear data.",
-            SettingCard("clock", "What and when", "Choose how far back to go and which spaces to clean.",
+            "Choose a time range and what to delete, then press Clear data.",
+            SettingCard("clock", "Time range and spaces", "How far back to go, and which spaces to clean.",
                         extra=pickers),
-            SettingCard("clear", "Choose what to delete", "", extra=box),
-            SettingCard("delete", "Clear now", "Deletes the items you ticked for the chosen time range and spaces.",
+            SettingCard("clear", "What to delete", "", extra=box),
+            SettingCard("delete", "Clear now", "Deletes what you ticked, for the chosen time range and spaces.",
                         _button("Clear data", self._clear_now, primary=True)),
             SettingCard("power", "Clear automatically when JBrowser closes",
-                        "Anything you tick here is deleted every time you close JBrowser, so it never builds up.",
+                        "What you tick here is deleted every time you close JBrowser.",
                         extra=on_exit),
         )
 
@@ -732,21 +737,21 @@ class SettingsWindow(ChromeWindow):
         return self._page(
             "Passwords", "JBrowser can remember your logins and fill them in for you.",
             SettingCard("key", "Offer to save passwords",
-                        "After you sign in to a website, JBrowser asks whether to remember the username and "
-                        "password. Nothing is saved unless you say yes, and incognito spaces never save.",
+                        "After you sign in, JBrowser asks whether to remember the login. Nothing is saved unless "
+                        "you say yes, and never in incognito spaces.",
                         self._toggle("passwords.offer_save")),
             SettingCard("edit", "Fill in logins automatically",
-                        "When a site has exactly one saved login, JBrowser fills it in as soon as the sign-in form "
-                        "appears. With several logins, click the key in the card header to choose one.",
+                        "With one saved login for a site, it's filled in as soon as the sign-in form appears. With "
+                        "more, click the key on the card to choose.",
                         self._toggle("passwords.autofill")),
             SettingCard("warning", "Warn me about insecure sign-in pages",
-                        "Shows a warning when you type a password on a page that does not use encryption (http), "
-                        "because others on the same network could read it.",
+                        "A warning when you type a password on an unencrypted (http) page, where others on the same "
+                        "network could read it.",
                         self._toggle("passwords.warn_insecure"), token="warning"),
             SettingCard("lock", "How your passwords are protected",
-                        f"Passwords are encrypted with AES-256 and the key is protected by {mode}. They never leave "
-                        "this computer. You can add a master password, check for weak or reused passwords and import "
-                        "logins from another browser in the password manager.",
+                        f"They're encrypted (AES-256) with a key protected by {mode}, and never leave this PC. In "
+                        "the password manager you can add a master password, find weak or reused passwords and "
+                        "import logins from another browser.",
                         _button("Open password manager", lambda: self.ui.open_dialog("passwords"), primary=True)),
         )
 
@@ -768,26 +773,25 @@ class SettingsWindow(ChromeWindow):
         row.addWidget(_button("Remove selected", self._remove_never))
         nb.addLayout(row)
         tabs = self.ctx.state.all_tabs()
-        stats = (f"Right now: {len(tabs)} cards open, {sum(1 for t in tabs if t.sleeping)} asleep and "
-                 f"{sum(1 for t in tabs if t.throttled)} resting because they are out of view.")
+        stats = (f"{len(tabs)} cards open, {sum(1 for t in tabs if t.sleeping)} asleep and "
+                 f"{sum(1 for t in tabs if t.throttled)} resting out of view.")
         return self._page(
-            "Performance", "Keep JBrowser light on memory and battery, even with many cards open.",
+            "Performance", "Keep JBrowser light on memory and battery, even with lots of cards open.",
             SettingCard("moon", "Memory saver",
-                        "Cards you have not looked at for a while are put to sleep to free up memory. A sleeping "
-                        "card shows a faded picture with a moon and wakes up instantly when you click it. Cards "
-                        "that are playing sound or video, have unsaved typing, are downloading or are in a call "
-                        "are never put to sleep.",
+                        "Cards you haven't looked at for a while go to sleep to free up memory, and wake instantly "
+                        "when you click them. Cards playing sound or video, with unsaved typing, downloading or in a "
+                        "call never sleep.",
                         self._combo("performance.sleep_preset",
                                     [(pid, label + (" (default)" if pid == "moderate" else ""))
                                      for pid, (label, _m) in SLEEP_PRESETS.items()])),
             SettingCard("pin", "Never put these sites to sleep",
-                        "Add sites that should always stay awake, such as music players or chat apps.",
+                        "Sites that should always stay awake, such as music players or chat apps.",
                         extra=never_box),
             SettingCard("speed", "Rest cards that are out of view",
-                        "Five seconds after a card scrolls off screen (or its space is hidden), JBrowser stops "
-                        "drawing it and pauses its background timers, saving processor and battery power. It comes "
-                        "back to full speed the moment you scroll to it.", self._toggle("performance.throttle")),
-            SettingCard("info", "Current status", stats),
+                        "A few seconds after a card leaves the screen, it stops drawing and pauses in the background "
+                        "to save power. It's back to full speed the moment you scroll to it.",
+                        self._toggle("performance.throttle")),
+            SettingCard("info", "Right now", stats),
         )
 
     def _add_never(self) -> None:
@@ -825,24 +829,24 @@ class SettingsWindow(ChromeWindow):
         pb.addWidget(_buttons(_button("Proxy for all spaces", lambda: self.ui.open_dialog("proxy")),
                               _button("Proxy for this space", lambda: self.ui.set_space_proxy())))
         return self._page(
-            "Network and DNS", "How JBrowser finds and connects to websites.",
+            "Network and DNS", "How JBrowser connects to websites.",
             SettingCard("network", "DNS provider",
-                        "DNS turns names like example.com into the numeric addresses computers use. Quad9 "
-                        "(recommended) encrypts these look-ups and refuses to look up known dangerous sites. "
-                        "Cloudflare encrypts them and is very fast. “Windows default” uses whatever your network "
-                        "provides, which is usually not encrypted." + dns_note,
+                        "DNS looks up a site's address from its name (like example.com). Quad9 (recommended) keeps "
+                        "these look-ups encrypted and refuses known dangerous sites. Cloudflare encrypts them and is "
+                        "very fast. “Windows default” uses your network's DNS, which usually isn't encrypted."
+                        + dns_note,
                         self._combo("network.dns_mode", [("quad9", "Quad9 (recommended)"),
                                                          ("cloudflare", "Cloudflare 1.1.1.1"),
                                                          ("system", "Windows default")])),
             self._toggle_card("network.dns_fallback", "sync", "Fall back to Windows DNS if secure DNS fails",
-                              "If the secure DNS service cannot be reached (for example on some hotel or office "
-                              "networks), use the normal Windows DNS instead of showing an error."),
+                              "Some hotel, school or office networks block secure DNS. With this on, JBrowser uses "
+                              "the normal Windows DNS there instead of showing an error."),
             SettingCard("vpn", "Proxy server",
-                        "A proxy sends your browsing through another server, often required at work or school. "
-                        "Leave this alone unless you were given proxy details.", extra=proxy_box),
+                        "Sends your browsing through another server, as some workplaces and schools require. Leave "
+                        "this alone unless you were given proxy details.", extra=proxy_box),
             SettingCard("developer", "Local development toolkit",
-                        "For web developers: give local projects friendly names like app.test and open common "
-                        "development ports with one click.",
+                        "For web developers: give local projects names like app.test and open common development "
+                        "ports with one click.",
                         _button("Open toolkit", lambda: self.ui.open_dialog("devhosts"))),
         )
 
@@ -860,17 +864,21 @@ class SettingsWindow(ChromeWindow):
         pl.addWidget(self.dl_path, 1)
         pl.addWidget(_button("Change", self._pick_dir))
         return self._page(
-            "Downloads", "Where files are saved and how they are checked.",
-            SettingCard("folder", "Save downloads to",
-                        "The folder where downloaded files go.", extra=path_box),
+            "Downloads", "Where files go, and how JBrowser keeps you safe from harmful ones.",
+            SettingCard("folder", "Save downloads to", "The folder for downloaded files.", extra=path_box),
             self._toggle_card("downloads.ask", "save", "Ask where to save each file",
-                              "Shows a Save dialog for every download so you can pick the folder and file name."),
+                              "Choose the folder and name for every download."),
             SettingCard("shield", "Download protection",
-                        "Asks before keeping programs and scripts (like .exe or .msi files), and warns louder when "
-                        "they come over an insecure connection. Every downloaded file is also marked as coming from "
-                        "the internet, so Windows SmartScreen and Office can check it before it runs.",
-                        self._toggle("downloads.protect")),
-            SettingCard("download", "Your downloads", "See, open and manage files you have downloaded.",
+                        "Watches for files that could harm your PC: programs and scripts (like .exe files), files "
+                        "from sites on the dangerous-sites list, and files from sites without a secure connection "
+                        "(no HTTPS).\n• Standard (recommended): warns you and lets you keep the file or delete it. "
+                        "Until you decide, it's saved so it can't be opened by accident.\n• Strict: blocks those "
+                        "downloads.\n• Off: no warnings.\nEvery file is also marked as coming from the internet, so "
+                        "Windows SmartScreen checks it before it runs.",
+                        self._combo("downloads.protection", [("standard", "Standard (recommended)"),
+                                                             ("strict", "Strict"), ("off", "Off")], width=200),
+                        token="warning"),
+            SettingCard("download", "Your downloads", "See and open the files you downloaded.",
                         _button("Open downloads", lambda: self.ui.open_dialog("downloads"))),
         )
 
@@ -884,7 +892,7 @@ class SettingsWindow(ChromeWindow):
         self._current_page = "advanced"
         paths = self.ctx.paths
         return self._page(
-            "Advanced", "Extra tools for power users.",
+            "Advanced", "Extra tools for power users. Most people never need to change these.",
             SettingCard("code", "User scripts and styles",
                         "Add your own JavaScript or CSS to chosen websites, per site and per space. Useful for small "
                         "fixes and personal tweaks.",
@@ -895,39 +903,41 @@ class SettingsWindow(ChromeWindow):
             SettingCard("keyboard", "Keyboard shortcuts", "Every shortcut in one place.",
                         _button("Show shortcuts", lambda: (self.close(), self.ui.open_hotkeys()))),
             SettingCard("tiles", "Graphics acceleration",
-                        "If websites flicker, show stripes or draw in the wrong place (it happens with some graphics "
-                        "cards and drivers, often dedicated ones), try “Compatible”, or “Off” as a last resort. "
-                        "Applies after a restart.",
+                        "Uses your graphics card to draw pages quickly. If websites flicker, show stripes or draw in "
+                        "the wrong place (it happens with some graphics cards and drivers), try “Compatible”, or "
+                        "“Off” as a last resort: pages then draw more slowly, without the graphics card. Applies "
+                        "after a restart.",
                         _buttons(self._combo("advanced.gpu_mode", [("auto", "Automatic (recommended)"),
                                                                     ("compatible", "Compatible"),
                                                                     ("off", "Off (slower, no glitches)")]),
                                  _button("Restart now", lambda: (self.close(), self.ui.restart())))),
             SettingCard("globe", "How JBrowser introduces itself to websites",
-                        "JBrowser tells sites it's the newest Chrome, so none treat it as outdated, and switches to "
-                        "Firefox by itself while you sign in to Google. If Google keeps asking “I'm not a robot”, try "
-                        "the engine's own version. If Google still won't let you sign in, choose Firefox: every "
-                        "site then sees Firefox, all the time.",
+                        "Every browser tells websites its name and version (its “user agent”). JBrowser says it's "
+                        "the newest Chrome, so no site treats it as outdated, and briefly says Firefox while you sign "
+                        "in to Google, which Google needs. If Google keeps asking whether you're a robot, try "
+                        "“Engine version”. If Google refuses to sign you in, press “Fix and sign in again” on the "
+                        "message it shows: JBrowser then says Firefox to every site until you're signed in, and goes "
+                        "back by itself. “Firefox” keeps it that way all the time.",
                         self._combo("advanced.identity", [("current", "Newest Chrome (recommended)"),
                                                           ("engine", "Engine version"),
                                                           ("firefox", "Firefox (for Google sign-in trouble)")])),
             self._toggle_card("advanced.media_notice", "info", "Explain videos JBrowser can't play",
-                              "Shows a note when a video or sound is in a format JBrowser can't play yet (such as "
-                              "H.264), so you know to open it in another browser."),
+                              "Shows a note when a video or sound uses a format JBrowser can't play (such as H.264), "
+                              "so you know to open it in another browser."),
         )
 
     def _reset(self) -> QWidget:
         self._current_page = "reset"
         return self._page(
-            "Reset", "Start over, either for your settings only or for everything.",
+            "Reset", "Start over: just your settings, or everything.",
             SettingCard("sync", "Restore settings to their defaults",
-                        "Puts every option back the way it was when JBrowser was installed. Your spaces, cards, "
-                        "history, bookmarks and saved passwords are not touched.",
+                        "Every option goes back to how it was when JBrowser was installed. Your spaces, cards, "
+                        "history, bookmarks and passwords stay.",
                         _button("Reset settings", self.ui.reset_settings)),
             SettingCard("delete", "Factory reset",
-                        "Erases everything JBrowser has stored on this computer: all spaces and cards, cookies and "
-                        "signed-in sessions, history, bookmarks, saved passwords, download records, user scripts, "
-                        "caches and settings. Files you downloaded are kept. JBrowser then restarts as if it had "
-                        "just been installed. This cannot be undone.",
+                        "Erases everything JBrowser stored on this PC: spaces and cards, cookies and sign-ins, "
+                        "history, bookmarks, passwords, download list, user scripts, caches and settings. Files you "
+                        "downloaded stay. JBrowser then restarts as if newly installed. This can't be undone.",
                         _button("Factory reset", self.ui.factory_reset, danger=True), token="danger"),
         )
 
@@ -947,11 +957,11 @@ class SettingsWindow(ChromeWindow):
         bl.addWidget(auto)
         bl.addWidget(_buttons(_button("Check now", self.ui.check_for_updates, primary=True),
                               _button("Release notes", lambda: QDesktopServices.openUrl(QUrl(RELEASES_PAGE)))))
-        how = ("Updates download and install themselves after you agree, and JBrowser restarts on the new version. "
-               "Every download is checked against its published fingerprint before it runs."
+        how = ("When you agree, updates download and install themselves and JBrowser restarts on the new version. "
+               "Each download is checked against its published fingerprint before it runs."
                if up.installed_copy() else
-               "This copy runs from source or a portable folder, so JBrowser tells you about new versions and "
-               "links to the download page instead of installing them.")
+               "This copy isn't installed (it runs from source or a portable folder), so JBrowser tells you about "
+               "new versions and links to the download page instead.")
         return SettingCard("download", "Updates", how, extra=box)
 
     def _about(self) -> QWidget:
@@ -984,12 +994,12 @@ class SettingsWindow(ChromeWindow):
                         f"Qt {QT_VERSION_STR}, PyQt {PYQT_VERSION_STR}, Chromium {chrome}, "
                         f"Python {platform.python_version()}, Windows build {build}."),
             SettingCard("shield", "Privacy",
-                        "JBrowser has no accounts and no telemetry. The only network requests it makes on its own "
-                        "are downloading the tracker and dangerous-site lists, a daily update check with GitHub "
-                        "(it sends nothing about you), and, if enabled, search suggestions while you type."),
+                        "No accounts, no telemetry. On its own, JBrowser only downloads its tracker and "
+                        "dangerous-site lists, checks GitHub for updates once a day (sending nothing about you) and, "
+                        "if they're on, fetches search suggestions as you type."),
             self._updates_card(),
             SettingCard("lightbulb", "Welcome tour",
-                        "Watch the welcome screen again and take the short guided tour of JBrowser's main features.",
+                        "See the welcome screen again and take the short tour of JBrowser's main features.",
                         _button("Replay welcome", lambda: (self.close(), self.ui.window.start_onboarding(replay=True)))),
             made,
         )

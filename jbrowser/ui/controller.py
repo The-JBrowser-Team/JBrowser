@@ -40,6 +40,7 @@ class BrowserController(QObject):
         self._prev_width: dict[str, float] = {}
         self._printers: list = []
         self._dialogs: dict[str, object] = {}
+        self._reading_offered: set[str] = set()     # pages where reading mode was already suggested
 
     # ------------------------------------------------------------- lookups
     def canvas(self, space_id: str | None = None) -> "Canvas | None":
@@ -66,7 +67,8 @@ class BrowserController(QObject):
 
     # --------------------------------------------------------------- cards
     def open_url(self, url: QUrl | str, target: str = "new", space_id: str | None = None,
-                 after_tab: str | None = None, index: int | None = None) -> Tab | None:
+                 after_tab: str | None = None, index: int | None = None, stack_onto: str = "",
+                 width: float = 0.0) -> Tab | None:
         st = self.ctx.state
         q = url if isinstance(url, QUrl) else self.ctx.resolve_input(url)
         space = st.space(space_id) if space_id else st.active_space
@@ -89,7 +91,7 @@ class BrowserController(QObject):
                 index = idx + 1
         background = target == "background"
         tab = st.add_tab(space.id, q.toString(), index=index, activate=not background,
-                         width=self.ctx.settings.get("canvas.default_width"))
+                         width=width or self.ctx.settings.get("canvas.default_width"), stack_onto=stack_onto)
         if tab is None:
             return None
         if space.id != st.active_space_id and not background:
@@ -224,7 +226,7 @@ class BrowserController(QObject):
                 if t.favourite_id == fid:
                     self.activate_card(t.id, wake=True, center=True)
                     return
-        tab = self.open_url(QUrl(fav.url), "new")
+        tab = self.open_url(QUrl(fav.url), "new", width=fav.width)   # as wide as when it was last closed
         if tab is not None:
             tab.favourite_id = fid
             self.ctx.session.mark_dirty()
@@ -340,7 +342,7 @@ class BrowserController(QObject):
         new = self.ctx.state.move_tab_to_space(tab_id, space_id)
         if new:
             sp = self.ctx.state.space(space_id)
-            self.toast(f"Moved to {sp.name} (signed-in state stays isolated per space)", "people")
+            self.toast(f"Moved to {sp.name}. Sign-ins stay separate in each space", "people")
 
     # ------------------------------------------------------------- scaling
     def scale_selected(self, frac: float) -> None:
@@ -371,23 +373,92 @@ class BrowserController(QObject):
             c.ensure_visible(tab_id, "left")
 
     def split(self, n: int) -> None:
-        space = self.ctx.state.active_space
+        """Show n columns side by side (a column of stacked cards counts once)."""
+        st = self.ctx.state
+        space = st.active_space
         if not space or not space.tabs:
             return
-        selected = self.ctx.state.selected_tabs(space)
-        if len(selected) == n:
-            tabs = selected
-        else:
-            idx = max(0, space.index_of(space.active_tab_id))
-            start = max(0, min(idx, len(space.tabs) - n))
-            tabs = space.tabs[start:start + n]
-        for t in tabs:
-            t.update(width=1.0 / len(tabs))
+        cols = st.columns(space)
+        selected = {t.id for t in st.selected_tabs(space)}
+        chosen = [c for c in cols if any(t.id in selected for t in c)]
+        if len(chosen) != n:
+            cur = next((i for i, c in enumerate(cols) if any(t.id == space.active_tab_id for t in c)), 0)
+            start = max(0, min(cur, len(cols) - n))
+            chosen = cols[start:start + n]
+        for col in chosen:
+            for t in col:
+                t.update(width=1.0 / len(chosen))
         c = self.canvas()
-        if c and tabs:
-            c.ensure_visible(tabs[0].id, "left")
-        names = {2: "Split view 50 / 50", 3: "Triple columns 33 / 33 / 33", 4: "Quad columns"}
-        self.toast(names.get(len(tabs), f"{len(tabs)} columns"), "columns")
+        if c and chosen:
+            c.ensure_visible(chosen[0][0].id, "left")
+        names = {2: "Two columns, side by side", 3: "Three columns", 4: "Four columns"}
+        self.toast(names.get(len(chosen), f"{len(chosen)} columns"), "columns")
+
+    # ------------------------------------------------------------- stacking
+    def can_stack(self) -> bool:
+        tab = self.ctx.state.active_tab
+        return tab is not None and self.ctx.state.can_stack_onto(tab.id)
+
+    def open_stack_picker(self, tab_id: str | None = None) -> None:
+        """Open the place below the active card to stack another card there (up to 3 per column)."""
+        tab = self.ctx.state.tab(tab_id) if tab_id else self.ctx.state.active_tab
+        if tab is None:
+            self.open_lazy_toolbar("new")
+            return
+        if tab.pinned:
+            self.toast("Pinned cards can't be stacked. Unpin it first", "pin")
+            return
+        if not self.ctx.state.can_stack_onto(tab.id):
+            self.toast("This column is full: 3 cards at most", "stack")
+            return
+        c = self.canvas(tab.space_id)
+        if c is not None:
+            c.open_stack_picker(tab.id)
+
+    def unstack(self, tab_id: str | None = None) -> None:
+        tab = self.ctx.state.tab(tab_id) if tab_id else self.ctx.state.active_tab
+        if tab is not None and tab.stack:
+            self.ctx.state.unstack(tab.id)
+            QTimer.singleShot(0, lambda: self.activate_card(tab.id, focus=True))
+
+    # -------------------------------------------------------- reading mode
+    def toggle_reading(self, tab_id: str | None = None) -> None:
+        tab = self.ctx.state.tab(tab_id) if tab_id else self.ctx.state.active_tab
+        if tab is not None:
+            self.set_reading(tab.id, not tab.reading)
+
+    def set_reading(self, tab_id: str, on: bool) -> None:
+        tab = self.ctx.state.tab(tab_id)
+        card, ctrl = self.card(tab_id), self.ctrl(tab_id)
+        if tab is None or card is None or ctrl is None:
+            return
+        if not on:
+            if tab.reading:
+                tab.update(reading=False)
+            return
+        if tab.sleeping:
+            self.toast("Wake this card first to read it in reading mode", "moon")
+            return
+        url = tab.url
+
+        def show(article: dict | None) -> None:
+            if self.ctx.state.tab(tab_id) is None or tab.url != url:
+                return                       # closed or navigated meanwhile
+            if article is None:
+                tab.update(readable=False)
+                self.toast("Reading mode isn't available for this page", "reading")
+                return
+            card.show_reader(article)
+            tab.update(reading=True)
+            self._reading_offered.add(url)
+        ctrl.extract_article(show)
+
+    def claim_reading_offer(self, url: str) -> bool:
+        """True the first time reading mode may be suggested for ``url`` in this session."""
+        if not url or url in self._reading_offered:
+            return False
+        self._reading_offered.add(url)
+        return True
 
     def select_all_cards(self) -> None:
         self.ctx.state.select_all()
@@ -401,6 +472,8 @@ class BrowserController(QObject):
         if ctrl.tab.sleeping and action.startswith("reload"):
             self.ctx.lifecycle.wake(ctrl.tab.id)
             return
+        if ctrl.tab.reading:
+            ctrl.tab.update(reading=False)          # back, forward and reload act on the real page
         if action == "back":
             ctrl.back()
         elif action == "forward":
@@ -610,7 +683,11 @@ class BrowserController(QObject):
         menu_action(m, "Remove from favourites" if fav else "Add to favourites", lambda: self.toggle_favourite(tab_id),
                     "star_fill" if fav else "star")
         m.addSeparator()
-        widths = submenu(m, "Card width", "columns")
+        menu_action(m, "Stack a card below", lambda: self.open_stack_picker(tab_id), "stack",
+                    shortcut="Alt+Shift+S", enabled=st.can_stack_onto(tab_id))
+        if tab.stack:
+            menu_action(m, "Take out of the column", lambda: self.unstack(tab_id), "columns", shortcut="Alt+Shift+U")
+        widths = submenu(m, "Column width" if tab.stack else "Card width", "columns")
         for frac, label in WIDTH_PRESETS:
             menu_action(widths, label, lambda f=frac: (st.set_active_tab(tab_id), self.scale_selected(f)),
                         checkable=True, checked=abs(tab.width - frac) < 0.01)
@@ -624,6 +701,9 @@ class BrowserController(QObject):
             for sp in others:
                 menu_action(mv, f"{sp.icon}  {sp.name}", lambda sid=sp.id: self.move_tab_to_space(tab_id, sid))
         m.addSeparator()
+        if card is not None and not tab.sleeping and tab.url.startswith(("http://", "https://")):
+            menu_action(m, "Leave reading mode" if tab.reading else "Reading mode",
+                        lambda: self.toggle_reading(tab_id), "reading", shortcut="F9")
         if card is not None and not tab.sleeping:
             menu_action(m, "Find in page", lambda: card.open_find(), "search", shortcut="Ctrl+F")
             menu_action(m, "Developer tools", lambda: card.toggle_devtools(), "code", shortcut="F12")
@@ -678,17 +758,24 @@ class BrowserController(QObject):
 
     def show_layout_menu(self, pos: QPoint) -> None:
         m = QMenu(self.window)
-        n_sel = len(self.ctx.state.selected_tabs())
-        header = menu_action(m, f"Scale {'selected cards' if n_sel > 1 else 'card'}", None, "columns")
+        st = self.ctx.state
+        act = st.active_tab
+        menu_action(m, "Stack a card below", lambda: self.open_stack_picker(), "stack", shortcut="Alt+Shift+S",
+                    enabled=self.can_stack())
+        if act is not None and act.stack:
+            menu_action(m, "Take card out of its column", lambda: self.unstack(), "columns", shortcut="Alt+Shift+U")
+        m.addSeparator()
+        n_sel = len(st.selected_tabs())
+        header = menu_action(m, f"Width of {'the selected cards' if n_sel > 1 else 'this card'}", None, "columns")
         header.setEnabled(False)
         for n in range(1, 10):
             menu_action(m, f"{n * 10}%", lambda f=n / 10: self.scale_selected(f), shortcut=f"Alt+{n}")
-        menu_action(m, "100% (full width)", lambda: self.scale_selected(1.0), shortcut="Alt+0")
+        menu_action(m, "Full width", lambda: self.scale_selected(1.0), shortcut="Alt+0")
         m.addSeparator()
-        menu_action(m, "Split view 50 / 50", lambda: self.split(2), "columns", shortcut="Alt+Shift+D")
-        menu_action(m, "Triple columns 33 / 33 / 33", lambda: self.split(3), "tiles", shortcut="Alt+Shift+T")
-        menu_action(m, "Quad columns 25% × 4", lambda: self.split(4), "grid", shortcut="Alt+Shift+Q")
-        menu_action(m, "Focus view 80%", lambda: self.scale_selected(0.8), "fullscreen", shortcut="Alt+8")
+        menu_action(m, "Two columns side by side", lambda: self.split(2), "columns", shortcut="Alt+Shift+D")
+        menu_action(m, "Three columns", lambda: self.split(3), "tiles", shortcut="Alt+Shift+T")
+        menu_action(m, "Four columns", lambda: self.split(4), "grid", shortcut="Alt+Shift+Q")
+        menu_action(m, "Focus view (80%)", lambda: self.scale_selected(0.8), "fullscreen", shortcut="Alt+8")
         m.addSeparator()
         menu_action(m, "Select all cards", self.select_all_cards, "selectall", shortcut="Ctrl+Shift+A")
         menu_action(m, "Show canvas overview strip", lambda: self.ctx.settings.toggle("canvas.show_minimap"),
@@ -766,6 +853,7 @@ class BrowserController(QObject):
         menu_action(m, "Passwords", lambda: run("passwords.show"), "key")
         m.addSeparator()
         page = submenu(m, "Page", "page")
+        menu_action(page, "Reading mode", lambda: run("view.reading"), "reading", shortcut="F9")
         menu_action(page, "Find in page", lambda: run("page.find"), "search", shortcut="Ctrl+F")
         menu_action(page, "Zoom in", lambda: run("page.zoom_in"), "zoom_in", shortcut="Ctrl+=")
         menu_action(page, "Zoom out", lambda: run("page.zoom_out"), "zoom_out", shortcut="Ctrl+-")
@@ -834,6 +922,10 @@ class BrowserController(QObject):
                     checked=bool(s.get("appearance.favorites_bar")), shortcut="Ctrl+Shift+B")
         menu_action(m, "Home button", lambda: s.toggle("toolbar.home_button"), checkable=True,
                     checked=bool(s.get("toolbar.home_button")))
+        always = s.get("toolbar.downloads_button") == "always"
+        menu_action(m, "Always show the Downloads button",
+                    lambda: s.set("toolbar.downloads_button", "auto" if always else "always"), checkable=True,
+                    checked=always)
         m.addSeparator()
         menu_action(m, "Ribbon and appearance settings…", lambda: self.open_settings("appearance"), "settings")
         m.exec(pos)
@@ -897,7 +989,10 @@ class BrowserController(QObject):
 
     def toggle_maximize(self) -> None:
         w = self.window
-        w.showNormal() if w.isMaximized() else w.showMaximized()
+        w.transition(w.showNormal if w.isMaximized() else w.showMaximized)
+
+    def minimize(self) -> None:
+        self.window.transition(self.window.showMinimized)
 
     def toggle_window_fullscreen(self) -> None:
         w = self.window
@@ -910,7 +1005,7 @@ class BrowserController(QObject):
     def set_dns(self, mode: str) -> None:
         self.ctx.settings.set("network.dns_mode", mode)
         ok = self.ctx.dns.current == mode
-        self.toast(f"DNS: {DNS_MODES[mode]['label']}" + ("" if ok else " (unavailable in this Qt build)"), "network")
+        self.toast(f"DNS: {DNS_MODES[mode]['label']}" + ("" if ok else " (not available in this version)"), "network")
 
     def toggle_proxy(self) -> None:
         desc = self.ctx.proxy.toggle_global()
@@ -979,25 +1074,26 @@ class BrowserController(QObject):
             return
         clean, removed = strip_tracking(QUrl(tab.url))
         QGuiApplication.clipboard().setText(clean.toString())
-        self.toast(f"Link copied ({removed} tracking parameter{'s' if removed != 1 else ''} removed)"
+        self.toast(f"Link copied ({removed} tracking code{'s' if removed != 1 else ''} removed)"
                    if removed else "Link copied", "link")
 
-    def confirm_dangerous_download(self, name: str, host: str, insecure: bool) -> bool:
-        box = QMessageBox(self.window)
-        box.setIcon(QMessageBox.Icon.Warning)
-        box.setWindowTitle("Keep this file?")
-        box.setText(f"“{name}” is a program or script.")
-        detail = (f"Files like this can install software or change your computer. Only keep it if you trust "
-                  f"{host or 'its source'} and you were expecting it.")
-        if insecure:
-            detail += "\n\nIt is also being downloaded over an insecure (HTTP) connection, so it could have been " \
-                      "tampered with on the way."
-        box.setInformativeText(detail)
-        keep = box.addButton("Keep file", QMessageBox.ButtonRole.AcceptRole)
-        discard = box.addButton("Discard", QMessageBox.ButtonRole.RejectRole)
-        box.setDefaultButton(discard)
-        box.exec()
-        return box.clickedButton() is keep
+    def ask_about_download(self, item) -> None:
+        """Standard download protection: a bubble under the Downloads button asks to keep or delete."""
+        from jbrowser.ui.download_prompt import DownloadPrompt
+        if not self.window.isVisible() or self.window.isMinimized():
+            self.toast(f"{item.record.filename} needs your decision in Downloads (Ctrl+J)", "warning")
+            return
+        def show() -> None:                  # after the ribbon has made room for the Downloads button
+            if not item.waiting:
+                return
+            tb = self.window.titlebar
+            anchor = tb.downloads if tb.downloads.isVisible() else tb.menu_btn
+            DownloadPrompt(self.ctx, item, self.window).show_below(anchor)
+        QTimer.singleShot(80, show)
+
+    def on_download_blocked(self, item) -> None:
+        self.window.toasts.show(f"Download blocked: {item.record.filename}. Strict download protection is on "
+                                "(Settings › Downloads)", "blocked", 5200)
 
     def reset_settings(self) -> None:
         if QMessageBox.question(self.window, "Reset settings",

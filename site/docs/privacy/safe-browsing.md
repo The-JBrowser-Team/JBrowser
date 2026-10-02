@@ -60,9 +60,25 @@ When a password is submitted on an `http://` page (not localhost), an info bar w
 
 [services/downloads.py](source:jbrowser/services/downloads.py):
 
+<!-- if >= 2.0.0 -->
+- **What is flagged.** `DownloadManager.assess()` returns the reasons to warn about a download: `type`
+  (`DANGEROUS_EXTENSIONS`: `.exe`, `.msi`, `.ps1`, `.bat`, `.js`, `.lnk`, `.iso` and about 40 more), `threat` (the
+  download's host or the page's host is on the dangerous-sites list, `ThreatService.match`) and `insecure` (the
+  download or its page uses plain `http://` and isn't a local or developer address).
+- **Protection levels** (`downloads.protection`, migrated from the old on/off `downloads.protect`):
+  - `standard` (default): the download is accepted but saved as `<name>.unconfirmed` (`HOLD_SUFFIX`), so it can't be
+    opened by accident, and `flagged` is emitted. The UI shows the keep-or-delete bubble
+    ([ui/download_prompt.py](source:jbrowser/ui/download_prompt.py)) and the Downloads window shows *Keep* / *Delete*
+    on the row. `keep()` renames the file to its real name (now, or as soon as it finishes; the Zone.Identifier stream
+    moves with it); `discard()` cancels it if it is still running and deletes the file.
+  - `strict`: the request is cancelled and a `blocked` record (with the reason) is added to the list.
+  - `off`: no checks.
+- The record keeps `warning` (the reasons), `held` and `final_path`, so a decision can still be made after a restart.
+<!-- else -->
 - **Dangerous file types** (`DANGEROUS_EXTENSIONS`: `.exe`, `.msi`, `.ps1`, `.bat`, `.js`, `.lnk`, `.iso` and about
   40 more) ask before they are kept, with a stronger warning when the download came over plain http
   (`downloads.protect`).
+<!-- endif -->
 - **Mark-of-the-Web.** Every completed download gets a `Zone.Identifier` alternate data stream with `ZoneId=3`
   (internet), so Windows SmartScreen and Office Protected View check it. For normal spaces it also records
   `HostUrl` and `ReferrerUrl`; for incognito spaces only the zone.
