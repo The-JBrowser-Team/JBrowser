@@ -8,7 +8,7 @@ or the command registry. They never call each other directly.
 | `window.py` | `MainWindow`: the Windows 11 window that holds the sidebar, title bar and canvases, and wires them together |
 | `controller.py` | `BrowserController`: **what every click, shortcut and command actually does** |
 | `actions.py` | Registers every command with its shortcut, Lazy Toolbar keywords and live state |
-| `titlebar.py` | The ribbon: navigation, the address pill (with the privacy shield and the star), tools (*Gallery*, stack, reading mode, the Downloads button with its percentage, *Update*) and window controls |
+| `titlebar.py` | The ribbon: navigation, the address pill (with the privacy shield and the star), tools (*Gallery*, card width, stack, an optional reading mode button, the Downloads button with its percentage, *Update*) and window controls |
 | `stack_picker.py` | The place that opens below a card to stack another one there: a new page, an open card, a favourite or a bookmark, and the column's width |
 | `sidebar.py` | Favourites, spaces, the current space's cards (drag to reorder or move), the centred clock, peek-to-show and the tools row |
 | `canvas.py` | The infinite horizontal canvas and the `SpaceStack` (panning, resizing, dragging cards, pull to add a card, the overview strip) |

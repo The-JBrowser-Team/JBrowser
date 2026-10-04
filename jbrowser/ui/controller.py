@@ -9,7 +9,7 @@ import logging
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QObject, QPoint, Qt, QTimer, QUrl
-from PyQt6.QtGui import QDesktopServices, QGuiApplication
+from PyQt6.QtGui import QCursor, QDesktopServices, QGuiApplication
 from PyQt6.QtWebEngineCore import QWebEngineDownloadRequest
 from PyQt6.QtWidgets import QFileDialog, QInputDialog, QLineEdit, QMenu, QMessageBox
 
@@ -29,6 +29,9 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 
 WIDTH_PRESETS = [(0.25, "25%"), (1 / 3, "33%"), (0.5, "50%"), (2 / 3, "66%"), (0.75, "75%"), (0.8, "80%"), (1.0, "100%")]
+# The ribbon's card width button (titlebar.WidthButton), with the Alt+number shortcut for each width.
+RIBBON_WIDTHS = [(0.2, "20%", "Alt+2"), (0.4, "40%", "Alt+4"), (0.5, "50%", "Alt+5"), (0.6, "60%", "Alt+6"),
+                 (0.8, "80%", "Alt+8"), (1.0, "Full width", "Alt+0")]
 
 
 class BrowserController(QObject):
@@ -782,6 +785,31 @@ class BrowserController(QObject):
                     checkable=True, checked=bool(self.ctx.settings.get("canvas.show_minimap")))
         m.exec(pos)
 
+    def show_width_menu_here(self) -> None:
+        """The width menu under the ribbon's button, or under the mouse when the button is hidden."""
+        btn = self.window.titlebar.width_btn
+        if btn.isVisible():
+            self.show_width_menu(btn.mapToGlobal(QPoint(0, btn.height())))
+        else:
+            self.show_width_menu(QCursor.pos())
+
+    def show_width_menu(self, pos: QPoint) -> None:
+        """The ribbon's card width button: common widths with their shortcuts."""
+        tabs = self.ctx.state.selected_tabs()
+        m = QMenu(self.window)
+        header = menu_action(m, "Width of the selected cards" if len(tabs) > 1 else "Width of this card", None,
+                             "columns")
+        header.setEnabled(False)
+        widths = {round(t.width, 3) for t in tabs}
+        current = next(iter(widths)) if len(widths) == 1 else None
+        for frac, label, keys in RIBBON_WIDTHS:
+            menu_action(m, label, lambda f=frac: self.scale_selected(f), checkable=True,
+                        checked=current is not None and abs(current - frac) < 0.01, shortcut=keys,
+                        enabled=bool(tabs))
+        m.addSeparator()
+        menu_action(m, "More layouts and split views", lambda: self.show_layout_menu(pos), "tiles")
+        m.exec(pos)
+
     def show_shield_menu(self, tab_id: str | None, pos: QPoint) -> None:
         tab = self.ctx.state.tab(tab_id) if tab_id else self.ctx.state.active_tab
         m = QMenu(self.window)
@@ -922,12 +950,16 @@ class BrowserController(QObject):
                     checked=bool(s.get("appearance.favorites_bar")), shortcut="Ctrl+Shift+B")
         menu_action(m, "Home button", lambda: s.toggle("toolbar.home_button"), checkable=True,
                     checked=bool(s.get("toolbar.home_button")))
+        menu_action(m, "Card width button", lambda: s.toggle("toolbar.width_button"), checkable=True,
+                    checked=bool(s.get("toolbar.width_button")))
+        menu_action(m, "Reading mode button", lambda: s.toggle("toolbar.reading_button"), checkable=True,
+                    checked=bool(s.get("toolbar.reading_button")))
         always = s.get("toolbar.downloads_button") == "always"
         menu_action(m, "Always show the Downloads button",
                     lambda: s.set("toolbar.downloads_button", "auto" if always else "always"), checkable=True,
                     checked=always)
         m.addSeparator()
-        menu_action(m, "Ribbon and appearance settings…", lambda: self.open_settings("appearance"), "settings")
+        menu_action(m, "Ribbon and sidebar settings…", lambda: self.open_settings("ribbon"), "settings")
         m.exec(pos)
 
     def show_sidebar_menu(self, pos: QPoint) -> None:
@@ -961,7 +993,7 @@ class BrowserController(QObject):
         menu_action(m, "Home opens the Lazy Toolbar", lambda: s.set("toolbar.home_mode", "lazy"), checkable=True,
                     checked=mode != "url" or not url)
         menu_action(m, f"Home opens {pretty_url(url, keep_path=False)}" if url else "Home opens a web page…",
-                    lambda: s.set("toolbar.home_mode", "url") if url else self.open_settings("appearance"),
+                    lambda: s.set("toolbar.home_mode", "url") if url else self.open_settings("ribbon"),
                     checkable=True, checked=mode == "url" and bool(url))
         tab = self.ctx.state.active_tab
         if tab is not None and tab.url.startswith(("http://", "https://")):
@@ -969,7 +1001,7 @@ class BrowserController(QObject):
                         lambda: (s.set("toolbar.home_url", tab.url), s.set("toolbar.home_mode", "url"),
                                  self.toast("Home page set", "home")), "home")
         m.addSeparator()
-        menu_action(m, "Home button settings…", lambda: self.open_settings("appearance"), "settings")
+        menu_action(m, "Home button settings…", lambda: self.open_settings("ribbon"), "settings")
         menu_action(m, "Hide Home button", lambda: s.set("toolbar.home_button", False), "close")
         m.exec(pos)
 

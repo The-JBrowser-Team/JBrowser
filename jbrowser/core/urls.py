@@ -2,12 +2,16 @@
 from __future__ import annotations
 
 import ipaddress
+import os
 import re
 
 from PyQt6.QtCore import QUrl
 
 _SCHEME_RE = re.compile(r"^[a-zA-Z][a-zA-Z0-9+.\-]*:")
 _HOSTPORT_RE = re.compile(r"^(?P<host>\[[0-9a-fA-F:.]+\]|[^/:?#\s]+)(?::(?P<port>\d{1,5}))?(?P<rest>[/?#].*)?$")
+_DRIVE_RE = re.compile(r"^[a-zA-Z]:[\\/]")                        # C:\... or C:/...
+_UNC_RE = re.compile(r"^\\\\[^\\/?.\s][^\\/]*[\\/]?")              # \\server\share (not \\?\ or \\.\)
+_HOSTNAME_RE = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?$")
 
 INTERNAL_SCHEMES = {"http", "https", "file", "about", "data", "view-source", "chrome", "qrc",
                     "ftp", "blob", "javascript", "devtools", "ws", "wss", "chrome-error"}
@@ -109,9 +113,26 @@ def pretty_url(url: str | QUrl, keep_path: bool = True) -> str:
     return q.toDisplayString()
 
 
+def local_path(text: str) -> str | None:
+    """The file or folder path typed or pasted in ``text`` (``C:\\Users\\...``, ``D:/...``, ``\\\\server\\share``,
+    ``%USERPROFILE%\\...``; quotes from "Copy as path" are fine), or None when it isn't one."""
+    t = text.strip()
+    if len(t) >= 2 and t[0] == t[-1] and t[0] in "\"'":
+        t = t[1:-1].strip()
+    if t.startswith("%"):
+        t = os.path.expandvars(t)
+    if _DRIVE_RE.match(t) or _UNC_RE.match(t):
+        return t
+    return None
+
+
 def looks_like_url(text: str, dev_hosts: set[str] | None = None) -> bool:
     text = text.strip()
-    if not text or " " in text:
+    if not text:
+        return False
+    if local_path(text) is not None or text[:5].lower() == "file:":
+        return True                       # local files and folders may have spaces in their names
+    if " " in text:
         return False
     if _SCHEME_RE.match(text):
         scheme = text.split(":", 1)[0].lower()
@@ -130,6 +151,11 @@ def looks_like_url(text: str, dev_hosts: set[str] | None = None) -> bool:
         return True
     if is_ip(host):
         return True
+    port = m.group("port") or ""
+    if _HOSTNAME_RE.match(host) and any(c.isalpha() for c in host) and \
+            (len(port) >= 4 or (port and m.group("rest"))):
+        # A computer on the network with a port: "nas:5000", "pi:80/admin" (but "psalm:23" is a search).
+        return True
     if "." not in host or host.startswith(".") or host.endswith("."):
         return False
     tld = host.rsplit(".", 1)[1]
@@ -142,15 +168,21 @@ def looks_like_url(text: str, dev_hosts: set[str] | None = None) -> bool:
 def to_url(text: str) -> QUrl:
     """Turn user input that ``looks_like_url`` into a navigable QUrl."""
     text = text.strip()
+    path = local_path(text)
+    if path is not None:
+        return QUrl.fromLocalFile(path.replace("\\", "/"))
+    if text[:5].lower() == "file:":
+        # Typed or pasted file URLs often have backslashes or unencoded spaces.
+        return QUrl(text.replace("\\", "/"), QUrl.ParsingMode.TolerantMode)
     if _SCHEME_RE.match(text):
         scheme = text.split(":", 1)[0].lower()
         if scheme in INTERNAL_SCHEMES or scheme in EXTERNAL_SCHEMES:
             return QUrl(text)
     m = _HOSTPORT_RE.match(text)
     host = (m.group("host") if m else text).lower()
-    scheme = "http" if (is_local_host(host) or host.endswith((".test", ".local", ".internal", ".lan"))) \
-        else "https"
-    return QUrl.fromUserInput(f"{scheme}://{text}")
+    local = is_local_host(host) or host.endswith((".test", ".local", ".internal", ".lan")) \
+        or bool(m is not None and m.group("port") and "." not in host)
+    return QUrl.fromUserInput(f"{'http' if local else 'https'}://{text}")
 
 
 def display_title(title: str, url: str) -> str:

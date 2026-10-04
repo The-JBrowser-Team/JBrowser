@@ -42,7 +42,10 @@ WM_SETTINGCHANGE = 0x001A
 WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320
 WM_THEMECHANGED = 0x031A
 WM_DWMCOMPOSITIONCHANGED = 0x031E
-_SYSTEM_CHANGE_MESSAGES = (WM_SETTINGCHANGE, WM_THEMECHANGED, WM_DWMCOMPOSITIONCHANGED, WM_DWMCOLORIZATIONCOLORCHANGED)
+WM_POWERBROADCAST = 0x0218          # energy saver, sleep and resume
+WM_DISPLAYCHANGE = 0x007E
+_SYSTEM_CHANGE_MESSAGES = (WM_SETTINGCHANGE, WM_THEMECHANGED, WM_DWMCOMPOSITIONCHANGED, WM_DWMCOLORIZATIONCOLORCHANGED,
+                           WM_POWERBROADCAST, WM_DISPLAYCHANGE)
 
 HTCLIENT = 1
 HTCAPTION = 2
@@ -51,6 +54,7 @@ HTLEFT, HTRIGHT, HTTOP, HTTOPLEFT, HTTOPRIGHT = 10, 11, 12, 13, 14
 HTBOTTOM, HTBOTTOMLEFT, HTBOTTOMRIGHT = 15, 16, 17
 _BORDER_HITS = {HTLEFT, HTRIGHT, HTTOP, HTTOPLEFT, HTTOPRIGHT, HTBOTTOM, HTBOTTOMLEFT, HTBOTTOMRIGHT}
 
+DWMWA_CLOAK = 13
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_USE_IMMERSIVE_DARK_MODE_OLD = 19
 DWMWA_WINDOW_CORNER_PREFERENCE = 33
@@ -79,6 +83,16 @@ class APPBARDATA(ctypes.Structure):
 
 class DATA_BLOB(ctypes.Structure):
     _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
+
+
+class HIGHCONTRASTW(ctypes.Structure):
+    _fields_ = [("cbSize", wintypes.UINT), ("dwFlags", wintypes.DWORD), ("lpszDefaultScheme", wintypes.LPWSTR)]
+
+
+class SYSTEM_POWER_STATUS(ctypes.Structure):
+    _fields_ = [("ACLineStatus", wintypes.BYTE), ("BatteryFlag", wintypes.BYTE),
+                ("BatteryLifePercent", wintypes.BYTE), ("SystemStatusFlag", wintypes.BYTE),
+                ("BatteryLifeTime", wintypes.DWORD), ("BatteryFullLifeTime", wintypes.DWORD)]
 
 
 if IS_WINDOWS:
@@ -117,6 +131,18 @@ if IS_WINDOWS:
                                             ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
                                             ctypes.POINTER(DATA_BLOB)]
     _kernel32.LocalFree.argtypes = [ctypes.c_void_p]
+    _kernel32.GetSystemPowerStatus.argtypes = [ctypes.POINTER(SYSTEM_POWER_STATUS)]
+    _user32.GetDC.argtypes = [wintypes.HWND]
+    _user32.GetDC.restype = wintypes.HDC
+    _user32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
+    _user32.WindowFromPoint.argtypes = [wintypes.POINT]
+    _user32.WindowFromPoint.restype = wintypes.HWND
+    _user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+    _user32.GetAncestor.restype = wintypes.HWND
+    _user32.GetForegroundWindow.restype = wintypes.HWND
+    _gdi32 = ctypes.windll.gdi32
+    _gdi32.GetPixel.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
+    _gdi32.GetPixel.restype = wintypes.DWORD
 
 
 def _set_dword_attr(hwnd: int, attr: int, value: int) -> bool:
@@ -216,6 +242,97 @@ def set_transitions(hwnd: int, enabled: bool) -> None:
         _set_dword_attr(hwnd, 3, 0 if enabled else 1)
 
 
+def set_cloak(hwnd: int, cloaked: bool) -> bool:
+    """Hide (or show again) a window from the screen without hiding it from Windows: a new window is
+    cloaked until its material and first frame are ready, so it never flashes white or black."""
+    return IS_WINDOWS and _set_dword_attr(hwnd, DWMWA_CLOAK, int(cloaked))
+
+
+# ---------------------------------------------------------------------------- can Windows show a material?
+# Mica and Acrylic only appear when Windows draws them. With transparency effects off, energy saver on,
+# high contrast or over Remote Desktop, Windows draws a plain fill instead, and JBrowser's see-through
+# layers would sit on top of whatever that fill is. ui/backdrop.py (LookGuard) paints JBrowser's own
+# opaque base in those cases.
+def transparency_effects_on() -> bool:
+    """Settings → Personalisation → Colours → Transparency effects."""
+    if not IS_WINDOWS:
+        return False
+    try:
+        import winreg
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+                            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
+            value, _ = winreg.QueryValueEx(key, "EnableTransparency")
+        return bool(value)
+    except OSError:
+        return True                       # never written: Windows' default (on)
+
+
+def high_contrast_on() -> bool:
+    if not IS_WINDOWS:
+        return False
+    hc = HIGHCONTRASTW()
+    hc.cbSize = ctypes.sizeof(HIGHCONTRASTW)
+    if _user32.SystemParametersInfoW(0x0042, hc.cbSize, ctypes.byref(hc), 0):     # SPI_GETHIGHCONTRAST
+        return bool(hc.dwFlags & 0x1)                                              # HCF_HIGHCONTRASTON
+    return False
+
+
+def energy_saver_on() -> bool:
+    """Battery saver / energy saver, which turns Windows' transparency effects off while it's on."""
+    if not IS_WINDOWS:
+        return False
+    status = SYSTEM_POWER_STATUS()
+    if _kernel32.GetSystemPowerStatus(ctypes.byref(status)):
+        return status.SystemStatusFlag == 1
+    return False
+
+
+def remote_session() -> bool:
+    return IS_WINDOWS and bool(_user32.GetSystemMetrics(0x1000))                 # SM_REMOTESESSION
+
+
+def material_blockers() -> list[str]:
+    """Why Windows won't draw Mica or Acrylic right now (empty when it will)."""
+    if not IS_WINDOWS:
+        return ["not Windows"]
+    out = []
+    if not transparency_effects_on():
+        out.append("transparency effects are off")
+    if energy_saver_on():
+        out.append("energy saver is on")
+    if high_contrast_on():
+        out.append("a high contrast theme is on")
+    if remote_session():
+        out.append("Remote Desktop")
+    return out
+
+
+def sample_own_pixel(hwnd: int, x: int, y: int) -> tuple[int, int, int] | None:
+    """The colour on screen at client pixel (x, y) of ``hwnd``, as Windows composited it, or None when
+    another window covers that point (then it says nothing about ``hwnd``)."""
+    if not IS_WINDOWS:
+        return None
+    pt = wintypes.POINT(x, y)
+    _user32.ClientToScreen(hwnd, ctypes.byref(pt))
+    top = _user32.WindowFromPoint(pt)
+    if not top or int(_user32.GetAncestor(top, 2) or 0) != int(hwnd):              # GA_ROOT
+        return None
+    dc = _user32.GetDC(None)
+    if not dc:
+        return None
+    try:
+        c = _gdi32.GetPixel(dc, pt.x, pt.y)
+    finally:
+        _user32.ReleaseDC(None, dc)
+    if c == 0xFFFFFFFF:                                                            # CLR_INVALID
+        return None
+    return c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF
+
+
+def foreground_window() -> int:
+    return int(_user32.GetForegroundWindow() or 0) if IS_WINDOWS else 0
+
+
 def post_syscommand(hwnd: int, command: int) -> None:
     if IS_WINDOWS:
         _user32.PostMessageW(hwnd, WM_SYSCOMMAND, command, 0)
@@ -276,6 +393,10 @@ class NativeFrame:
         # Returns True when the window takes it over and sends the command again itself (MainWindow.transition).
         self.on_transition: Callable[[int], bool] | None = None
         self.passing: int | None = None     # a command sent again by the window: let Windows carry it out
+        # Windows draws Mica and Acrylic as a flat grey or white fill while a window is inactive. JBrowser
+        # keeps its frame in the active state instead, so the window looks the same whether or not it has
+        # the focus. (Qt still learns about activation from WM_ACTIVATE.)
+        self.keep_active_look = os.environ.get("JBROWSER_INACTIVE_LOOK") != "1"
 
     def _set_hover(self, value: bool) -> None:
         if value != self._max_hover:
@@ -355,8 +476,11 @@ class NativeFrame:
                 return True, code
             return True, HTCLIENT
         if m == WM_NCACTIVATE:
-            # lParam = -1 stops DefWindowProc from painting a classic caption over the client.
-            return True, _user32.DefWindowProcW(hwnd, m, msg.wParam, -1)
+            # lParam = -1 stops DefWindowProc from painting a classic caption over the client. wParam TRUE
+            # keeps the frame, and the material behind the window, in their active look (see above);
+            # the result is TRUE either way, so the window is still allowed to lose the focus.
+            active = 1 if self.keep_active_look else msg.wParam
+            return True, _user32.DefWindowProcW(hwnd, m, active, -1)
         if m == WM_NCMOUSELEAVE:
             self._set_hover(False)
             return False, 0
@@ -453,6 +577,75 @@ def dpapi_unprotect(data: bytes, entropy: bytes = b"JBrowser") -> bytes:
         return ctypes.string_at(blob_out.pbData, blob_out.cbData)
     finally:
         _kernel32.LocalFree(blob_out.pbData)
+
+
+# ---------------------------------------------------------------------------- default apps
+# The installer registers JBrowser with Windows (installer/JBrowser.iss, "Register JBrowser as a web browser
+# and PDF viewer"): links open with the JBrowserURL handler, PDF files with JBrowserPDF. Windows only lets the
+# user choose defaults, in Settings → Apps → Default apps; JBrowser reads the choice and links there.
+DEFAULT_HANDLERS = {"browser": ("https", "JBrowserURL"), "pdf": (".pdf", "JBrowserPDF")}
+
+
+def _reg_value(root, path: str, name: str) -> str | None:
+    import winreg
+    try:
+        with winreg.OpenKey(root, path) as key:
+            value, _ = winreg.QueryValueEx(key, name)
+        return str(value)
+    except OSError:
+        return None
+
+
+def registered_with_windows() -> str | None:
+    """Where the installer registered JBrowser for "Default apps": "user", "machine", or None."""
+    if not IS_WINDOWS:
+        return None
+    import winreg
+    for root, where in ((winreg.HKEY_CURRENT_USER, "user"), (winreg.HKEY_LOCAL_MACHINE, "machine")):
+        if _reg_value(root, r"Software\RegisteredApplications", "JBrowser"):
+            return where
+    return None
+
+
+def handles_pdf() -> bool:
+    """Whether this installation offers JBrowser for PDF files (installed by 2.0.1 or later)."""
+    if not IS_WINDOWS:
+        return False
+    import winreg
+    caps = r"Software\Clients\StartMenuInternet\JBrowser\Capabilities\FileAssociations"
+    return any(_reg_value(root, caps, ".pdf") for root in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE))
+
+
+def default_handler(kind: str) -> str | None:
+    """The handler Windows uses for links ("browser") or PDF files ("pdf"), or None if unknown. Newer Windows
+    11 builds keep the user's choice in UserChoiceLatest, older ones in UserChoice."""
+    if not IS_WINDOWS or kind not in DEFAULT_HANDLERS:
+        return None
+    import winreg
+    what = DEFAULT_HANDLERS[kind][0]
+    base = (rf"Software\Microsoft\Windows\Shell\Associations\UrlAssociations\{what}" if kind == "browser"
+            else rf"Software\Microsoft\Windows\CurrentVersion\Explorer\FileExts\{what}")
+    hkcu = winreg.HKEY_CURRENT_USER
+    return (_reg_value(hkcu, base + r"\UserChoiceLatest\ProgId", "ProgId")
+            or _reg_value(hkcu, base + r"\UserChoice", "ProgId"))
+
+
+def is_default(kind: str) -> bool:
+    return default_handler(kind) == DEFAULT_HANDLERS[kind][1]
+
+
+def open_default_apps() -> None:
+    """Windows Settings → Default apps, on JBrowser's own page when Windows knows about it."""
+    if not IS_WINDOWS:
+        return
+    where = registered_with_windows()
+    uri = "ms-settings:defaultapps"
+    if where:
+        uri += f"?registeredApp{'User' if where == 'user' else 'Machine'}=JBrowser"
+    try:
+        os.startfile(uri)  # type: ignore[attr-defined]
+    except OSError:
+        log.warning("Couldn't open Windows Default apps settings")
 
 
 def running_as_admin() -> bool:

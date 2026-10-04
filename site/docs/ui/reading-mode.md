@@ -42,12 +42,24 @@ isolated world) and returns the title, byline, site name, language, direction, l
 `ReadingOffer` appears at the bottom of the card when the page is readable, the card is active, the window has focus,
 `reading.offer` is on and the page hasn't been offered before in this session (`BrowserController.claim_reading_offer`).
 It waits until you scroll well into the article or stay on it for 9 seconds. *Don't show again* turns `reading.offer`
+<!-- if >= 2.0.1 -->
+off (Settings → General → Reading turns it back on). It is drawn solid: Qt composites a partly transparent widget over
+a web page far more see-through than its alpha suggests (`theme.solid()`).
+<!-- else -->
 off (Settings → Appearance turns it back on). It is drawn solid: Qt composites a partly transparent widget over a web
 page far more see-through than its alpha suggests (`theme.solid()`).
+<!-- endif -->
 
 ## Buttons and shortcuts
 
+<!-- if >= 2.0.1 -->
+- A card shows its own reading button when its page is readable (or in reading mode).
+- [[changed 2.0.1]] The ribbon's reading button (`TitleBar.reading_btn`) is optional and off by default
+  (`toolbar.reading_button`; Settings → Ribbon and sidebar, or right-click the ribbon). It is a toggle; its glyph
+  turns to the accent colour on articles.
+<!-- else -->
 - The ribbon's reading button (`TitleBar.reading_btn`) is a toggle; its glyph turns to the accent colour on articles.
 - A card shows its own reading button when its page is readable.
+<!-- endif -->
 - **F9** and **Alt+Shift+R** (`view.reading`) toggle reading mode for the active card; *Reading mode* is also in the
   card menu and the ··· menu → Page.

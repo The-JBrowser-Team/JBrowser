@@ -5,6 +5,42 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [2.0.1] - 2026-10-04
+
+Cards get a width button, JBrowser can open your PDF files, and Settings is easier to find your way around.
+
+### Added
+- **Card width button on the ribbon.** It shows the selected card's width. Click it for **20%**, **40%**, **50%**,
+  **60%**, **80%** or **full width**, each listed with its shortcut (**Alt+2**, **Alt+4**, **Alt+5**, **Alt+6**,
+  **Alt+8**, **Alt+0**). With several cards selected, it sizes them all. It's on by default; right-click the ribbon
+  to hide it.
+- **JBrowser for PDF files.** The installer now also registers JBrowser as a PDF viewer, so you can choose it for
+  `.pdf` files in Windows' Default apps or under **Open with**. PDFs open in the built-in viewer, where you can zoom,
+  search, print and save them.
+- **Settings › Default apps.** Shows whether JBrowser opens your links and your PDF files, and takes you straight to
+  the right place in Windows' settings to change it.
+
+### Changed
+- **Settings, reorganised.** Pages are grouped into *Browsing*, *Look and feel*, *Privacy and safety* and *System*,
+  and the longer pages have headings. Every ribbon and sidebar option now lives on one new page, **Ribbon and
+  sidebar**. Searching settings hides empty headings, and **Esc** clears the search before it closes Settings.
+- **The reading mode button is off the ribbon by default.** It's still on every card's title bar whenever a page
+  looks like an article, and **F9** works as always. Turn the ribbon button back on in Settings › Ribbon and sidebar,
+  or by right-clicking the ribbon.
+- **A smaller app.** Debug-only copies of web-engine files and Qt plugins JBrowser never uses are no longer installed.
+- The welcome tour shows the card width button.
+
+### Fixed
+- **Local links open again.** Typing or pasting a file or folder location into the address bar searched the web
+  instead of opening it: `C:\Users\…\page.html`, paths with spaces or `#`, quoted paths from *Copy as path*,
+  `D:/…`, `%USERPROFILE%\…`, network locations like `\\server\share` and `file:///` addresses with backslashes. They
+  open in a card now, and are never sent for search suggestions. A computer on your network with a port
+  (`nas:5000`) opens too.
+- **Files from Windows open as files.** Opening a saved page or a PDF with JBrowser (Open with, double-click, the
+  command line) searched the web for its location instead of opening it, also when JBrowser was already running.
+  Relative paths on the command line work too.
+- Steadier window colours on more PCs.
+
 ## [2.0.0] - 2026-10-02
 
 JBrowser 2.0 is the biggest update yet: cards can now stack in columns, articles open in a calm reading mode, and

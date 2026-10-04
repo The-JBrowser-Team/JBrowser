@@ -61,9 +61,13 @@ _SOLID_MIX = {"window": (0.20, 0.15), "sidebar_solid": (0.24, 0.19), "canvas_sol
 _WASH_ALPHA = (0.15, 0.10)          # the translucent wash (dark, light): a tint, never a paint job
 _OUTLINE_WASH = (0.30, 0.12)        # how far the active card's outline is washed towards white (dark, light)
 _OUTLINE_GREY = ("#8b9099", "#9aa0a8")   # the outline without a tint (dark, light)
-# Opaque base while the window minimises or maximises (Theme.hold_opaque): Windows 11's own colour
-# behind inactive Mica / Acrylic windows (dark, light), so the hand-over is barely visible.
+# Opaque base while the window minimises or maximises (Theme.hold_opaque), and whenever Windows isn't
+# drawing a material behind JBrowser (Theme.see_through): Windows 11's own colour behind Mica / Acrylic
+# windows that can't show it (dark, light), so the hand-over is barely visible.
 TRANSITION_BASE = ("#202020", "#f3f3f3")
+# Windows 10's blur has no tint of its own (Windows 11's Acrylic and Mica do), so JBrowser's base over
+# it is denser there: the window keeps its colours whatever is behind it (dark, light).
+_WIN10_BASE = ("rgba(28,28,34,0.86)", "rgba(246,246,249,0.84)")
 # Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
 _INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
               "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
@@ -110,6 +114,10 @@ class Theme(QObject):
         self.tokens: dict[str, str] = dict(DARK)
         self.translucent = True
         self.hold_opaque = False         # set by MainWindow.transition while Windows animates the window
+        # False while Windows can't draw Mica / Acrylic behind JBrowser (transparency effects off, energy
+        # saver, high contrast, Remote Desktop, a graphics path without see-through windows). Set by
+        # ui/backdrop.py LookGuard; JBrowser then paints an opaque base of its own.
+        self.see_through = True
         self.tint: QColor | None = None
         self.incognito = False
         self._syncing = False
@@ -175,6 +183,8 @@ class Theme(QObject):
             self._request_scheme(None)                  # so _system_dark() reads Windows' own setting
         self.dark = self.incognito or (self._system_dark() if mode == "system" else mode == "dark")
         self.tokens = dict(DARK if self.dark else LIGHT)
+        if win.IS_WINDOWS and not win.IS_WIN11:
+            self.tokens["backdrop_base"] = _WIN10_BASE[0 if self.dark else 1]
         tint = TINTS.get(self.settings.get("appearance.tint") or "")
         self.tint = QColor(tint[1]) if tint and not self.incognito else None
         if self.incognito:
@@ -236,6 +246,18 @@ class Theme(QObject):
             return self.c("window_tint")
         return None
 
+    @property
+    def material_shown(self) -> bool:
+        """True when a see-through material (Mica / Acrylic) is chosen and Windows is drawing it."""
+        return self.translucent and self.see_through
+
+    def set_see_through(self, on: bool) -> None:
+        """Windows started or stopped drawing materials behind JBrowser (ui/backdrop.py LookGuard)."""
+        if bool(on) != self.see_through:
+            self.see_through = bool(on)
+            self.apply()              # menus switch between frosted glass and an opaque background
+            self.changed.emit()
+
     def backdrop_layers(self) -> list[QColor]:
         """What a translucent window paints over the system backdrop, bottom first: JBrowser's own
         base colour, then the tint wash. The base keeps dark windows dark and light ones light
@@ -244,10 +266,11 @@ class Theme(QObject):
         wash = self.backdrop_wash()
         if wash is not None:
             layers.append(wash)
-        if self.hold_opaque:
-            # While Windows animates a minimise or maximise it draws a snapshot of the window, and on
-            # some PCs it draws the see-through parts of that snapshot with the wrong colours. Under
-            # everything goes the colour Windows itself shows behind an inactive window.
+        if self.hold_opaque or not self.see_through:
+            # Nothing of the window may depend on what Windows draws behind it: while it animates a
+            # minimise or maximise (it draws a snapshot, and on some PCs the see-through parts of that
+            # snapshot come out in the wrong colours), and while it isn't drawing a material at all.
+            # Under everything goes the colour Windows itself shows behind such windows.
             layers.insert(0, QColor(TRANSITION_BASE[0 if self.dark else 1]))
         return layers
 
@@ -296,10 +319,11 @@ class Theme(QObject):
         a_soft = f"rgba({self.accent.red()},{self.accent.green()},{self.accent.blue()},0.22)"
         a_hover = self.accent.lighter(112).name() if self.dark else self.accent.darker(110).name()
         dialog_bg = t["dialog_solid"]
-        # Menus are frosted glass over Acrylic (Windows rounds them and draws their outline); a
-        # menu made while the Solid material was chosen keeps an opaque background.
-        menu_bg = t["menu"] if self.translucent else t["dialog_solid"]
-        menu_border = "none" if self.translucent else f"1px solid {t['panel_border']}"
+        # Menus are frosted glass over Acrylic (Windows rounds them and draws their outline); with the
+        # Solid material, or while Windows draws no materials, they have an opaque background.
+        glass = self.material_shown
+        menu_bg = t["menu"] if glass else t["dialog_solid"]
+        menu_border = "none" if glass else f"1px solid {t['panel_border']}"
         from jbrowser.ui.icons import glyph_png
         check_png = glyph_png("check", self.accent_text(), 14)
         arrow_png = glyph_png("chev_down", self.c("text2"), 12)

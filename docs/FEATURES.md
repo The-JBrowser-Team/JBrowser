@@ -5,7 +5,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 ### Windows 11 look & feel
 - **Acrylic** by default, or **Mica, Mica Alt** or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
   The theme you pick holds even when Windows uses the other one: JBrowser paints its own base colour under the
-  frosted glass, so the window never turns pale behind light text (or dark behind dark text).
+  frosted glass, so the window never turns pale behind light text (or dark behind dark text). Inactive windows keep
+  their look, and when Windows isn't drawing see-through effects (transparency effects or energy saver off, high
+  contrast, Remote Desktop, some graphics drivers) JBrowser switches to a solid look by itself until they're back.
 - **Frosted menus**: right-click menus, the ··· menu and the Archive are translucent too.
 - **Colour tints**: rose, coral, amber, lime, mint, teal, sky, indigo, violet, slate or *No colour* (Settings →
   Appearance, the welcome setup, or "colour" in the Lazy Toolbar). Over Acrylic or Mica it is a light wash; with
@@ -14,8 +16,10 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   as the Settings button.
 - Custom title bar that keeps native behaviour: drag, double-click maximise, Aero Snap, **Snap Layouts flyout** on the maximise button, rounded corners, shadow, resize edges.
   Buttons are grouped like Chrome: navigation · address pill (with the privacy shield and the star on its right) ·
-  tools (Gallery, stack, reading mode, Downloads, menu) · window controls. The Downloads button appears once you
-  download something and shows the percentage while files download (Settings → Appearance can always show it).
+  tools (Gallery, card width, stack, Downloads, menu) · window controls. The **card width** button shows the selected
+  card's width and offers 20 %, 40 %, 50 %, 60 %, 80 % and full width with their shortcuts. The Downloads button
+  appears once you download something and shows the percentage while files download. Settings → Ribbon and sidebar
+  (or right-clicking the ribbon) shows or hides each optional button, including a ribbon button for reading mode.
 - **No colour warp** when minimising, maximising or restoring: the window paints itself solid while Windows animates
   it, and *Animate minimising and maximising* (Settings → Appearance) turns Windows' animation off for PCs that still
   flicker.
@@ -32,7 +36,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   screen's frame rate and keeps up with the input on slower PCs too.
 - **Alt + ← / →** steps focus between cards (smoothly scrolled into view); Ctrl+Tab cycles and wraps around.
 - **Pinned cards** stay at the start of their space (right-click → Pin card).
-- **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**.
+- **Alt + 0** = 100 % width, **Alt + 1 … 9** = 10 % … 90 % of the canvas, applied to **all selected cards**; or the
+  card width button on the ribbon.
 - Multi-select with **Ctrl + Click / Shift + Click** on card headers (or in the sidebar list), **Ctrl + Shift + A** selects all.
 - **Stack cards in columns** (new in 2.0): up to three cards on top of each other. Drag a card onto the lower part of
   another (its top edge puts it above), or press the **stack** button on the ribbon (Alt+Shift+S): a space opens below
@@ -88,6 +93,9 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - Run actions directly: switch DNS resolver, toggle proxy, toggle animations, card-size presets, clear cache,
   open localhost:3000/5173/8000/8080, change theme/material, memory-saver presets, and more.
 - Enter opens in the mode's target, **Shift+Enter** in the other one (new card ↔ this card), Tab completes.
+- **Files on this PC**: type or paste a location (`C:\…`, `D:/…`, `"C:\path with spaces\file.pdf"`, `%USERPROFILE%\…`,
+  `\\server\share`, `file:///…`) and it opens in a card, never as a search. Computers on your network with a port
+  (`nas:5000`) open too.
 
 ### Security, networking & developer tools
 - **DNS resolver** with live switching: *OS default*, **Quad9 malware-blocking DoH (recommended, default)**, *Cloudflare 1.1.1.1 DoH*,
@@ -148,7 +156,7 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   password generator, CSV import (Chrome/Edge/Firefox), **encrypted export** (a CSV inside a ZIP locked with a
   password you choose, AES-256; 7-Zip, WinRAR and JBrowser itself open it), never-save list, clipboard auto-clear and
   a local **password health check** that flags weak and reused passwords.
-- **Reading mode** (F9, Alt+Shift+R, or the reading button on the ribbon or a card): the article's text and pictures
+- **Reading mode** (F9, Alt+Shift+R, or the reading button on a card; a ribbon button is optional): the article's text and pictures
   without the clutter, extracted with Mozilla's Readability in JBrowser's isolated world and shown in a separate,
   script-free page (strict Content-Security-Policy, own in-memory profile, trackers still blocked). Serif or
   sans-serif, four colour themes (match JBrowser, light, sepia, dark) and text size; links open in the card. Off by
@@ -158,8 +166,11 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - **DevTools** docked inside the card (F12 / Ctrl+Shift+I), **find in page** (Ctrl+F), **zoom** remembered per site
   (Ctrl+= / Ctrl+- / Ctrl+0), print, save page (HTML/MHTML), save as PDF, view source, card screenshots.
 - **Cookies** and **site permissions** (camera, mic, location, notifications, clipboard, screen share…) managers, per space.
-- **Settings** (Ctrl+, or click the logo): General, Appearance, Search, Privacy and security, Clear browsing data,
-  Passwords, Performance, Network and DNS, Downloads, Advanced, Reset and About, with a search box that filters options.
+- **Settings** (Ctrl+, or click the logo), in four groups: *Browsing* (General, Search, Default apps), *Look and
+  feel* (Appearance, Ribbon and sidebar), *Privacy and safety* (Privacy and security, Clear browsing data, Passwords,
+  Downloads) and *System* (Performance, Network and DNS, Advanced, Reset, About), with headings inside the longer
+  pages and a search box that filters options (Esc clears it).
+  Default apps shows whether JBrowser opens your links and PDF files and opens Windows' Default apps page.
   Advanced has the graphics acceleration mode (Automatic / Compatible / Off, for graphics drivers that glitch), how
   JBrowser introduces itself to websites, and the optional note about videos JBrowser can't play.
   Clear browsing data works by time range (last hour to all time) and space, and can run automatically on exit.
@@ -170,6 +181,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
 - Session restore with full back/forward history, reopen closed cards (Ctrl+Shift+T), permission prompts,
   certificate-error interstitials, HTTP/proxy authentication, screen-share picker, web notifications (in-app + Windows),
   OAuth/payment popups that keep `window.opener`, HTML5 immersive fullscreen, single-instance URL forwarding.
+- **PDF viewer**: PDFs open in a card with zoom, search, print and save. The installer registers JBrowser for `.pdf`
+  (and `.html`) files, so it can be chosen in Windows' Default apps or *Open with*.
 
 ## Keyboard shortcuts
 

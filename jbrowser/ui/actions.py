@@ -88,6 +88,8 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
               shortcuts=[f"Alt+{n}"], icon="columns", keywords=f"width resize {n}0 percent")
     c.add("layout.scale10", "Scale card(s) to 100% (full width)", LAYOUT, lambda: ui.scale_selected(1.0),
           shortcuts=["Alt+0"], icon="fullscreen", keywords="width resize full 100 percent")
+    c.add("layout.width_menu", "Card width…", LAYOUT, lambda: ui.show_width_menu_here(), icon="columns",
+          keywords="size resize percent 20 40 50 60 80 full")
     c.add("layout.split2", "Two columns side by side", LAYOUT, lambda: ui.split(2), shortcuts=["Alt+Shift+D"],
           icon="columns", keywords="dual split 50 two")
     c.add("layout.split3", "Three columns", LAYOUT, lambda: ui.split(3), shortcuts=["Alt+Shift+T"],
@@ -161,6 +163,12 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
           state=on_off("appearance.favorites_bar"))
     c.add("view.toggle_home", "Home button on the ribbon", VIEW, lambda: s.toggle("toolbar.home_button"),
           icon="home", state=on_off("toolbar.home_button"), keywords="toolbar start page")
+    c.add("view.toggle_width_button", "Card width button on the ribbon", VIEW,
+          lambda: s.toggle("toolbar.width_button"), icon="columns", state=on_off("toolbar.width_button"),
+          keywords="toolbar size resize percent")
+    c.add("view.toggle_reading_button", "Reading mode button on the ribbon", VIEW,
+          lambda: s.toggle("toolbar.reading_button"), icon="reading", state=on_off("toolbar.reading_button"),
+          keywords="toolbar reader article")
     c.add("view.toggle_animations", "Fluid animations", VIEW, ui.toggle_animations, icon="lightning",
           keywords="motion transitions reduce", state=on_off("appearance.animations"))
     c.add("view.theme_dark", "Theme: dark", VIEW, lambda: ui.set_theme("dark"), icon="moon")

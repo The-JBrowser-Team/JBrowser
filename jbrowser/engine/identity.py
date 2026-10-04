@@ -21,7 +21,7 @@ from datetime import date
 
 # Written by tools/chrome_version.py: the newest stable Chrome for Windows, and when it was newest.
 CHROME_VERSION = "155.0.8059.26"
-CHROME_VERSION_DATE = date(2026, 10, 2)
+CHROME_VERSION_DATE = date(2026, 10, 4)
 
 ESTIMATE_DAYS = 30        # one major version per 30 days after CHROME_VERSION_DATE (Chrome: every 28)
 

@@ -49,6 +49,22 @@ visits weighted by how recent they are, so the pages you actually use rise to th
 `search.keywords` holds shortcuts such as `g`, `ddg`, `yt`, `w`, `gh`, `maps`, `mdn`, `py`, `so`, `pypi`, `npm`
 and `r` (see `DEFAULT_SEARCH_KEYWORDS` in [core/settings.py](source:jbrowser/core/settings.py)). Typing
 `yt lofi beats` searches YouTube directly. The default engine (`search.engine`) handles everything else.
+<!-- if >= 2.0.1 -->
+
+## Addresses, files and searches
+
+`looks_like_url()` and `to_url()` in [core/urls.py](source:jbrowser/core/urls.py) decide whether input is an address.
+[[new 2.0.1]] `local_path()` recognises file and folder locations before anything else, spaces included:
+`C:\…` and `C:/…`, network paths (`\\server\share`, but not `\\?\` or `\\.\` device paths), `%VARIABLE%\…` (expanded)
+and paths in quotes, as Explorer's *Copy as path* writes them. They become `QUrl.fromLocalFile()` addresses, and the
+top result reads *Open C:\…* with *File on this PC* or *Folder on this PC* (decided from the text alone: a network
+path can take seconds to answer). `file:` input with backslashes or unencoded spaces is cleaned up the same way.
+A single-label host with a four- or five-digit port (`nas:5000`), or any port followed by a path (`pi:80/admin`),
+opens over `http://`; `psalm:23` stays a search. Input that counts as an address is never sent for suggestions.
+
+Command-line arguments (file associations, *Open with*) go through the same `resolve_input()`; `app.py` makes
+relative paths absolute first, because a running copy that receives them has a different working folder.
+<!-- endif -->
 
 ## Performance
 

@@ -55,7 +55,7 @@ The spec's choices, and the equivalent command-line flags:
 | `PyQt6.QtPrintSupport` | Printing |
 | `PyQt6.QtMultimedia` + `assets\sounds` | Welcome-screen sounds. The FFmpeg media plugin is filtered out because sounds use the native Windows backend. |
 | `upx=False` (`--noupx`) | UPX corrupts Qt WebEngine binaries (`QtWebEngineProcess.exe`, `Qt6WebEngineCore.dll`) |
-| `_needed()` filter (spec only) | Leaves out what a widgets app never loads: Qt Quick 3D / Controls / PDF and similar modules, the QML folder, non-English translations and the debug copy of the DevTools resources. That takes the app from 523 MB to 344 MB and the installer from 138 MB to 108 MB. Qt6Quick, Qt6Qml and Qt6QuickWidgets stay, because Qt6WebEngineCore links against them. |
+| `_needed()` filter (spec only) | Leaves out what a widgets app never loads: Qt Quick 3D / Controls / PDF and similar modules, the QML folder, non-English translations, the debug-build copies of the engine's resources (`*.debug.pak`, `*.debug.bin`) and unused plugins (`_UNUSED_PLUGINS`). That takes the app from 523 MB to 340 MB and the installer from 138 MB to about 106 MB. Qt6Quick, Qt6Qml and Qt6QuickWidgets stay, because Qt6WebEngineCore links against them. |
 
 After changing the filter, check that nothing needed went missing: every DLL's imports must resolve inside the build,
 a page must load, and F12 must open DevTools. `-OneFile` builds don't use the filter.

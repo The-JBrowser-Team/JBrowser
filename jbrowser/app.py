@@ -28,6 +28,10 @@ def _parse_args(argv: list[str]) -> argparse.Namespace:
     p.add_argument("--debug", action="store_true", help="Verbose logging to the console")
     p.add_argument("--wait-pid", type=int, default=0, help=argparse.SUPPRESS)  # restart hand-over
     args, _unknown = p.parse_known_args(argv[1:])  # Qt / Chromium switches pass through
+    # Files given on the command line (Open with, file associations, a terminal) open as files, also
+    # in an already running copy, whose working folder is a different one: make relative paths absolute.
+    args.urls = [os.path.abspath(u) if "://" not in u and not u.lower().startswith(("about:", "file:"))
+                 and os.path.exists(u) else u for u in args.urls]
     return args
 
 
@@ -42,6 +46,33 @@ def _setup_logging(paths: AppPaths, debug: bool) -> None:
         sh = logging.StreamHandler()
         sh.setFormatter(logging.Formatter("%(levelname)-7s %(name)s: %(message)s"))
         root.addHandler(sh)
+
+
+def _install_qt_log() -> None:
+    """Qt's own warnings go to JBrowser's log (each one a few times at most) instead of a console nobody
+    sees, and ui/backdrop.py learns from them when the graphics driver can't do see-through windows."""
+    from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
+
+    qt_log = logging.getLogger("qt")
+    levels = {QtMsgType.QtDebugMsg: logging.DEBUG, QtMsgType.QtInfoMsg: logging.INFO,
+              QtMsgType.QtWarningMsg: logging.WARNING, QtMsgType.QtCriticalMsg: logging.ERROR,
+              QtMsgType.QtFatalMsg: logging.CRITICAL}
+    seen: dict[str, int] = {}
+
+    def handler(mode, _context, message) -> None:
+        try:
+            text = str(message)
+            from jbrowser.ui import backdrop
+            backdrop.note_qt_message(text)
+            level = levels.get(mode, logging.INFO)
+            key = text[:80]
+            if qt_log.isEnabledFor(level) and seen.get(key, 0) < 3 and len(seen) < 300:
+                seen[key] = seen.get(key, 0) + 1
+                qt_log.log(level, "%s", text)
+        except Exception:                      # never raise into Qt
+            pass
+
+    qInstallMessageHandler(handler)
 
 
 def _chromium_flags(paths: AppPaths) -> None:
@@ -164,6 +195,7 @@ def run(argv: list[str] | None = None) -> int:
 
     from jbrowser.platform import win
 
+    _install_qt_log()
     win.set_app_user_model_id(APP_ID)
     QCoreApplication.setAttribute(Qt.ApplicationAttribute.AA_ShareOpenGLContexts)
     app = QApplication(argv)

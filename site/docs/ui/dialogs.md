@@ -29,13 +29,27 @@ spec collects them explicitly for the same reason).
 ## The Settings window
 
 [`SettingsWindow`](api:jbrowser.ui.dialogs.settings.SettingsWindow) ([ui/dialogs/settings.py](source:jbrowser/ui/dialogs/settings.py))
+<!-- if >= 2.0.1 -->
+has a navigation pane in four groups (`NAV_GROUPS`): *Browsing* (General, Search, Default apps), *Look and feel*
+(Appearance, Ribbon and sidebar), *Privacy and safety* (Privacy and security, Clear browsing data, Passwords,
+Downloads) and *System* (Performance, Network and DNS, Advanced, Reset, About). `PAGES` lists every page in order.
+On the right are `SettingCard`s: an icon, a title, a plain-language description and a control.
+<!-- else -->
 has a navigation pane of `PAGES` (General, Appearance, Search, Privacy and security, Clear browsing data, Passwords,
 Performance, Network and DNS, Downloads, Advanced, Reset and About) and, on the right, `SettingCard`s: an icon, a
 title, a plain-language description and a control.
+<!-- endif -->
 
 - Helpers build the common controls: `_toggle(key)`, `_toggle_card(key, glyph, title, description)` and
   `_combo(key, options)`. Each writes straight into the settings store, so changes apply immediately.
 - The search box filters cards by their title and description text across all pages.
+<!-- if >= 2.0.1 -->
+- [[new 2.0.1]] `_section(title)` passed to `_page()` starts a heading; the cards after it belong to it, and the
+  search hides a heading (and a navigation group) when none of its cards match. **Esc** clears the search first.
+- [[new 2.0.1]] *Default apps* reads the user's choice for `https` and `.pdf` from Windows
+  (`win.default_handler()`: `UserChoiceLatest`, then `UserChoice`) and opens Windows' Default apps page on JBrowser's
+  entry (`win.open_default_apps()`). It refreshes when the window is activated again.
+<!-- endif -->
 - `_listen(signal, slot)` connects to app-wide signals and disconnects them when the window closes, so a closed
   Settings window never receives updates.
 - Every setting also has a command page in the Lazy Toolbar (`Settings: <page>`).

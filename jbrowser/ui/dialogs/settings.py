@@ -11,14 +11,15 @@ import sys
 import time
 from typing import Any, Callable
 
-from PyQt6.QtCore import PYQT_VERSION_STR, QT_VERSION_STR, QSize, Qt, QUrl
-from PyQt6.QtGui import QDesktopServices
+from PyQt6.QtCore import PYQT_VERSION_STR, QT_VERSION_STR, QEvent, QSize, Qt, QUrl
+from PyQt6.QtGui import QDesktopServices, QFont
 from PyQt6.QtWidgets import (QCheckBox, QComboBox, QFileDialog, QFrame, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
                              QListWidget, QListWidgetItem, QMessageBox, QPushButton, QScrollArea, QStackedWidget,
                              QTableWidget, QTableWidgetItem, QVBoxLayout, QWidget)
 
 from jbrowser import APP_NAME, __version__
 from jbrowser.core.settings import DEFAULT_SEARCH_KEYWORDS, SLEEP_PRESETS
+from jbrowser.platform import win
 from jbrowser.services.network import describe_proxy
 from jbrowser.services.search import ENGINES
 from jbrowser.ui.chrome_window import ChromeWindow
@@ -28,13 +29,19 @@ from jbrowser.ui.widgets import TintPicker, ToggleSwitch
 
 NAV_W = 250
 
-PAGES = [
-    ("general", "General", "home"), ("appearance", "Appearance", "sun"), ("search", "Search", "search"),
-    ("privacy", "Privacy and security", "shield"), ("clear", "Clear browsing data", "clear"),
-    ("passwords", "Passwords", "key"), ("performance", "Performance", "speed"),
-    ("network", "Network and DNS", "network"), ("downloads", "Downloads", "download"),
-    ("advanced", "Advanced", "developer"), ("reset", "Reset", "sync"), ("about", "About JBrowser", "info"),
+# The navigation pane, in groups. PAGES (every page, in order) also gives each page a Lazy Toolbar command
+# (ui/actions.py: "Settings: Search", ...).
+NAV_GROUPS = [
+    ("Browsing", [("general", "General", "home"), ("search", "Search", "search"),
+                  ("defaults", "Default apps", "newwindow")]),
+    ("Look and feel", [("appearance", "Appearance", "sun"), ("ribbon", "Ribbon and sidebar", "sidebar")]),
+    ("Privacy and safety", [("privacy", "Privacy and security", "shield"), ("clear", "Clear browsing data", "clear"),
+                            ("passwords", "Passwords", "key"), ("downloads", "Downloads", "download")]),
+    ("System", [("performance", "Performance", "speed"), ("network", "Network and DNS", "network"),
+                ("advanced", "Advanced", "developer"), ("reset", "Reset", "sync"),
+                ("about", "About JBrowser", "info")]),
 ]
+PAGES = [page for _group, pages in NAV_GROUPS for page in pages]
 
 CLEAR_RANGES = [(3600, "Last hour"), (86400, "Last 24 hours"), (7 * 86400, "Last 7 days"),
                 (28 * 86400, "Last 4 weeks"), (0, "All time")]
@@ -139,6 +146,8 @@ class SettingsWindow(ChromeWindow):
         self.ui = ui
         self.s = ctx.settings
         self._cards: list[tuple[str, SettingCard]] = []
+        self._sections: list[tuple[QLabel, list[SettingCard]]] = []      # headings inside pages, with their cards
+        self._nav_groups: list[tuple[QListWidgetItem, list[str]]] = []
         self._index: dict[str, int] = {}
         # Connections to long-lived services; dropped when the window goes away so no slot
         # ever touches a deleted widget.
@@ -171,20 +180,33 @@ class SettingsWindow(ChromeWindow):
         self.stack = QStackedWidget()
         self.stack.setObjectName("SettingsStack")
         body.addWidget(self.stack, 1)
-        builders = {"general": self._general, "appearance": self._appearance, "search": self._search,
-                    "privacy": self._privacy, "clear": self._clear, "passwords": self._passwords,
-                    "performance": self._performance, "network": self._network, "downloads": self._downloads,
-                    "advanced": self._advanced, "reset": self._reset, "about": self._about}
-        for key, label, glyph in PAGES:
-            it = QListWidgetItem(icon(glyph), label)
-            it.setData(Qt.ItemDataRole.UserRole, key)
-            it.setSizeHint(QSize(200, 38))
-            self.nav.addItem(it)
-            self._index[key] = self.stack.count()
-            self._current_page = key
-            self.stack.addWidget(builders[key]())
+        builders = {"general": self._general, "search": self._search, "defaults": self._defaults,
+                    "appearance": self._appearance, "ribbon": self._ribbon, "privacy": self._privacy,
+                    "clear": self._clear, "passwords": self._passwords, "downloads": self._downloads,
+                    "performance": self._performance, "network": self._network, "advanced": self._advanced,
+                    "reset": self._reset, "about": self._about}
+        head_font = self.nav.font()
+        head_font.setPointSizeF(max(7.5, head_font.pointSizeF() - 1))
+        head_font.setWeight(QFont.Weight.DemiBold)
+        for n, (group, pages) in enumerate(NAV_GROUPS):
+            head = QListWidgetItem(group)
+            head.setFlags(Qt.ItemFlag.NoItemFlags)          # a heading: never selected or focused
+            head.setFont(head_font)
+            head.setSizeHint(QSize(200, 28 if n == 0 else 40))
+            head.setTextAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignBottom)
+            self.nav.addItem(head)
+            self._nav_groups.append((head, [key for key, _l, _g in pages]))
+            for key, label, glyph in pages:
+                it = QListWidgetItem(icon(glyph), label)
+                it.setData(Qt.ItemDataRole.UserRole, key)
+                it.setSizeHint(QSize(200, 36))
+                self.nav.addItem(it)
+                self._index[key] = self.stack.count()
+                self._current_page = key
+                self.stack.addWidget(builders[key]())
+        self._style_nav()
         self.nav.currentRowChanged.connect(self._on_nav)
-        self.nav.setCurrentRow(0)
+        self.show_page("general")
 
     # ------------------------------------------------------------ plumbing
     def _listen(self, signal, slot: Callable) -> None:
@@ -199,14 +221,16 @@ class SettingsWindow(ChromeWindow):
         t = theme().tokens
         self.nav.setStyleSheet(
             "QListWidget{background:transparent;border:none;}"
-            "QListWidget::item{padding:8px 10px;border-radius:7px;margin:1px 0;}"
+            "QListWidget::item{padding:7px 10px;border-radius:7px;margin:1px 0;}"
             f"QListWidget::item:selected{{background:{t['selected']};color:{t['text']};}}"
-            f"QListWidget::item:hover:!selected{{background:{t['hover']};}}")
+            f"QListWidget::item:hover:!selected{{background:{t['hover']};}}"
+            f"QListWidget::item:disabled{{background:transparent;color:{t['text3']};padding:0 10px 3px 10px;}}")
 
     def _on_nav(self, row: int) -> None:
         item = self.nav.item(row)
-        if item is not None:
-            self.stack.setCurrentIndex(self._index[item.data(Qt.ItemDataRole.UserRole)])
+        key = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
+        if key in self._index:
+            self.stack.setCurrentIndex(self._index[key])
 
     def show_page(self, key: str) -> None:
         for i in range(self.nav.count()):
@@ -228,6 +252,7 @@ class SettingsWindow(ChromeWindow):
             i.setWordWrap(True)
             lay.addWidget(i)
             lay.addSpacing(6)
+        section: list[SettingCard] | None = None
         for w in widgets:
             if w is None:
                 continue
@@ -235,6 +260,14 @@ class SettingsWindow(ChromeWindow):
                 lay.addSpacing(w)
             elif isinstance(w, SettingCard):
                 self._cards.append((self._current_page, w))
+                if section is not None:
+                    section.append(w)
+                lay.addWidget(w)
+            elif isinstance(w, QLabel) and w.property("section"):
+                if section is not None:
+                    lay.addSpacing(10)
+                section = []
+                self._sections.append((w, section))
                 lay.addWidget(w)
             else:
                 lay.addWidget(w)
@@ -253,9 +286,19 @@ class SettingsWindow(ChromeWindow):
             card.setVisible(hit)
             if hit and page not in pages_with_hits:
                 pages_with_hits.append(page)
+        for label, cards in self._sections:                 # a heading shows while one of its cards does
+            label.setVisible(not words or any(not c.isHidden() for c in cards))
+        shown: set[str] = set()
         for i in range(self.nav.count()):
             key = self.nav.item(i).data(Qt.ItemDataRole.UserRole)
-            self.nav.item(i).setHidden(bool(words) and key not in pages_with_hits and key != "about")
+            if key is None:
+                continue
+            hidden = bool(words) and key not in pages_with_hits and key != "about"
+            self.nav.item(i).setHidden(hidden)
+            if not hidden:
+                shown.add(key)
+        for head, keys in self._nav_groups:
+            head.setHidden(not any(k in shown for k in keys))
         if words and pages_with_hits:
             cur = self.nav.currentItem()
             if cur is None or cur.data(Qt.ItemDataRole.UserRole) not in pages_with_hits:
@@ -300,16 +343,19 @@ class SettingsWindow(ChromeWindow):
         return self._page(
             "General",
             "The basics. You can change any of these back at any time.",
+            _section("Starting up"),
             SettingCard("home", "Reopen my cards when JBrowser starts",
                         "Your cards come back where you left them. Only the ones on screen load straight away, so "
                         "JBrowser still starts quickly.", self._toggle("startup.restore_session")),
             SettingCard("search", "Search engine",
                         "Used when you type words instead of a web address. To use another engine once, type its "
-                        "keyword first, like “yt cats” for YouTube.",
+                        "keyword first, like “yt cats” for YouTube. More in Search.",
                         self._combo("search.engine", [(k, v[0]) for k, v in ENGINES.items()])),
+            _section("Cards"),
             SettingCard("columns", "Width of new cards",
                         "Cards sit side by side. Half fits two on screen; full width gives one card the whole "
-                        "window. To resize a card, select it and press Alt+1 to Alt+9, or Alt+0 for full width.",
+                        "window. To resize a card, select it and use the width button on the ribbon, or press Alt+1 "
+                        "to Alt+9 (Alt+0 for full width).",
                         self._combo("canvas.default_width", width_options)),
             SettingCard("stack", "Stack cards in a column",
                         "Put up to three cards on top of each other: drag a card onto the lower part of another, or "
@@ -318,6 +364,9 @@ class SettingsWindow(ChromeWindow):
             SettingCard("grid", "Show the overview strip",
                         "A thin bar under the cards that shows where you are. Click or drag it to jump around.",
                         self._toggle("canvas.show_minimap")),
+            _section("Reading"),
+            self._reading_card(),
+            _section("Help"),
             SettingCard("lightbulb", "Getting around",
                         "Alt + mouse wheel slides between cards. Alt+← and Alt+→ move between cards, Alt+↑ and Alt+↓ "
                         "switch spaces. Ctrl+T opens a card and Ctrl+K searches everything.",
@@ -327,7 +376,8 @@ class SettingsWindow(ChromeWindow):
     def _appearance(self) -> QWidget:
         self._current_page = "appearance"
         return self._page(
-            "Appearance", "How JBrowser looks and moves.",
+            "Appearance", "How JBrowser looks and moves. The buttons on the ribbon are in Ribbon and sidebar.",
+            _section("Colours and material"),
             SettingCard("sun", "Theme",
                         "Dark or light. “Match Windows” switches along with your Windows colour mode.",
                         self._combo("appearance.theme", [("system", "Match Windows"), ("dark", "Dark"),
@@ -335,38 +385,106 @@ class SettingsWindow(ChromeWindow):
             SettingCard("tiles", "Window material",
                         "The see-through look of the window. Acrylic blurs what's behind it, Mica takes a soft tint "
                         "from your wallpaper (Mica Alt a stronger one), and Solid turns see-through effects off and "
-                        "uses the least graphics power.",
+                        "uses the least graphics power. When Windows has transparency effects or energy saver "
+                        "turned off, JBrowser looks like Solid until they're back.",
                         self._combo("appearance.material", [("acrylic", "Acrylic (default)"), ("mica", "Mica"),
                                                             ("mica_alt", "Mica Alt"), ("solid", "Solid")])),
             self._tint_card(),
             self._toggle_card("appearance.use_accent", "heart", "Use my Windows accent colour",
                               "Buttons, highlights and the active card's border use your Windows accent colour. "
                               "Turn off for JBrowser's blue."),
+            _section("Motion and sound"),
             SettingCard("lightning", "Fluid animations",
                         "Cards, menus and the sidebar slide smoothly. Turn off if your PC feels slow or you prefer "
                         "less motion: everything then changes instantly.", self._toggle("appearance.animations")),
             self._toggle_card("appearance.window_animations", "restore", "Animate minimising and maximising",
                               "Windows' own animation when the window is minimised, maximised or restored. If the "
                               "window flickers or changes colour at those moments on your PC, turn this off."),
-            self._sidebar_card(),
-            self._toggle_card("sidebar.new_card_always", "add", "Always show “New card” in the sidebar",
-                              "When off, it only appears once a space has a card."),
-            self._toggle_card("appearance.favorites_bar", "bookmarks", "Show the bookmarks bar",
-                              "Your bookmarked sites under the ribbon, one click away. Ctrl+D bookmarks a page and "
-                              "Ctrl+Shift+B shows or hides the bar.", lambda v: self.ui.window.favbar.set_shown(v)),
+            self._toggle_card("appearance.sounds", "volume", "Sound effects",
+                              "The gentle sounds of the welcome screen. JBrowser makes no sounds while you browse."),
+            _section("Websites"),
+            self._toggle_card("appearance.force_dark_web", "moon", "Dark mode for websites",
+                              "Shows every website in dark colours, even ones without a dark theme. A few pages may "
+                              "look odd; turn it off again if so."),
+        )
+
+    def _ribbon(self) -> QWidget:
+        self._current_page = "ribbon"
+        return self._page(
+            "Ribbon and sidebar", "Choose what's on the ribbon at the top of the window and in the sidebar. "
+                                  "Right-click the ribbon for the same choices.",
+            _section("Ribbon"),
+            self._toggle_card("toolbar.width_button", "columns", "Card width button",
+                              "Shows the selected card's width. Click it to make the card 20%, 40%, 50%, 60%, 80% or "
+                              "full width; the shortcuts are Alt+2, Alt+4, Alt+5, Alt+6, Alt+8 and Alt+0."),
+            self._toggle_card("toolbar.reading_button", "reading", "Reading mode button",
+                              "Reading mode is always on each card's title bar when a page looks like an article, and "
+                              "F9 turns it on or off. Turn this on for a button on the ribbon as well."),
             self._home_card(),
-            SettingCard("download", "Downloads button on the ribbon",
+            SettingCard("download", "Downloads button",
                         "Normally it only appears once you download something, and shows the progress as a "
                         "percentage. Downloads are always one Ctrl+J away.",
                         self._combo("toolbar.downloads_button", [("auto", "Show when downloading"),
                                                                  ("always", "Always show")], width=200)),
-            self._reading_card(),
-            self._toggle_card("appearance.force_dark_web", "moon", "Dark mode for websites",
-                              "Shows every website in dark colours, even ones without a dark theme. A few pages may "
-                              "look odd; turn it off again if so."),
-            self._toggle_card("appearance.sounds", "volume", "Sound effects",
-                              "The gentle sounds of the welcome screen. JBrowser makes no sounds while you browse."),
+            self._toggle_card("appearance.favorites_bar", "bookmarks", "Show the bookmarks bar",
+                              "Your bookmarked sites under the ribbon, one click away. Ctrl+D bookmarks a page and "
+                              "Ctrl+Shift+B shows or hides the bar.", lambda v: self.ui.window.favbar.set_shown(v)),
+            _section("Sidebar"),
+            self._sidebar_card(),
+            self._toggle_card("sidebar.new_card_always", "add", "Always show “New card” in the sidebar",
+                              "When off, it only appears once a space has a card."),
         )
+
+    def _defaults(self) -> QWidget:
+        self._current_page = "defaults"
+        self._default_status = {"browser": _hint(""), "pdf": _hint("")}
+        self._refresh_defaults()
+        return self._page(
+            "Default apps", "Open links and PDF files from other apps in JBrowser. Windows lets only you choose "
+                            "these, in Settings → Apps → Default apps: the buttons take you there.",
+            SettingCard("globe", "Default browser",
+                        "Links in emails, documents and other apps open in JBrowser, as do web pages saved on "
+                        "this PC (.html).",
+                        _button("Choose in Windows", win.open_default_apps), extra=self._default_status["browser"]),
+            SettingCard("open_file", "PDF files",
+                        "PDF files you double-click open in JBrowser's PDF viewer, where you can zoom, search, "
+                        "print and save them. In Windows, find .pdf and choose JBrowser.",
+                        _button("Choose in Windows", win.open_default_apps), extra=self._default_status["pdf"]),
+            SettingCard("folder_open", "Open files from this PC",
+                        "Type or paste a file's or folder's location into the Lazy Toolbar, such as "
+                        "C:\\Users\\you\\Documents\\report.pdf (with or without quotes), or a network location like "
+                        "\\\\server\\share. Press Enter to open it in a card."),
+        )
+
+    def _refresh_defaults(self) -> None:
+        labels = getattr(self, "_default_status", None)
+        if not labels:
+            return
+        where = win.registered_with_windows()
+        if where is None:
+            text = ("Windows doesn't know about this copy of JBrowser. Run the JBrowser installer and keep "
+                    "“Register JBrowser as a web browser and PDF viewer” ticked.")
+            for lab in labels.values():
+                lab.setText(text)
+            return
+        labels["browser"].setText("✓ JBrowser is your default browser." if win.is_default("browser")
+                                  else "Another browser opens links right now.")
+        if not win.handles_pdf():
+            labels["pdf"].setText("Install the latest JBrowser to offer it for PDF files.")
+        else:
+            labels["pdf"].setText("✓ JBrowser opens your PDF files." if win.is_default("pdf")
+                                  else "Another app opens PDF files right now.")
+
+    def keyPressEvent(self, e) -> None:
+        if e.key() == Qt.Key.Key_Escape and self.finder.text():
+            self.finder.clear()                   # Esc ends a search first, then closes Settings
+            return
+        super().keyPressEvent(e)
+
+    def changeEvent(self, e) -> None:
+        if e.type() == QEvent.Type.ActivationChange and self.isActiveWindow():
+            self._refresh_defaults()              # back from Windows' Default apps
+        super().changeEvent(e)
 
     def _reading_card(self) -> SettingCard:
         font = self._combo("reading.font", [("serif", "Serif text"), ("sans", "Sans-serif text")], width=170)
@@ -382,7 +500,7 @@ class SettingsWindow(ChromeWindow):
         bl.addStretch(1)
         return SettingCard("reading", "Suggest reading mode on articles",
                            "Reading mode shows just the text and pictures of an article, without ads or clutter. "
-                           "Turn it on with the reading button on the ribbon or a card, or press F9. When this "
+                           "Turn it on with the reading button on the card's title bar, or press F9. When this "
                            "setting is on, JBrowser offers it once while you read an article.",
                            self._toggle("reading.offer"), extra=box)
 
@@ -529,6 +647,7 @@ class SettingsWindow(ChromeWindow):
         return self._page(
             "Privacy and security",
             "JBrowser blocks tracking and dangerous sites from the start. Fine-tune it here.",
+            _section("Protection"),
             SettingCard("shield", "Block trackers, ads, cryptominers and telemetry",
                         "Stops hidden scripts that follow you between sites, show ads, secretly mine cryptocurrency "
                         "or report what you do, and hides the empty ad boxes. Pages often load faster too. The "
@@ -544,6 +663,7 @@ class SettingsWindow(ChromeWindow):
                         "different, harmless answers, so it can't follow you that way. Sign-in and security-check "
                         "pages are left alone, so they don't take you for a robot.",
                         self._toggle("privacy.fingerprint_protection")),
+            _section("Tracking"),
             SettingCard("link", "Remove tracking codes from links",
                         "Links often carry codes like “utm_source” or “fbclid” that tell companies where you came "
                         "from. JBrowser removes the common ones; pages work the same.",
@@ -558,6 +678,7 @@ class SettingsWindow(ChromeWindow):
                               "must respect it."),
             self._toggle_card("privacy.dnt", "shield", "Send “Do Not Track”",
                               "An older request not to be tracked. Many sites ignore it, but it does no harm."),
+            _section("While you browse"),
             self._toggle_card("privacy.https_upgrade", "lock", "Always try the secure version of websites",
                               "Opens the encrypted (https) version of a site first. If there isn't one, the page "
                               "opens normally."),
@@ -569,6 +690,7 @@ class SettingsWindow(ChromeWindow):
                               "hides them without breaking calls."),
             self._toggle_card("privacy.block_autoplay", "mute", "Stop videos from playing on their own",
                               "Videos and sounds only start after you click on the page."),
+            _section("Sites"),
             SettingCard("globe", "Sites with protection turned off",
                         "Sites you allowed to use trackers, for example because something didn't work. Select one "
                         "to turn protection back on.", extra=allow_box),
@@ -893,6 +1015,7 @@ class SettingsWindow(ChromeWindow):
         paths = self.ctx.paths
         return self._page(
             "Advanced", "Extra tools for power users. Most people never need to change these.",
+            _section("Tools"),
             SettingCard("code", "User scripts and styles",
                         "Add your own JavaScript or CSS to chosen websites, per site and per space. Useful for small "
                         "fixes and personal tweaks.",
@@ -902,6 +1025,7 @@ class SettingsWindow(ChromeWindow):
                         _button("Open folder", lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(str(paths.data))))),
             SettingCard("keyboard", "Keyboard shortcuts", "Every shortcut in one place.",
                         _button("Show shortcuts", lambda: (self.close(), self.ui.open_hotkeys()))),
+            _section("Compatibility"),
             SettingCard("tiles", "Graphics acceleration",
                         "Uses your graphics card to draw pages quickly. If websites flicker, show stripes or draw in "
                         "the wrong place (it happens with some graphics cards and drivers), try “Compatible”, or "

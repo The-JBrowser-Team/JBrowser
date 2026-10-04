@@ -53,6 +53,8 @@ DEFAULTS: dict[str, Any] = {
     "toolbar.home_button": False,
     "toolbar.home_mode": "lazy",             # lazy (open the Lazy Toolbar) | url
     "toolbar.home_url": "",
+    "toolbar.width_button": True,            # card width button (20% to full width) on the ribbon
+    "toolbar.reading_button": False,         # reading mode on the ribbon (the card header always has it)
     # First-run welcome and guided tour (shown again when the version increases)
     "onboarding.version": 0,
     # Automatic updates from GitHub Releases (see services/updater.py)

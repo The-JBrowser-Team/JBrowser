@@ -43,7 +43,11 @@ _UNUSED_QT = ("qt6quick3d", "qt6quickcontrols2", "qt6quickdialogs2", "qt6quickte
               "qt6quickvectorimage", "qt6pdf", "qt6shadertools", "qt6spatialaudio", "qt6remoteobjects",
               "qt6sensors", "qt6texttospeech", "qt6statemachine", "qt6test.",
               "qt6webenginequick", "qt6webchannelquick", "qt6positioningquick", "qt6multimediaquick",
-              "qt6websockets")
+              "qt6websockets", "qt6serialport")
+# Plugins for things JBrowser never does: TIFF / TGA / WBMP / ICNS images, off-screen and minimal platforms,
+# network touch input (TUIO) and serial-port GPS receivers (NMEA, the only user of Qt6SerialPort).
+_UNUSED_PLUGINS = {"qtiff.dll", "qtga.dll", "qwbmp.dll", "qicns.dll", "qoffscreen.dll", "qminimal.dll",
+                   "qtuiotouchplugin.dll", "qtposition_nmea.dll"}
 
 
 def _needed(dest: str) -> bool:
@@ -53,8 +57,10 @@ def _needed(dest: str) -> bool:
         return False                                   # QML modules: not used by a widgets app
     if name.startswith(_UNUSED_QT) or name == "qpdf.dll":   # qpdf.dll: the PDF image plugin needs Qt6Pdf
         return False
-    if name == "qtwebengine_devtools_resources.debug.pak":
-        return False                                   # debug-build copy; DevTools use the other .pak
+    if name in _UNUSED_PLUGINS:
+        return False
+    if name.endswith((".debug.pak", ".debug.bin")):
+        return False                                   # debug-build copies; the release engine reads the others
     if "/qt6/translations/" in d:
         # The UI is English: keep only Chromium's English strings (en-GB also covers en-AU etc.).
         return name in ("en-us.pak", "en-gb.pak")

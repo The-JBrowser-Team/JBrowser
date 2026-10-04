@@ -6,6 +6,7 @@ history, saved passwords and every browser command. Prefixes narrow the scope:
 """
 from __future__ import annotations
 
+import os
 from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Callable
 
@@ -434,6 +435,15 @@ class LazyToolbar(Overlay):
                                   self._open(ctx.search.search_url(t), alt)))
         if is_url:
             url = to_url(q)
+            if url.isLocalFile():
+                path = os.path.normpath(url.toLocalFile())
+                # Never touch the disk while typing: a network path can take seconds to answer.
+                folder = q.rstrip("\"' ").endswith(("\\", "/")) or not os.path.splitext(path)[1]
+                items.append(PaletteItem("go", f"Open {path}", "Folder on this PC" if folder else "File on this PC",
+                                         glyph="folder" if folder else "open_file", badge="Open", complete=path,
+                                         run=lambda alt, u=url: self._open(u, alt)))
+                items.append(search_item)
+                return items
             target = ctx.privacy.dev_target(url.host())
             sub = url.toString()
             if target:

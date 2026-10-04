@@ -89,7 +89,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "browser"; Description: "Register JBrowser as a web browser (so you can choose it as your default in Windows Settings)"; GroupDescription: "Windows integration:"
+Name: "browser"; Description: "Register JBrowser as a web browser and PDF viewer (so you can choose it as your default in Windows Settings)"; GroupDescription: "Windows integration:"
 
 [InstallDelete]
 ; Remove the previous version's program files before copying the new ones.
@@ -115,6 +115,7 @@ Root: HKA; Subkey: "Software\Clients\StartMenuInternet\JBrowser\Capabilities\URL
 Root: HKA; Subkey: "Software\Clients\StartMenuInternet\JBrowser\Capabilities\URLAssociations"; ValueType: string; ValueName: "https"; ValueData: "JBrowserURL"; Tasks: browser
 Root: HKA; Subkey: "Software\Clients\StartMenuInternet\JBrowser\Capabilities\FileAssociations"; ValueType: string; ValueName: ".html"; ValueData: "JBrowserHTML"; Tasks: browser
 Root: HKA; Subkey: "Software\Clients\StartMenuInternet\JBrowser\Capabilities\FileAssociations"; ValueType: string; ValueName: ".htm"; ValueData: "JBrowserHTML"; Tasks: browser
+Root: HKA; Subkey: "Software\Clients\StartMenuInternet\JBrowser\Capabilities\FileAssociations"; ValueType: string; ValueName: ".pdf"; ValueData: "JBrowserPDF"; Tasks: browser
 Root: HKA; Subkey: "Software\RegisteredApplications"; ValueType: string; ValueName: "JBrowser"; ValueData: "Software\Clients\StartMenuInternet\JBrowser\Capabilities"; Flags: uninsdeletevalue; Tasks: browser
 ; --- The handlers Windows calls for links and .html files --------------------------------
 Root: HKA; Subkey: "Software\Classes\JBrowserURL"; ValueType: string; ValueName: ""; ValueData: "JBrowser URL"; Flags: uninsdeletekey; Tasks: browser
@@ -124,6 +125,13 @@ Root: HKA; Subkey: "Software\Classes\JBrowserURL\shell\open\command"; ValueType:
 Root: HKA; Subkey: "Software\Classes\JBrowserHTML"; ValueType: string; ValueName: ""; ValueData: "JBrowser HTML Document"; Flags: uninsdeletekey; Tasks: browser
 Root: HKA; Subkey: "Software\Classes\JBrowserHTML\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"",0"; Tasks: browser
 Root: HKA; Subkey: "Software\Classes\JBrowserHTML\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: browser
+Root: HKA; Subkey: "Software\Classes\JBrowserPDF"; ValueType: string; ValueName: ""; ValueData: "JBrowser PDF Document"; Flags: uninsdeletekey; Tasks: browser
+Root: HKA; Subkey: "Software\Classes\JBrowserPDF\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"",0"; Tasks: browser
+Root: HKA; Subkey: "Software\Classes\JBrowserPDF\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#AppExe}"" ""%1"""; Tasks: browser
+; --- JBrowser in the "Open with" lists (and Default apps → choose a default for this file type) ----
+Root: HKA; Subkey: "Software\Classes\.pdf\OpenWithProgids"; ValueType: string; ValueName: "JBrowserPDF"; ValueData: ""; Flags: uninsdeletevalue; Tasks: browser
+Root: HKA; Subkey: "Software\Classes\.html\OpenWithProgids"; ValueType: string; ValueName: "JBrowserHTML"; ValueData: ""; Flags: uninsdeletevalue; Tasks: browser
+Root: HKA; Subkey: "Software\Classes\.htm\OpenWithProgids"; ValueType: string; ValueName: "JBrowserHTML"; ValueData: ""; Flags: uninsdeletevalue; Tasks: browser
 
 [Run]
 ; Normal install: offer to start JBrowser on the last page.

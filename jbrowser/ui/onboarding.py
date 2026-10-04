@@ -1034,8 +1034,8 @@ class Onboarding(QWidget):
                                         "favourites."),
         ("stack", "Stack cards", "Put up to three cards on top of each other in one column: drag a card onto "
                                  "the lower part of another, or press this button. Right-click it for layouts."),
-        ("reading", "Reading mode", "On an article, this shows just the text and pictures, without the clutter "
-                                    "(F9). JBrowser suggests it once when you're reading."),
+        ("width", "Card width", "Make the selected card 20%, 40%, 50%, 60%, 80% or full width here, or press "
+                                "Alt+2 … Alt+0. Reading mode (F9) is on every card's title bar."),
         ("archive", "The Archive", "Closed a card by mistake? It waits here for 48 hours. Ctrl+Shift+T brings "
                                    "back the most recent one."),
         ("shield", "Protection", "Trackers, fingerprinting and dangerous sites are blocked. Click the shield in the "
@@ -1049,7 +1049,7 @@ class Onboarding(QWidget):
         return {"section": sb.section, "favourites": sb.favourites if sb.favourites.isVisible() else sb.spaces_label,
                 "pill": w.titlebar.pill, "canvas": w.stack, "gallery": w.titlebar.gallery_btn,
                 "list": sb.list, "archive": sb.archive_btn, "stack": w.titlebar.stack_btn,
-                "reading": w.titlebar.reading_btn, "shield": w.titlebar.pill, "logo": sb.header.logo}.get(name)
+                "width": w.titlebar.width_btn, "shield": w.titlebar.pill, "logo": sb.header.logo}.get(name)
 
     def _target_rect(self, name: str) -> QRectF:
         wid = self._target_widget(name)

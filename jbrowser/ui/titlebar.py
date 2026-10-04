@@ -352,6 +352,72 @@ class GalleryButton(QAbstractButton):
         p.end()
 
 
+class WidthButton(QAbstractButton):
+    """Ribbon button showing the selected card's width; click to pick 20% to full width (Alt+2 … Alt+0)."""
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setAccessibleName("Card width")
+        self._hover = False
+        self._label = ""
+        f = QFont(self.font())
+        f.setWeight(QFont.Weight.Medium)
+        self._font = f
+        # Always as wide as "100%", so the address bar doesn't move when the width changes.
+        self.setFixedSize(BTN + QFontMetrics(f).horizontalAdvance("100%") + 2, BTN)
+
+    def set_width(self, frac: float | None) -> None:
+        label = "" if frac is None else f"{round(frac * 100)}%"
+        if label != self._label:
+            self._label = label
+            self.update()
+        self.setEnabled(frac is not None)
+        self.setToolTip("Card width: 20% to full width (Alt+2 … Alt+0)" if frac is not None else
+                        "Card width: open a card first")
+
+    def enterEvent(self, e) -> None:
+        self._hover = True
+        self.update()
+
+    def leaveEvent(self, e) -> None:
+        self._hover = False
+        self.update()
+
+    def sizeHint(self) -> QSize:
+        return self.size()
+
+    def paintEvent(self, _e) -> None:
+        th = theme()
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        r = QRectF(self.rect()).adjusted(2, 2, -2, -2)
+        if self.isEnabled() and (self._hover or self.isDown()):
+            bg = QPainterPath()
+            bg.addRoundedRect(r, 7, 7)
+            p.fillPath(bg, th.c("pressed" if self.isDown() else "hover"))
+        fg = th.c("text3") if not self.isEnabled() else th.c("text") if self._hover else th.c("text2")
+        # Two bars with a double-headed arrow between them: "as wide as".
+        cx, cy = r.left() + 14, r.center().y()
+        pen = QPen(fg, 1.3)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+        p.setPen(pen)
+        p.drawLine(QPointF(cx - 7, cy - 5), QPointF(cx - 7, cy + 5))
+        p.drawLine(QPointF(cx + 7, cy - 5), QPointF(cx + 7, cy + 5))
+        p.drawLine(QPointF(cx - 4, cy), QPointF(cx + 4, cy))
+        for side in (-1, 1):
+            tip = cx + 4 * side
+            p.drawLine(QPointF(tip, cy), QPointF(tip - 2.6 * side, cy - 2.6))
+            p.drawLine(QPointF(tip, cy), QPointF(tip - 2.6 * side, cy + 2.6))
+        if self._label:
+            p.setFont(self._font)
+            p.setPen(fg)
+            p.drawText(QRectF(r.left() + 25, r.top(), r.width() - 27, r.height()),
+                       Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft, self._label)
+        p.end()
+
+
 class DownloadsButton(QAbstractButton):
     """Ribbon Downloads button. While files download it widens to show the percentage over a progress bar."""
 
@@ -489,6 +555,7 @@ class TitleBar(QWidget):
                                     "Right-click for layouts and split views", self, size=BTN, glyph_px=14)
         self.stack_btn.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         self.reading_btn = IconButton("reading", "Reading mode (F9)", self, size=BTN, glyph_px=14, checkable=True)
+        self.width_btn = WidthButton(self)
         self.downloads = DownloadsButton(self)
         self.downloads.setToolTip("Downloads (Ctrl+J)")
         self.menu_btn = IconButton("more", "Menu", self, size=BTN, glyph_px=14)
@@ -496,8 +563,8 @@ class TitleBar(QWidget):
         self.update_chip.clicked.connect(ui.show_update_dialog)
         self.gallery_btn = GalleryButton(self)
         self.gallery_btn.clicked.connect(lambda: ui.toggle_gallery())
-        self.tool_group = _group(self, self.update_chip, self.gallery_btn, self.stack_btn, self.reading_btn,
-                                 self.downloads, self.menu_btn)
+        self.tool_group = _group(self, self.update_chip, self.gallery_btn, self.width_btn, self.stack_btn,
+                                 self.reading_btn, self.downloads, self.menu_btn)
         lay.addWidget(self.tool_group)
         lay.addSpacing(12)
         self.min_btn = IconButton("min", "Minimize", self, size=TITLE_H, glyph_px=9, width=46)
@@ -519,6 +586,8 @@ class TitleBar(QWidget):
         self.stack_btn.customContextMenuRequested.connect(lambda _pos: ui.show_layout_menu(
             self.stack_btn.mapToGlobal(QPoint(0, self.stack_btn.height()))))
         self.reading_btn.clicked.connect(lambda: ui.toggle_reading())
+        self.width_btn.clicked.connect(lambda: ui.show_width_menu(self.width_btn.mapToGlobal(
+            QPoint(0, self.width_btn.height()))))
         self.downloads.clicked.connect(lambda: ctx.commands.run("downloads.show"))
         self.menu_btn.clicked.connect(lambda: ui.show_main_menu(self.menu_btn.mapToGlobal(
             QPoint(self.menu_btn.width(), self.menu_btn.height()))))
@@ -540,6 +609,7 @@ class TitleBar(QWidget):
         ctx.settings.changed.connect(self._on_setting)
         ctx.updater.stateChanged.connect(self._on_update_state)
         self._apply_home()
+        self._apply_tools()
         self.refresh()
         self._on_downloads()
 
@@ -560,6 +630,17 @@ class TitleBar(QWidget):
             self._apply_home()
         elif key == "toolbar.downloads_button":
             self._on_downloads()
+        elif key in ("toolbar.width_button", "toolbar.reading_button"):
+            self._apply_tools()
+
+    def _apply_tools(self) -> None:
+        """The optional ribbon buttons: card width (shown by default) and reading mode (hidden by default;
+        every card's header has its own)."""
+        s = self.ctx.settings
+        self.width_btn.setVisible(bool(s.get("toolbar.width_button")))
+        self.reading_btn.setVisible(bool(s.get("toolbar.reading_button")))
+        self.tool_group.adjustSize()
+        QTimer.singleShot(0, self._place_pill)
 
     def _apply_home(self) -> None:
         s = self.ctx.settings
@@ -621,6 +702,7 @@ class TitleBar(QWidget):
         self.reading_btn.setToolTip("Leave reading mode (F9)" if reading else
                                     "Reading mode (F9): this page looks like an article" if readable else
                                     "Reading mode (F9): works best on articles and other pages with lots of text")
+        self.width_btn.set_width(tab.width if tab is not None else None)
         self._refresh_stack()
 
     def _refresh_stack(self) -> None:

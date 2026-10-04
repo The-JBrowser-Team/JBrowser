@@ -82,22 +82,22 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 2.0.0 (latest) · 2 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.0)
+### 2.0.1 (latest) · 4 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.1)
 
-**JBrowser 2.0 is here**, the biggest update yet. [▶ See it on YouTube](https://www.youtube.com/@TheJBrowserTeam)
+- **Card width button** on the ribbon: 20%, 40%, 50%, 60%, 80% or full width, with the shortcut next to each
+  (Alt+2 … Alt+0).
+- **Open PDFs with JBrowser**: choose it for `.pdf` files in Windows' Default apps or *Open with*. The new
+  *Settings › Default apps* page shows what opens your links and PDFs.
+- **Local links work**: paste `C:\…`, `\\server\share`, a quoted path or a `file:///` address into the address bar
+  and it opens, spaces and all.
+- **Settings, reorganised** into four groups, with a new *Ribbon and sidebar* page. The reading mode button moved off
+  the ribbon by default (it's still on every card, and F9 works).
+- A smaller app and steadier window colours.
 
-- **Stack cards in columns**: up to three cards on top of each other. Drag a card onto another, or press the new stack
-  button on the ribbon (Alt+Shift+S) to choose a new page, an open card, a favourite or a bookmark. Cards in a column
-  share one width.
-- **Reading mode** (F9): articles without ads or clutter, with your choice of font, colours and text size. JBrowser
-  suggests it once when you're reading an article, and never again if you say so.
-- **Download protection levels**: *Standard* warns about risky files and lets you keep or delete them; *Strict* blocks
-  them. Covers programs, dangerous sites and sites without HTTPS.
-- **A cleaner ribbon**: the shield now sits in the address bar, the Downloads button appears only when you download
-  something and shows the percentage, and a whole download row opens its file.
-- **Google sign-in fixes itself**: *Fix and sign in again*, and JBrowser switches back by itself once you're in.
-- **No colour warp** when minimising or maximising, favourites that reopen at the width you left them, and plainer
-  language everywhere.
+**2.0.0** (2 October 2026), **JBrowser 2.0**, the biggest update yet
+([▶ YouTube](https://www.youtube.com/@TheJBrowserTeam)): stack cards in columns, reading mode (F9), download
+protection levels, a cleaner ribbon with download progress, Google sign-in that fixes itself, and no colour warp when
+minimising or maximising.
 
 **1.6.2** (2 October 2026): windows that keep their colours, Google sign-in through the whole hand-off, frosted
 menus, an update window that keeps its size.

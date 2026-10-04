@@ -13,7 +13,7 @@ from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from jbrowser.platform import win
-from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit
+from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard, paint_probe_hole
 from jbrowser.ui.icons import app_icon, paint_logo
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import IconButton
@@ -81,7 +81,9 @@ class ChromeWindow(QWidget):
                                       c.max_btn.set_force_hover, c.max_btn.set_force_pressed, self._toggle_max)
         self.native.resizable = lambda: not self.isFullScreen()
         self.backdrop = Backdrop(self)               # the material and light/dark mode (ui/backdrop.py)
-        self.native.on_system_change = self.backdrop.schedule
+        self.guard = look_guard()
+        self.guard.watch(self, self, self._probe_spot)
+        self.native.on_system_change = self._on_system_change
         self.transitions = WindowTransitions(self, self.native)   # minimise / maximise without colour warp
         c.min_btn.clicked.connect(lambda: self.transitions.run(self.showMinimized))
         theme().changed.connect(self.update)
@@ -95,6 +97,15 @@ class ChromeWindow(QWidget):
 
     def _hit_test(self, local: QPoint) -> int:
         return caption_hit(self, local, self.caption.max_btn)
+
+    def _on_system_change(self) -> None:
+        self.backdrop.schedule()
+        self.guard.system_changed()
+
+    def _probe_spot(self) -> QPoint | None:
+        """The top edge of the caption, mid-way: only the backdrop is painted there."""
+        spot = QPoint(self.width() // 2, 2)
+        return spot if self.childAt(spot) is self.caption else None
 
     def nativeEvent(self, event_type, message):
         try:
@@ -126,6 +137,7 @@ class ChromeWindow(QWidget):
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             for layer in th.backdrop_layers():     # JBrowser's base colour, then the tint
                 p.fillRect(self.rect(), layer)
+            paint_probe_hole(p, self)
         else:
             p.fillRect(self.rect(), th.c("window"))
         # Content layer: slightly raised surface, rounded where it meets the navigation pane.

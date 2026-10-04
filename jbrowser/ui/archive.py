@@ -270,7 +270,7 @@ class ArchivePopup(QFrame):
         th = theme()
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self.backdrop.active:     # Acrylic behind the popup, like the main window
+        if self.backdrop.active and th.see_through:     # Acrylic behind the popup, like the main window
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
             p.fillRect(self.rect(), Qt.GlobalColor.transparent)
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)

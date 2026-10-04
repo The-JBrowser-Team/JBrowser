@@ -79,6 +79,37 @@ saver) turned the Acrylic light behind light text, and maximising re-darkened on
   (`win.dark_frame()`), restore it if anything else changed it, and rebuild the material
   (`apply_backdrop(rebuild=True)`: none, then the material again) so no part of the window keeps the wrong one.
 <!-- endif -->
+<!-- if >= 2.0.1 -->
+
+[[new 2.0.1]] **When Windows draws no material, or the wrong one.** With transparency effects or energy saver off, a
+high-contrast theme, over Remote Desktop, or with a graphics driver that can't give windows see-through pixels, DWM
+draws a flat fill (or black) behind the window instead of Mica or Acrylic. `LookGuard` in
+[ui/backdrop.py](source:jbrowser/ui/backdrop.py) decides `Theme.see_through` from three sources:
+
+- `win.material_blockers()` (the *Transparency effects* setting, `SPI_GETHIGHCONTRAST`, `GetSystemPowerStatus`,
+  `SM_REMOTESESSION`), every 3 seconds and whenever `NativeFrame.on_system_change` reports a broadcast;
+- Qt's own warnings about Direct Composition (`note_qt_message()`, fed by the message handler in
+  [app.py](source:jbrowser/app.py), which also writes Qt's warnings to the log);
+- the screen. After a window appears, a theme change or a system change, and now and then on activation, the active
+  window leaves a 3 × 3 spot at the top edge of its title bar unpainted for one frame (`paint_probe_hole()`) and
+  `win.sample_own_pixel()` reads what DWM composited there: the bare material. Black means no see-through pixels; a
+  light material behind a dark theme (luma above 170) or a dark one behind a light theme (below 110) means the wrong
+  material. (Measured on Windows 11: dark Acrylic reads 54 over black and 146 over white, light Acrylic 135 and 227,
+  Mica about 32 and 244.) Two readings in a row must agree.
+
+While `see_through` is off, `backdrop_layers()` puts the opaque `TRANSITION_BASE` under everything and menus and glass
+popups get opaque backgrounds, so the window looks like the Solid material until the material is back.
+
+Two more things keep the look steady:
+
+- `NativeFrame` answers `WM_NCACTIVATE` with `wParam = TRUE`, so DWM keeps the active material when the window loses
+  the focus, instead of its flat grey or white inactive fill. Qt still learns about activation from `WM_ACTIVATE`.
+- `Backdrop` cloaks a new `"window"` or `"frame"` window (`DWMWA_CLOAK`) from its first `Show` event until its
+  material, mode and first frame are ready (`Backdrop.CLOAK_MS`), so it never appears as a white or black rectangle.
+
+For testing: `JBROWSER_NO_MATERIAL=1` behaves as if Windows drew no materials, `JBROWSER_INACTIVE_LOOK=1` restores
+Windows' inactive look and `JBROWSER_NO_CLOAK=1` turns the cloak off.
+<!-- endif -->
 
 ### The window's event filter
 

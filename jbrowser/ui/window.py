@@ -12,7 +12,7 @@ from jbrowser import APP_NAME
 from jbrowser.context import AppContext, UiHooks
 from jbrowser.platform import win
 from jbrowser.ui.actions import register_commands
-from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit
+from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard, paint_probe_hole
 from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
@@ -39,6 +39,7 @@ class RootWidget(QWidget):
             p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
             for layer in th.backdrop_layers():  # JBrowser's base colour, then the tint (or incognito black)
                 p.fillRect(self.rect(), layer)
+            paint_probe_hole(p, self)
         else:
             p.fillRect(self.rect(), th.c("window"))
         p.end()
@@ -165,7 +166,9 @@ class MainWindow(QMainWindow):
 
         th = theme()
         self.backdrop = Backdrop(self)
-        self.native.on_system_change = self.backdrop.schedule
+        self.guard = look_guard()             # an opaque base whenever Windows draws no material behind us
+        self.guard.watch(self, root, self._probe_spot)
+        self.native.on_system_change = self._on_system_change
         self.transitions = WindowTransitions(self, self.native, self._repaint_all)   # no colour warp
         self.transition = self.transitions.run
         ctx.settings.changed.connect(lambda k, _v: self._apply_transitions() if k == "appearance.window_animations"
@@ -214,6 +217,17 @@ class MainWindow(QMainWindow):
 
     # ------------------------------------------------------------- backdrop
     # The system material and the window's light/dark mode belong to self.backdrop (ui/backdrop.py).
+    def _on_system_change(self) -> None:
+        self.backdrop.schedule()
+        self.guard.system_changed()
+
+    def _probe_spot(self) -> QPoint | None:
+        """The top edge of the title bar above the address bar, where only the backdrop is painted."""
+        tb, root = self.titlebar, self.centralWidget()
+        if not tb.isVisible() or self._immersive is not None or self._onboarding is not None:
+            return None
+        spot = tb.mapTo(root, QPoint(tb.pill.geometry().center().x(), 2))
+        return spot if root.childAt(spot) is tb else None      # nothing laid over it
 
     # ----------------------------------------------------------- native frame
     def nativeEvent(self, event_type, message):
@@ -343,7 +357,7 @@ class MainWindow(QMainWindow):
             # Menus on frosted glass, like the window (QMenu polishes itself before its native window
             # exists, which is when a window can still be made translucent).
             obj.setProperty("jbGlass", True)
-            if theme().translucent:
+            if theme().material_shown:
                 obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
                 Backdrop(obj, "popup")
             return False
