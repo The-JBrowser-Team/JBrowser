@@ -746,8 +746,12 @@ class TitleBar(QWidget):
         self.max_btn.setToolTip("Restore" if maximized else "Maximize")
 
     def paintEvent(self, _e) -> None:
+        th = theme()
         p = QPainter(self)
-        p.fillRect(self.rect(), theme().c("titlebar"))
+        th.paint_base(p, self.rect())                # never bare backdrop (Theme.backdrop_color)
+        from jbrowser.ui.backdrop import paint_probe_hole
+        paint_probe_hole(p, self)
+        p.fillRect(self.rect(), th.c("titlebar"))
         p.end()
 
     def sizeHint(self) -> QSize:

@@ -5,6 +5,16 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [2.0.2] - 2026-10-05
+
+### Fixed
+- **No more light or dark box over the top of the window.** On some PCs a rectangle at the top right (over the
+  ribbon's buttons and the bookmarks bar) showed the bare see-through backdrop, light behind a dark JBrowser or the
+  other way round, until the window was minimised and restored. The ribbon, the bookmarks bar and the sidebar now
+  paint JBrowser's own base colour under themselves, like the cards do, so they never depend on the window behind
+  them being redrawn. JBrowser also redraws the whole window when it gains or loses the focus, when a menu or tooltip
+  closes over it, and when Windows changes a setting.
+
 ## [2.0.1] - 2026-10-04
 
 Cards get a width button, JBrowser can open your PDF files, and Settings is easier to find your way around.

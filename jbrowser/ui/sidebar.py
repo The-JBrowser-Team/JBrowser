@@ -1028,6 +1028,7 @@ class Sidebar(QWidget):
             p.setPen(QPen(th.c("panel_border"), 1))
             p.drawLine(self.width() - 1, 0, self.width() - 1, self.height())
         else:
+            th.paint_base(p, self.rect())            # never bare backdrop (Theme.backdrop_color)
             p.fillRect(self.rect(), th.surface("sidebar"))
         sp = self.ctx.state.active_space
         if sp is not None:

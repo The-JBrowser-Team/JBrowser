@@ -160,9 +160,10 @@ class FavoritesBar(QWidget):
         menu.exec(pos)
 
     def paintEvent(self, _e) -> None:
+        p = QPainter(self)
+        theme().paint_base(p, self.rect())           # never bare backdrop (Theme.backdrop_color)
         if not self._chips and self.height() > 10:
-            p = QPainter(self)
             p.setPen(theme().c("text3"))
             p.drawText(self.rect().adjusted(16, 0, 0, 0), Qt.AlignmentFlag.AlignVCenter,
                        "Bookmark pages with Ctrl+D to pin them here")
-            p.end()
+        p.end()

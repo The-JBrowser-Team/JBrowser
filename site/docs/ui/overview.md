@@ -110,6 +110,18 @@ Two more things keep the look steady:
 For testing: `JBROWSER_NO_MATERIAL=1` behaves as if Windows drew no materials, `JBROWSER_INACTIVE_LOOK=1` restores
 Windows' inactive look and `JBROWSER_NO_CLOAK=1` turns the cloak off.
 <!-- endif -->
+<!-- if >= 2.0.2 -->
+
+[[new 2.0.2]] **Every bar paints its own base.** On some PCs a rectangle at the top right of the window (over the
+ribbon's buttons and the bookmarks bar) showed the bare backdrop until the window was minimised: those pixels had
+been redrawn without the window background (`RootWidget`) underneath. Now the title bar, the bookmarks bar and the
+sidebar start their `paintEvent` with `Theme.paint_base()`, which paints `Theme.backdrop_color()` (the backdrop layers
+flattened into one colour, or the Solid window colour) with `CompositionMode_Source`, exactly as the canvas does.
+What they show no longer depends on anything being repainted underneath them. LookGuard's probe spot is painted by
+the title bar for the same reason. As a safety net, `MainWindow` repaints the whole window (`_heal`, debounced) when
+it gains or loses the focus, when a menu or tooltip hides, and on Windows settings broadcasts; `ChromeWindow`
+repaints on focus changes.
+<!-- endif -->
 
 ### The window's event filter
 

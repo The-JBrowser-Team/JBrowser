@@ -82,7 +82,11 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 2.0.1 (latest) · 4 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.1)
+### 2.0.2 (latest) · 5 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.2)
+
+- **No more light or dark box** over the top right of the window on some PCs (it went away only after minimising).
+
+### 2.0.1 · 4 October 2026
 
 - **Card width button** on the ribbon: 20%, 40%, 50%, 60%, 80% or full width, with the shortcut next to each
   (Alt+2 … Alt+0).

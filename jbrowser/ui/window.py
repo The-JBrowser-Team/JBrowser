@@ -12,7 +12,7 @@ from jbrowser import APP_NAME
 from jbrowser.context import AppContext, UiHooks
 from jbrowser.platform import win
 from jbrowser.ui.actions import register_commands
-from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard, paint_probe_hole
+from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard
 from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
@@ -31,17 +31,10 @@ log = logging.getLogger(__name__)
 
 class RootWidget(QWidget):
     def paintEvent(self, _e) -> None:
-        th = theme()
         p = QPainter(self)
-        if th.translucent:
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-            p.fillRect(self.rect(), Qt.GlobalColor.transparent)
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-            for layer in th.backdrop_layers():  # JBrowser's base colour, then the tint (or incognito black)
-                p.fillRect(self.rect(), layer)
-            paint_probe_hole(p, self)
-        else:
-            p.fillRect(self.rect(), th.c("window"))
+        # JBrowser's base colour, then the tint (or incognito black); the window colour with Solid. The ribbon,
+        # the bookmarks bar, the sidebar and the canvas paint the same under themselves.
+        theme().paint_base(p, self.rect())
         p.end()
 
 
@@ -164,10 +157,17 @@ class MainWindow(QMainWindow):
         self._peek_timer.setInterval(140)
         self._peek_timer.timeout.connect(self._maybe_peek)
 
+        # One full repaint after anything that could leave part of the window stale (the window gains or loses
+        # the focus, a menu or tooltip closes over it, Windows changes a setting): the repaint minimising and
+        # restoring used to be the only cure for.
+        self._heal = QTimer(self)
+        self._heal.setSingleShot(True)
+        self._heal.setInterval(90)
+        self._heal.timeout.connect(self._repaint_all)
         th = theme()
         self.backdrop = Backdrop(self)
         self.guard = look_guard()             # an opaque base whenever Windows draws no material behind us
-        self.guard.watch(self, root, self._probe_spot)
+        self.guard.watch(self, self.titlebar, self._probe_spot)
         self.native.on_system_change = self._on_system_change
         self.transitions = WindowTransitions(self, self.native, self._repaint_all)   # no colour warp
         self.transition = self.transitions.run
@@ -220,14 +220,16 @@ class MainWindow(QMainWindow):
     def _on_system_change(self) -> None:
         self.backdrop.schedule()
         self.guard.system_changed()
+        self._heal.start()
 
     def _probe_spot(self) -> QPoint | None:
-        """The top edge of the title bar above the address bar, where only the backdrop is painted."""
+        """The top edge of the title bar above the address bar (title bar coordinates), where only the
+        backdrop is painted."""
         tb, root = self.titlebar, self.centralWidget()
         if not tb.isVisible() or self._immersive is not None or self._onboarding is not None:
             return None
-        spot = tb.mapTo(root, QPoint(tb.pill.geometry().center().x(), 2))
-        return spot if root.childAt(spot) is tb else None      # nothing laid over it
+        spot = QPoint(tb.pill.geometry().center().x(), 2)
+        return spot if root.childAt(tb.mapTo(root, spot)) is tb else None      # nothing laid over it
 
     # ----------------------------------------------------------- native frame
     def nativeEvent(self, event_type, message):
@@ -264,6 +266,8 @@ class MainWindow(QMainWindow):
         self._apply_transitions()
 
     def changeEvent(self, e) -> None:
+        if e.type() == QEvent.Type.ActivationChange and not self._shut_down:
+            self._heal.start()
         if e.type() == QEvent.Type.WindowStateChange:
             self.titlebar.set_maximized(self.isMaximized())
             if self._immersive is None:
@@ -361,6 +365,9 @@ class MainWindow(QMainWindow):
                 obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
                 Backdrop(obj, "popup")
             return False
+        if t == QEvent.Type.Hide and isinstance(obj, QWidget) and obj.isWindow() and \
+                obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip) and not self._shut_down:
+            self._heal.start()                 # a menu or tooltip closed over the window: repaint it whole
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip):
             # Native Windows 11 rounded corners + border for menus, combo popups and tooltips.

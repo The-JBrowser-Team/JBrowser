@@ -116,6 +116,8 @@ class ChromeWindow(QWidget):
         return (True, result) if handled else (False, 0)
 
     def changeEvent(self, e) -> None:
+        if e.type() == QEvent.Type.ActivationChange:
+            self.update()                          # repaint whole: no stale part survives a focus change
         if e.type() == QEvent.Type.WindowStateChange:
             self.caption.max_btn.set_glyph("restore" if self.isMaximized() else "max")
         super().changeEvent(e)

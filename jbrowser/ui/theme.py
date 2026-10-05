@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPalette
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QImage, QPainter, QPalette
 from PyQt6.QtWidgets import QApplication
 
 from jbrowser.core.settings import Settings
@@ -118,6 +118,8 @@ class Theme(QObject):
         # saver, high contrast, Remote Desktop, a graphics path without see-through windows). Set by
         # ui/backdrop.py LookGuard; JBrowser then paints an opaque base of its own.
         self.see_through = True
+        self._flat_key: tuple | None = None   # backdrop_color() cache
+        self._flat = QColor(0, 0, 0, 0)
         self.tint: QColor | None = None
         self.incognito = False
         self._syncing = False
@@ -273,6 +275,32 @@ class Theme(QObject):
             # Under everything goes the colour Windows itself shows behind such windows.
             layers.insert(0, QColor(TRANSITION_BASE[0 if self.dark else 1]))
         return layers
+
+    def backdrop_color(self) -> QColor:
+        """backdrop_layers() flattened into one colour (with alpha), or the solid window colour. The ribbon,
+        the bookmarks bar and the sidebar paint it under themselves (CompositionMode_Source), so their pixels
+        never depend on the window background being repainted underneath them: when it wasn't, on some PCs,
+        a rectangle of bare backdrop (light or dark) showed through until the window was minimised."""
+        if not self.translucent:
+            return self.c("window")
+        layers = self.backdrop_layers()
+        key = tuple(c.rgba() for c in layers)
+        if key != self._flat_key:
+            img = QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
+            img.fill(Qt.GlobalColor.transparent)
+            p = QPainter(img)
+            for c in layers:
+                p.fillRect(0, 0, 1, 1, c)
+            p.end()
+            self._flat_key, self._flat = key, img.pixelColor(0, 0)
+        return QColor(self._flat)
+
+    def paint_base(self, p: QPainter, rect) -> None:
+        """Paint backdrop_color() over rect, replacing whatever was there."""
+        p.save()
+        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        p.fillRect(rect, self.backdrop_color())
+        p.restore()
 
     def surface(self, token: str) -> QColor:
         """Surface color honoring the solid (no Mica) material."""
