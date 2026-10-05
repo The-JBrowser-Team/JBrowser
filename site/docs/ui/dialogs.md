@@ -11,9 +11,15 @@ Two base classes keep every window consistent with the main window:
 | [`ChromeWindow`](api:jbrowser.ui.chrome_window.ChromeWindow) | tool windows: Settings, History, Bookmarks, Passwords, Downloads, Cookies, Permissions, user scripts, developer hosts | [ui/chrome_window.py](source:jbrowser/ui/chrome_window.py) |
 | [`JDialog`](api:jbrowser.ui.dialogs.base.JDialog) | small modal prompts: sign-in, bookmark and space editors, the proxy dialog, the screen picker, the update dialog | [ui/dialogs/base.py](source:jbrowser/ui/dialogs/base.py) |
 
+<!-- if >= 2.0.3 -->
+`ChromeWindow` uses the main window's technique: the whole window is client area, it is opaque and paints its own
+backdrop (`Theme.paint_backdrop()`: Frosted or Solid), and a slim custom caption keeps drag, Snap Layouts and the
+window buttons. Subclasses fill `self.root`, optionally with a partly see-through navigation pane.
+<!-- else -->
 `ChromeWindow` uses the main window's technique: the whole window is client area, the system backdrop shows through
 translucent pixels, and a slim custom caption keeps drag, Snap Layouts and the window buttons. Subclasses fill
 `self.root`, optionally with a translucent navigation pane.
+<!-- endif -->
 
 ## Opening a tool window
 
@@ -49,6 +55,13 @@ title, a plain-language description and a control.
 - [[new 2.0.1]] *Default apps* reads the user's choice for `https` and `.pdf` from Windows
   (`win.default_handler()`: `UserChoiceLatest`, then `UserChoice`) and opens Windows' Default apps page on JBrowser's
   entry (`win.open_default_apps()`). It refreshes when the window is activated again.
+<!-- endif -->
+<!-- if >= 2.0.3 -->
+- [[new 2.0.3]] **Pages are built when needed.** The window opens with only the page it shows built (the others are
+  empty placeholders in the stack). `_ensure_page(key)` builds a page from `_builders` the first time it is chosen
+  (15–50 ms). Searching builds every page first (`_build_all()`), because it needs every card. Opening Settings went
+  from about 285 ms to about 100 ms. Fewer widgets also make restyling cheaper (see [theming](theming.md)): Qt
+  re-polishes every widget of the app when the style sheet changes.
 <!-- endif -->
 - `_listen(signal, slot)` connects to app-wide signals and disconnects them when the window closes, so a closed
   Settings window never receives updates.

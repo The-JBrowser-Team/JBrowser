@@ -18,7 +18,6 @@ PyQt6-WebEngine==6.11.0
 PyQt6-WebEngine-Qt6==6.11.2
 PyQt6_sip==13.12.0
 pywin32-ctypes==0.2.3
-pywinstyles==1.8
 requests==2.34.2
 setuptools==84.0.0
 urllib3==2.8.0

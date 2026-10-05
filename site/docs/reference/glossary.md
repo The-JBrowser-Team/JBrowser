@@ -61,7 +61,7 @@ Lazy Toolbar
 :   The command overlay that replaces the new-tab page and the address bar ([Lazy Toolbar](../ui/lazy-toolbar.md)).
 
 Material
-:   The window backdrop: Acrylic, Mica, Mica Alt or Solid.
+:   The window backdrop: <!-- if >= 2.0.3 -->Frosted (JBrowser's own frosted picture of the wallpaper) or Solid<!-- else -->Acrylic, Mica, Mica Alt or Solid<!-- endif -->.
 
 Memory saver
 :   Putting idle cards to sleep after a chosen time ([lifecycle](../engine/lifecycle.md)).

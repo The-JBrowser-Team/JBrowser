@@ -1,8 +1,9 @@
 """Photograph the real app for the website, then convert the pictures for the site.
 
 Runs JBrowser from source with a throw-away profile, puts a full-screen gradient behind a
-1600 x 1000 window and captures it from the screen, so Acrylic shows the gradient through the
-glass, at the display's full resolution. It shoots the canvas, the Gallery, the Lazy Toolbar, a
+1600 x 1000 window and captures it from the screen at the display's full resolution. The same
+gradient is JBrowser's wallpaper for the run (JBROWSER_WALLPAPER), so the Frosted look shows its
+colours and never the PC's own wallpaper. It shoots the canvas, the Gallery, the Lazy Toolbar, a
 split view, the site information panel, stacked cards and the stack picker, reading mode, the ten
 colour tints (over a neutral backdrop, where the light wash shows honestly), light mode, an
 incognito space and the welcome. The pictures go to
@@ -70,7 +71,7 @@ def topmost(w, on: bool = True) -> None:
 
 
 def to_front(w) -> None:
-    """Make ``w`` the active window: system backdrops only show on active windows."""
+    """Make ``w`` the active window, so it is photographed with its active look."""
     u = _user32()
     fg = u.GetForegroundWindow()
     fg_thread = u.GetWindowThreadProcessId(ctypes.c_void_p(fg), None) if fg else 0
@@ -90,9 +91,42 @@ def is_front(w) -> bool:
 # ------------------------------------------------------------------------------ the capture run
 def capture() -> None:
     """Runs inside JBrowser's process: schedules the steps once the window is up."""
-    from PyQt6.QtCore import QEventLoop, QPointF, QRect, Qt, QTimer, QUrl
-    from PyQt6.QtGui import QColor, QLinearGradient, QPainter, QRadialGradient
+    from PyQt6.QtCore import QEventLoop, QPointF, QRect, QRectF, Qt, QTimer, QUrl
+    from PyQt6.QtGui import QColor, QImage, QLinearGradient, QPainter, QRadialGradient
     from PyQt6.QtWidgets import QApplication, QWidget
+
+    from jbrowser.ui.frost import frost
+
+    def paint_gradient(p: QPainter, r: QRectF, key: str) -> None:
+        a, b, blobs = BACKDROPS[key]
+        w, h = r.width(), r.height()
+        lg = QLinearGradient(0, 0, w, h)
+        lg.setColorAt(0, QColor(a))
+        lg.setColorAt(1, QColor(b))
+        p.fillRect(r, lg)
+        for (fx, fy), col, alpha, radius in blobs:
+            rg = QRadialGradient(QPointF(w * fx, h * fy), max(w, h) * radius)
+            c0, c1 = QColor(col), QColor(col)
+            c0.setAlphaF(alpha)
+            c1.setAlphaF(0)
+            rg.setColorAt(0, c0)
+            rg.setColorAt(1, c1)
+            p.fillRect(r, rg)
+
+    made: set[str] = set()
+
+    def use_wallpaper(key: str) -> None:
+        """The gradient becomes JBrowser's wallpaper, so the Frosted look is made from it."""
+        path = SHOTS / f"wallpaper-{key}.png"
+        if key not in made:                                  # fresh each run
+            made.add(key)
+            img = QImage(1920, 1080, QImage.Format.Format_RGB32)
+            p = QPainter(img)
+            paint_gradient(p, QRectF(img.rect()), key)
+            p.end()
+            img.save(str(path))
+        os.environ["JBROWSER_WALLPAPER"] = str(path)
+        frost().check()
 
     class Stage(QWidget):
         """A full-screen gradient behind the window being photographed."""
@@ -105,24 +139,12 @@ def capture() -> None:
 
         def set_backdrop(self, key: str) -> None:
             self.key = key
+            use_wallpaper(key)
             self.update()
 
         def paintEvent(self, _e) -> None:
-            a, b, blobs = BACKDROPS[self.key]
             p = QPainter(self)
-            w, h = self.width(), self.height()
-            lg = QLinearGradient(0, 0, w, h)
-            lg.setColorAt(0, QColor(a))
-            lg.setColorAt(1, QColor(b))
-            p.fillRect(self.rect(), lg)
-            for (fx, fy), col, alpha, radius in blobs:
-                rg = QRadialGradient(QPointF(w * fx, h * fy), max(w, h) * radius)
-                c0, c1 = QColor(col), QColor(col)
-                c0.setAlphaF(alpha)
-                c1.setAlphaF(0)
-                rg.setColorAt(0, c0)
-                rg.setColorAt(1, c1)
-                p.fillRect(self.rect(), rg)
+            paint_gradient(p, QRectF(self.rect()), self.key)
             p.end()
 
     app = QApplication.instance()
@@ -182,7 +204,8 @@ def capture() -> None:
     def setup() -> None:
         ensure_lists()
         win.lazy.close_overlay()
-        for key, value in (("appearance.theme", "dark"), ("appearance.material", "acrylic"),
+        use_wallpaper("dark")
+        for key, value in (("appearance.theme", "dark"), ("appearance.material", "frosted"),
                            ("appearance.tint", "none"), ("appearance.favorites_bar", False)):
             s.set(key, value)
         win.showNormal()
@@ -411,7 +434,7 @@ def convert() -> None:
 
 def main() -> int:
     if sys.platform != "win32":
-        sys.exit("Screenshots are taken on Windows (the app uses Windows backdrops).")
+        sys.exit("Screenshots are taken on Windows (JBrowser runs on Windows).")
     if "--convert" in sys.argv:
         convert()
         return 0

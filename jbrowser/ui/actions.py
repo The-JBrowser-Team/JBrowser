@@ -174,9 +174,10 @@ def register_commands(ctx: "AppContext", ui: "BrowserController") -> None:
     c.add("view.theme_dark", "Theme: dark", VIEW, lambda: ui.set_theme("dark"), icon="moon")
     c.add("view.theme_light", "Theme: light", VIEW, lambda: ui.set_theme("light"), icon="sun")
     c.add("view.theme_system", "Theme: follow Windows", VIEW, lambda: ui.set_theme("system"), icon="settings")
-    for mat, label in (("mica", "Mica"), ("mica_alt", "Mica Alt"), ("acrylic", "Acrylic"), ("solid", "Solid")):
+    for mat, label in (("frosted", "Frosted"), ("solid", "Solid")):
         c.add(f"view.material_{mat}", f"Window material: {label}", VIEW, lambda m=mat: ui.set_material(m),
-              icon="tiles", keywords="backdrop glass transparency blur")
+              icon="tiles", keywords="backdrop glass transparency blur frosted translucent",
+              state=lambda m=mat: "Active" if s.get("appearance.material") == m else None)
     for key, label in [("none", "No colour"), *((k, v[0]) for k, v in TINTS.items())]:
         c.add(f"view.tint_{key}", f"Colour tint: {label}", VIEW, lambda k=key: s.set("appearance.tint", k),
               icon="colour", keywords="color theme accent tint wash",

@@ -50,10 +50,16 @@ With *Fluid animations* off, all of this is instant.
 
 ### Why the canvases are hidden
 
+<!-- if >= 2.0.3 -->
+Hiding the canvases while the Gallery is open stops the pages under it from drawing frames nobody sees, and keeps
+live web views (GPU surfaces) from showing through the Gallery's partly see-through background.
+<!-- else -->
 The main window is translucent (Acrylic or Mica). Windows composites live web views, which are GPU surfaces, into
 the window in a way that bleeds through translucent widgets painted above them, tinting the Gallery with whatever
 page is behind it. Hiding the canvases while the Gallery is open avoids that and also stops hidden pages drawing
-frames. They are re-hidden after a space switch (the incoming canvas is shown by `SpaceStack`) and shown again on
+frames.
+<!-- endif -->
+They are re-hidden after a space switch (the incoming canvas is shown by `SpaceStack`) and shown again on
 close. `stays_on_top` makes `SpaceStack._raise_overlays()` keep the Gallery above a newly shown canvas.
 
 ## Thumbnails

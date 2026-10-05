@@ -56,7 +56,7 @@ Keys are `area.name` in lowercase with underscores. Existing areas: `appearance`
 ## Versions and migration
 
 `settings.version` records the format of the stored file. When JBrowser reads an older file, `_migrate()` adjusts
-it (version 2 switched the default material to Acrylic) and `migrated_from` tells the rest of start-up where the
+it (version 2 switched the default material to Acrylic<!-- if >= 2.0.3 -->; version 4 turned Acrylic, Mica and Mica Alt into Frosted<!-- endif -->) and `migrated_from` tells the rest of start-up where the
 data came from. Raise `SETTINGS_VERSION` only when stored values need converting; new keys need no migration because
 missing keys fall back to `DEFAULTS`.
 

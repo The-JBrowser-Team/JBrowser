@@ -32,13 +32,13 @@ DEFAULT_SEARCH_KEYWORDS = [
     {"keyword": "r", "name": "Reddit", "url": "https://www.reddit.com/search/?q={query}"},
 ]
 
-SETTINGS_VERSION = 3
+SETTINGS_VERSION = 4
 
 DEFAULTS: dict[str, Any] = {
     "settings.version": SETTINGS_VERSION,
     # Appearance
     "appearance.theme": "system",            # system | dark | light
-    "appearance.material": "acrylic",        # acrylic | mica | mica_alt | solid
+    "appearance.material": "frosted",        # frosted (JBrowser's own, ui/frost.py) | solid
     "appearance.use_accent": True,
     "appearance.animations": True,
     "appearance.window_animations": True,    # Windows' minimise / maximise animations for the main window
@@ -160,6 +160,12 @@ class Settings(QObject):
             # 2.0: the on/off "warn about dangerous files" switch became three protection levels.
             if self._values.pop("downloads.protect", True) is False:
                 self._values["downloads.protection"] = "off"
+        if version < 4:
+            # 2.0.3: Windows' materials (Acrylic, Mica, Mica Alt) gave way to JBrowser's own Frosted look.
+            self._values["appearance.material"] = \
+                "solid" if self._values.get("appearance.material") == "solid" else "frosted"
+        if self._values.get("appearance.material") not in ("frosted", "solid"):
+            self._values["appearance.material"] = "frosted"
         self._values["settings.version"] = SETTINGS_VERSION
 
     def reset_to_defaults(self) -> None:

@@ -1021,10 +1021,10 @@ class BrowserController(QObject):
 
     def toggle_maximize(self) -> None:
         w = self.window
-        w.transition(w.showNormal if w.isMaximized() else w.showMaximized)
+        w.showNormal() if w.isMaximized() else w.showMaximized()
 
     def minimize(self) -> None:
-        self.window.transition(self.window.showMinimized)
+        self.window.showMinimized()
 
     def toggle_window_fullscreen(self) -> None:
         w = self.window

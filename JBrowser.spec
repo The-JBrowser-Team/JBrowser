@@ -8,7 +8,6 @@ hiddenimports = collect_submodules("jbrowser") + [
     "PyQt6.QtPrintSupport",    # printing
     "PyQt6.QtNetwork",
     "PyQt6.QtMultimedia",      # welcome-screen sound effects (QSoundEffect)
-    "pywinstyles",
     "cryptography.hazmat.primitives.ciphers.aead",
     "cryptography.hazmat.primitives.kdf.scrypt",
 ]

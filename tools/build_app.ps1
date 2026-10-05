@@ -62,7 +62,7 @@ if ($OneFile) {
         --add-data "$Root\assets\sounds\intro.wav;assets\sounds" --add-data "$Root\assets\sounds\click.wav;assets\sounds" `
         --collect-submodules jbrowser `
         --hidden-import PyQt6.QtWebChannel --hidden-import PyQt6.QtPrintSupport `
-        --hidden-import PyQt6.QtNetwork --hidden-import PyQt6.QtMultimedia --hidden-import pywinstyles `
+        --hidden-import PyQt6.QtNetwork --hidden-import PyQt6.QtMultimedia `
         --exclude-module tkinter --exclude-module PyQt5 --noupx
     $out = Join-Path $DistDir "JBrowser.exe"
 } else {

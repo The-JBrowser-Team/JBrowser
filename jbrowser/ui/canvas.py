@@ -7,7 +7,7 @@ import time
 from typing import TYPE_CHECKING
 
 from PyQt6.QtCore import QEasingCurve, QPoint, QRect, QRectF, Qt, QTimer, QVariantAnimation
-from PyQt6.QtGui import QColor, QFont, QImage, QPainter, QPainterPath, QPen, QPixmap
+from PyQt6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen, QPixmap
 from PyQt6.QtWidgets import QWidget
 
 from jbrowser.core.motion import motion
@@ -211,9 +211,7 @@ class Canvas(QWidget):
         self.ui = ui
         self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
         self.setMouseTracking(True)
-        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)   # see _background
-        self._bg_key: tuple | None = None
-        self._bg = QColor()
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)   # see paintEvent
         self.cards: dict[str, WebCard] = {}
         # Card id → (x, width, top, height): x and width in px, top and height as fractions of the column.
         self._geo: dict[str, tuple[float, float, float, float]] = {}
@@ -1002,27 +1000,7 @@ class Canvas(QWidget):
                 self.setCursor(Qt.CursorShape.PointingHandCursor if hover else Qt.CursorShape.ArrowCursor)
                 self.update()
 
-    def _background(self) -> QColor:
-        """The window's backdrop layers (base colour, tint) with the canvas tint over them, as one
-        colour. The canvas paints every one of its pixels with it (WA_OpaquePaintEvent), so Qt no longer
-        repaints the window underneath on every frame of scrolling, which halves the work on large or
-        high-DPI screens."""
-        th = theme()
-        if not th.translucent:
-            return th.c("canvas_solid")
-        layers = th.backdrop_layers() + [th.c("canvas")]
-        key = tuple(c.rgba() for c in layers)
-        if key != self._bg_key:
-            img = QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
-            img.fill(Qt.GlobalColor.transparent)
-            p = QPainter(img)
-            for c in layers:
-                p.fillRect(0, 0, 1, 1, c)
-            p.end()
-            self._bg_key, self._bg = key, img.pixelColor(0, 0)
-        return QColor(self._bg)
-
-    def paintEvent(self, _e) -> None:
+    def paintEvent(self, e) -> None:
         th = theme()
         p = QPainter(self)
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
@@ -1030,9 +1008,10 @@ class Canvas(QWidget):
             p.fillRect(self.rect(), Qt.GlobalColor.black)
             p.end()
             return
-        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-        p.fillRect(self.rect(), self._background())
-        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
+        # The window's background with the canvas tint baked in (one copy of a cached picture, or one colour
+        # with Solid). The canvas paints every one of its pixels (WA_OpaquePaintEvent), so Qt never repaints
+        # the window underneath while it scrolls.
+        th.paint_backdrop(p, self, e.rect(), "canvas")
         view = QRectF(self.rect()).adjusted(-40, -40, 40, 40)
         base = th.c("shadow")
         dpr = self.devicePixelRatioF()

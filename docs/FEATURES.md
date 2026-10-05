@@ -3,15 +3,14 @@
 Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md](../CHANGELOG.md).
 
 ### Windows 11 look & feel
-- **Acrylic** by default, or **Mica, Mica Alt** or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
-  The theme you pick holds even when Windows uses the other one: JBrowser paints its own base colour under the
-  frosted glass, so the window never turns pale behind light text (or dark behind dark text). Inactive windows keep
-  their look, and when Windows isn't drawing see-through effects (transparency effects or energy saver off, high
-  contrast, Remote Desktop, some graphics drivers) JBrowser switches to a solid look by itself until they're back.
-- **Frosted menus**: right-click menus, the ··· menu and the Archive are translucent too.
+- **Frosted** by default, or **Solid** (Settings → Appearance); dark/light/system theme and the Windows accent colour.
+  Frosted is JBrowser's own look: a soft, blurred tint of your wallpaper's colours under the window, painted by
+  JBrowser itself, so it looks the same on every PC, on Windows 10 and 11, active or not, with transparency effects
+  or energy saver on or off. The wallpaper never leaves your PC. Solid is one calm, even colour.
+- Menus and the Archive are solid panels with rounded corners.
 - **Colour tints**: rose, coral, amber, lime, mint, teal, sky, indigo, violet, slate or *No colour* (Settings →
-  Appearance, the welcome setup, or "colour" in the Lazy Toolbar). Over Acrylic or Mica it is a light wash; with
-  *Solid* the surfaces take on the colour. Incognito spaces are always black.
+  Appearance, the welcome setup, or "colour" in the Lazy Toolbar). With Frosted it is a light wash; with *Solid* the
+  surfaces take on the colour. Incognito spaces are always black.
 - Segoe UI throughout, with restrained weights; a 12-hour clock centred in the sidebar header, and the logo doubles
   as the Settings button.
 - Custom title bar that keeps native behaviour: drag, double-click maximise, Aero Snap, **Snap Layouts flyout** on the maximise button, rounded corners, shadow, resize edges.
@@ -20,9 +19,8 @@ Everything JBrowser can do, grouped by area. New in a release? See [CHANGELOG.md
   card's width and offers 20 %, 40 %, 50 %, 60 %, 80 % and full width with their shortcuts. The Downloads button
   appears once you download something and shows the percentage while files download. Settings → Ribbon and sidebar
   (or right-clicking the ribbon) shows or hides each optional button, including a ribbon button for reading mode.
-- **No colour warp** when minimising, maximising or restoring: the window paints itself solid while Windows animates
-  it, and *Animate minimising and maximising* (Settings → Appearance) turns Windows' animation off for PCs that still
-  flicker.
+- Every window is opaque, so minimising, maximising and restoring never change its colours. *Animate minimising
+  and maximising* (Settings → Appearance) turns Windows' animation off if you prefer.
 - Alpha-layered surfaces over the backdrop; natively rounded menus and tooltips; Segoe Fluent Icons throughout.
 - **Fluid Animations** (Settings → Appearance, on by default): turn it off and every transition becomes instant.
   On first run it follows the Windows "Animation effects" accessibility setting.

@@ -39,7 +39,6 @@ REQUIRED_IMPORTS = [
     "PyQt6.QtCore", "PyQt6.QtGui", "PyQt6.QtWidgets", "PyQt6.QtNetwork", "PyQt6.QtPrintSupport",
     "PyQt6.QtWebEngineCore", "PyQt6.QtWebEngineWidgets", "PyQt6.QtWebChannel", "PyQt6.QtMultimedia",
     "requests", "cryptography.hazmat.primitives.ciphers.aead", "cryptography.hazmat.primitives.kdf.scrypt",
-    "pywinstyles",
 ]
 
 VERIFY_SNIPPET = r"""
@@ -131,7 +130,7 @@ def lint(py: Path) -> bool:
 def report(py: Path) -> None:
     say("Installed versions:")
     names = ["PyQt6", "PyQt6-WebEngine", "PyQt6-Qt6", "PyQt6-WebEngine-Qt6", "requests", "cryptography",
-             "pywinstyles", "pyinstaller", "pyflakes"]
+             "pyinstaller", "pyflakes"]
     code = ("import importlib.metadata as m\n"
             f"for n in {names!r}:\n"
             "    try: print(f'  {n:<22} {m.version(n)}')\n"

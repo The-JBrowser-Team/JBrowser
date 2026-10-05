@@ -50,7 +50,7 @@ def _setup_logging(paths: AppPaths, debug: bool) -> None:
 
 def _install_qt_log() -> None:
     """Qt's own warnings go to JBrowser's log (each one a few times at most) instead of a console nobody
-    sees, and ui/backdrop.py learns from them when the graphics driver can't do see-through windows."""
+    sees."""
     from PyQt6.QtCore import QtMsgType, qInstallMessageHandler
 
     qt_log = logging.getLogger("qt")
@@ -62,8 +62,6 @@ def _install_qt_log() -> None:
     def handler(mode, _context, message) -> None:
         try:
             text = str(message)
-            from jbrowser.ui import backdrop
-            backdrop.note_qt_message(text)
             level = levels.get(mode, logging.INFO)
             key = text[:80]
             if qt_log.isEnabledFor(level) and seen.get(key, 0) < 3 and len(seen) < 300:
@@ -119,7 +117,7 @@ def _chromium_flags(paths: AppPaths) -> None:
     os.environ["JBROWSER_ADDED_CHROMIUM_FLAGS"] = added
     # Composite widget windows through the GPU (the same API as the web pages) from the start.
     # Otherwise the first web card converts the raster window to an RHI window, which recreates
-    # the HWND (flicker) and drops the Mica backdrop.
+    # the HWND (flicker).
     own("QT_WIDGETS_RHI", "1")
     own("QT_WIDGETS_RHI_BACKEND", backend)
     # UI sound effects only need the native Windows audio backend (not FFmpeg).
@@ -217,10 +215,12 @@ def run(argv: list[str] | None = None) -> int:
 
     from jbrowser.context import AppContext
     from jbrowser.core.settings import Settings
+    from jbrowser.ui.frost import frost
     from jbrowser.ui.icons import app_icon
     from jbrowser.ui.theme import Theme
 
     app.setWindowIcon(app_icon())
+    frost().cache_dir = paths.cache                   # the wallpaper's colours, kept for a quick start
     settings = Settings(paths.settings_file)
     if first_run:
         settings.set("appearance.animations", win.system_animations_enabled())

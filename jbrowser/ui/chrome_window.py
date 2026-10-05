@@ -1,8 +1,8 @@
-"""Translucent tool windows (Settings, History, Downloads, ...).
+"""Tool windows (Settings, History, Downloads, ...).
 
-They use the same technique as the main window: the whole window is client area, the
-Windows 11 system backdrop (Acrylic / Mica) shows through transparent pixels, and a slim
-custom caption provides drag, Snap Layouts and minimise / maximise / close.
+They use the same technique as the main window: the whole window is client area, painted by JBrowser (the
+Frosted picture or the Solid colour, then a content layer), and a slim custom caption provides drag, Snap
+Layouts and minimise / maximise / close.
 """
 from __future__ import annotations
 
@@ -13,7 +13,8 @@ from PyQt6.QtGui import QPainter, QPainterPath
 from PyQt6.QtWidgets import QHBoxLayout, QLabel, QVBoxLayout, QWidget
 
 from jbrowser.platform import win
-from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard, paint_probe_hole
+from jbrowser.ui.backdrop import Backdrop, caption_hit
+from jbrowser.ui.frost import frost
 from jbrowser.ui.icons import app_icon, paint_logo
 from jbrowser.ui.theme import theme
 from jbrowser.ui.widgets import IconButton
@@ -52,15 +53,15 @@ class _Caption(QWidget):
 
 
 class ChromeWindow(QWidget):
-    """Top-level window with a system backdrop. Subclasses populate ``self.root``."""
+    """Top-level window with JBrowser's backdrop (Frosted or Solid). Subclasses populate ``self.root``."""
 
     def __init__(self, title: str, parent: QWidget | None = None, size: tuple[int, int] = (900, 620),
                  nav_width: int = 0):
         super().__init__(parent, Qt.WindowType.Window)
         self.setWindowTitle(title)
         self.setWindowIcon(app_icon())
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)    # opaque: it paints every pixel itself
         self.resize(*size)
         self.setMinimumSize(520, 380)
         self.nav_width = nav_width
@@ -80,32 +81,21 @@ class ChromeWindow(QWidget):
         self.native = win.NativeFrame(lambda: int(self.winId()), self.devicePixelRatioF, self._hit_test,
                                       c.max_btn.set_force_hover, c.max_btn.set_force_pressed, self._toggle_max)
         self.native.resizable = lambda: not self.isFullScreen()
-        self.backdrop = Backdrop(self)               # the material and light/dark mode (ui/backdrop.py)
-        self.guard = look_guard()
-        self.guard.watch(self, self, self._probe_spot)
-        self.native.on_system_change = self._on_system_change
-        self.transitions = WindowTransitions(self, self.native)   # minimise / maximise without colour warp
-        c.min_btn.clicked.connect(lambda: self.transitions.run(self.showMinimized))
+        self.backdrop = Backdrop(self)               # light/dark frame (ui/backdrop.py)
+        self.native.on_system_change = self.backdrop.schedule
+        c.min_btn.clicked.connect(self.showMinimized)
         theme().changed.connect(self.update)
+        frost().changed.connect(self.update)
         if parent is not None:
             g = parent.geometry()
             self.move(g.x() + (g.width() - size[0]) // 2, g.y() + max(20, (g.height() - size[1]) // 2))
 
     # --------------------------------------------------------------- frame
     def _toggle_max(self) -> None:
-        self.transitions.run(self.showNormal if self.isMaximized() else self.showMaximized)
+        self.showNormal() if self.isMaximized() else self.showMaximized()
 
     def _hit_test(self, local: QPoint) -> int:
         return caption_hit(self, local, self.caption.max_btn)
-
-    def _on_system_change(self) -> None:
-        self.backdrop.schedule()
-        self.guard.system_changed()
-
-    def _probe_spot(self) -> QPoint | None:
-        """The top edge of the caption, mid-way: only the backdrop is painted there."""
-        spot = QPoint(self.width() // 2, 2)
-        return spot if self.childAt(spot) is self.caption else None
 
     def nativeEvent(self, event_type, message):
         try:
@@ -116,8 +106,6 @@ class ChromeWindow(QWidget):
         return (True, result) if handled else (False, 0)
 
     def changeEvent(self, e) -> None:
-        if e.type() == QEvent.Type.ActivationChange:
-            self.update()                          # repaint whole: no stale part survives a focus change
         if e.type() == QEvent.Type.WindowStateChange:
             self.caption.max_btn.set_glyph("restore" if self.isMaximized() else "max")
         super().changeEvent(e)
@@ -129,26 +117,23 @@ class ChromeWindow(QWidget):
         super().keyPressEvent(e)
 
     # --------------------------------------------------------------- paint
-    def paintEvent(self, _e) -> None:
+    def paintEvent(self, e) -> None:
         th = theme()
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if th.translucent:
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-            p.fillRect(self.rect(), Qt.GlobalColor.transparent)
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-            for layer in th.backdrop_layers():     # JBrowser's base colour, then the tint
-                p.fillRect(self.rect(), layer)
-            paint_probe_hole(p, self)
+        th.paint_backdrop(p, self, e.rect())        # Frosted picture or Solid colour
+        # Content layer: a slightly raised surface, rounded where it meets the navigation pane. Plain
+        # rectangles, and only the one rounded corner antialiased: it's under everything that scrolls.
+        top, x, R = CAPTION_H, self.nav_width, 10
+        w, h = self.width() - x, self.height() - top
+        layer = th.surface("layer")
+        if x:
+            p.fillRect(QRectF(x + R, top, w - R, R), layer)
+            p.fillRect(QRectF(x, top + R, w, h - R), layer)
+            corner = QPainterPath()
+            corner.addRoundedRect(QRectF(x, top, 2 * R, 2 * R), R, R)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            p.setClipRect(QRectF(x, top, R, R), Qt.ClipOperation.IntersectClip)
+            p.fillPath(corner, layer)
         else:
-            p.fillRect(self.rect(), th.c("window"))
-        # Content layer: slightly raised surface, rounded where it meets the navigation pane.
-        top = CAPTION_H
-        r = QRectF(self.nav_width, top, self.width() - self.nav_width, self.height() - top)
-        path = QPainterPath()
-        if self.nav_width:
-            path.addRoundedRect(r.adjusted(0, 0, 12, 12), 10, 10)
-        else:
-            path.addRect(r)
-        p.fillPath(path, th.surface("layer"))
+            p.fillRect(QRectF(x, top, w, h), layer)
         p.end()

@@ -92,9 +92,11 @@ See [AUTO_UPDATE.md](AUTO_UPDATE.md) and [BUILDING.md](BUILDING.md).
 
 ## Implementation notes and limitations
 
-- **Mica with Qt WebEngine.** Widget windows are composited through Direct3D 11 from the start
-  (`QT_WIDGETS_RHI=1`), and the whole window is client area (a custom `WM_NCCALCSIZE`). That lets the DWM backdrop
-  show through translucent pixels while Chromium renders through D3D11.
+- **The Frosted look** (`ui/frost.py`). Every window is opaque, and Windows' materials (Mica, Acrylic) are not used.
+  JBrowser paints a blurred, tinted picture of the desktop wallpaper under its widgets, built once per window size
+  and look and painted with 1:1 copies. The whole window is client area (a custom `WM_NCCALCSIZE`), and widget
+  windows are composited through Direct3D 11 from the start (`QT_WIDGETS_RHI=1`), so the first web card never
+  recreates the window.
 - **DNS-over-HTTPS.** PyQt6 exposes `QWebEngineGlobalSettings.DnsMode` but not `setDnsMode()`, so JBrowser calls the
   exported Qt function through `ctypes`. If a future Qt build changes that export, the DNS selector reports that it
   is unavailable.
@@ -121,11 +123,11 @@ See [AUTO_UPDATE.md](AUTO_UPDATE.md) and [BUILDING.md](BUILDING.md).
   world, and WebSocket and capture detection happens in the request interceptor and permission handler, not in the
   page.
 - **Gallery** (`ui/gallery.py`) is an overlay child of `SpaceStack`. While it is open, the canvases are hidden, so
-  the translucent window never blends live web views into it and hidden pages stop drawing frames. Thumbnails come
+  live web views never show through its partly see-through background and hidden pages stop drawing frames. Thumbnails come
   from a fresh grab of the visible cards and from the snapshots cards take when they leave view or a space is left.
   Blank grabs (a page that hasn't painted) are discarded.
-- **Colour tints** (`ui/theme.py`). With a translucent material, the tint is a wash (`window_tint`, 15 % dark or
-  10 % light) painted over the backdrop by `RootWidget`. With *Solid*, the tint is mixed into each `*_solid` token.
+- **Colour tints** (`ui/theme.py`). With *Frosted*, the tint is a wash (`window_tint`, 15 % dark or 10 % light)
+  baked into the frosted picture. With *Solid*, the tint is mixed into each `*_solid` token.
   An active incognito space overrides both with black.
 - **Sound effects** use Qt Multimedia with the native Windows backend, so the build leaves out the FFmpeg plugin.
   Web video uses Chromium's own codecs.

@@ -1146,7 +1146,7 @@ class Gallery(QWidget):
         p.setRenderHint(QPainter.RenderHint.Antialiasing)
         r = QRectF(self.rect())
         base = th.c("canvas_solid")
-        base.setAlphaF(0.84 if th.translucent else 1.0)      # frosted over Acrylic / Mica
+        base.setAlphaF(0.84 if th.translucent else 1.0)      # a little see-through over Frosted
         p.fillRect(r, base)
         # a soft glow of the accent at the top and of the space's colour at the bottom
         glow = QRadialGradient(QPointF(r.center().x(), r.top() - r.height() * 0.15), r.width() * 0.6)

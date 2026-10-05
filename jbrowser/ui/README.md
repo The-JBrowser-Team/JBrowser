@@ -16,8 +16,9 @@ or the command registry. They never call each other directly.
 | `card.py` | `WebCard`: one web page on the canvas (header, info bars, find bar, sleep snapshot, reading mode) |
 | `reader_view.py` | Reading mode inside a card (the article page and its bar of text options) and the one-time suggestion on articles |
 | `download_prompt.py` | The frosted keep-or-delete bubble for flagged downloads |
-| `glass.py` | `GlassPopup`: a small popup with the system Acrylic behind it |
-| `backdrop.py` | `Backdrop` (each window's material and light/dark mode), `WindowTransitions` (minimise / maximise without colour warp) and the caption hit test |
+| `glass.py` | `GlassPopup`: a small, opaque rounded popup |
+| `frost.py` | `Frost`: JBrowser's own Frosted look, a blurred, tinted picture of the wallpaper made once per window size |
+| `backdrop.py` | `Backdrop` (each window's light/dark frame, rounded corners and cloaked first appearance) and the caption hit test |
 | `lazy_toolbar.py` | The Lazy Toolbar command overlay (Ctrl+T / Ctrl+K) |
 | `onboarding.py` | The first-run welcome: animated intro, story slides, setup pages and the guided tour |
 | `sounds.py` | Low-latency UI sound effects (welcome screen) |
@@ -25,8 +26,8 @@ or the command registry. They never call each other directly.
 | `site_info.py` | The site information panel behind the lock icon |
 | `favorites_bar.py` | The bookmarks bar (Ctrl+Shift+B). The file name predates the rename. |
 | `hotkeys.py` | The shortcut sheet (Ctrl+/), generated from the command registry |
-| `chrome_window.py` | `ChromeWindow`: the translucent base for Settings and the other tool windows |
-| `theme.py` | Palettes, fonts and style sheets for dark and light over Mica / Acrylic, the colour tints and the incognito black |
+| `chrome_window.py` | `ChromeWindow`: the base for Settings and the other tool windows |
+| `theme.py` | Palettes, fonts and style sheets for dark and light, Frosted or Solid, the colour tints and the incognito black |
 | `icons.py` | Icons drawn from the Segoe Fluent Icons font |
 | `widgets.py` | Reusable custom-painted controls (toggles, chips, toasts, the colour-tint picker and so on) |
 

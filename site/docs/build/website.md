@@ -28,7 +28,7 @@ The home page uses real screenshots of the app, in `site/static/img/shots/`. Ref
 
 [tools/site_screenshots.py](source:tools/site_screenshots.py) runs JBrowser from source with a throw-away profile,
 downloads the filter lists if needed, opens a few real sites, puts a full-screen gradient behind a 1600 × 1000 window
-and captures it from the screen, so Acrylic shows the gradient through the glass. It shoots the canvas, the Gallery,
+and captures it from the screen<!-- if >= 2.0.3 -->. The same gradient is JBrowser's wallpaper for the run (`JBROWSER_WALLPAPER`), so the Frosted look is made from it and never from the PC's own wallpaper<!-- else -->, so Acrylic shows the gradient through the glass<!-- endif -->. It shoots the canvas, the Gallery,
 the Lazy Toolbar, a split view, the site information panel, all ten colour tints (over a neutral backdrop), light
 mode, an incognito space and the welcome, then writes WebP files at 1280 px, 1920 px and full size, plus
 `og-image.jpg` for link previews. It takes about two and a half minutes; leave the mouse and keyboard alone while it

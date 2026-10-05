@@ -1,6 +1,7 @@
 """Windows 11 integration via the Win32 / DWM APIs (ctypes).
 
-* Mica / Mica Alt / Acrylic system backdrops (DWMWA_SYSTEMBACKDROP_TYPE)
+* The desktop wallpaper (for JBrowser's own Frosted look, ui/frost.py). JBrowser's windows are opaque: it
+  never uses Windows' see-through materials (Mica, Acrylic).
 * Custom-drawn title bar that keeps native behaviour: the top caption is removed in
   WM_NCCALCSIZE while the invisible side/bottom resize borders, drop shadow, rounded
   corners, Aero Snap and the Windows 11 Snap Layouts flyout (HTMAXBUTTON) all remain.
@@ -36,16 +37,14 @@ WM_NCLBUTTONDBLCLK = 0x00A3
 WM_NCRBUTTONDOWN = 0x00A4
 WM_NCRBUTTONUP = 0x00A5
 WM_NCMOUSELEAVE = 0x02A2
-WM_SYSCOMMAND = 0x0112
-SC_MINIMIZE, SC_MAXIMIZE, SC_RESTORE = 0xF020, 0xF030, 0xF120
-WM_SETTINGCHANGE = 0x001A
+WM_SETTINGCHANGE = 0x001A           # also sent when the wallpaper changes
 WM_DWMCOLORIZATIONCOLORCHANGED = 0x0320
 WM_THEMECHANGED = 0x031A
-WM_DWMCOMPOSITIONCHANGED = 0x031E
-WM_POWERBROADCAST = 0x0218          # energy saver, sleep and resume
-WM_DISPLAYCHANGE = 0x007E
-_SYSTEM_CHANGE_MESSAGES = (WM_SETTINGCHANGE, WM_THEMECHANGED, WM_DWMCOMPOSITIONCHANGED, WM_DWMCOLORIZATIONCOLORCHANGED,
-                           WM_POWERBROADCAST, WM_DISPLAYCHANGE)
+_SYSTEM_CHANGE_MESSAGES = (WM_SETTINGCHANGE, WM_THEMECHANGED, WM_DWMCOLORIZATIONCOLORCHANGED)
+# The messages NativeFrame.handle acts on; everything else goes straight to Qt.
+_HANDLED = frozenset((WM_NCCALCSIZE, WM_NCHITTEST, WM_NCACTIVATE, WM_NCMOUSELEAVE, WM_NCLBUTTONDOWN, WM_NCLBUTTONUP,
+                      WM_NCLBUTTONDBLCLK, WM_NCRBUTTONDOWN, WM_NCRBUTTONUP) + _SYSTEM_CHANGE_MESSAGES)
+_MSG_OFFSET = ctypes.sizeof(ctypes.c_void_p)       # MSG.message comes right after MSG.hwnd
 
 HTCLIENT = 1
 HTCAPTION = 2
@@ -58,18 +57,11 @@ DWMWA_CLOAK = 13
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 DWMWA_USE_IMMERSIVE_DARK_MODE_OLD = 19
 DWMWA_WINDOW_CORNER_PREFERENCE = 33
-DWMWA_SYSTEMBACKDROP_TYPE = 38
-DWMWA_MICA_EFFECT_LEGACY = 1029
 DWMWCP_ROUND = 2
-BACKDROPS = {"solid": 1, "mica": 2, "acrylic": 3, "mica_alt": 4}
 
 SM_CXSIZEFRAME, SM_CYSIZEFRAME, SM_CXPADDEDBORDER = 32, 33, 92
 SWP_FRAMECHANGED_FLAGS = 0x0001 | 0x0002 | 0x0004 | 0x0010 | 0x0020  # NOSIZE|NOMOVE|NOZORDER|NOACTIVATE|FRAMECHANGED
-
-
-class MARGINS(ctypes.Structure):
-    _fields_ = [("cxLeftWidth", ctypes.c_int), ("cxRightWidth", ctypes.c_int),
-                ("cyTopHeight", ctypes.c_int), ("cyBottomHeight", ctypes.c_int)]
+SPI_GETDESKWALLPAPER = 0x0073
 
 
 class NCCALCSIZE_PARAMS(ctypes.Structure):
@@ -83,16 +75,6 @@ class APPBARDATA(ctypes.Structure):
 
 class DATA_BLOB(ctypes.Structure):
     _fields_ = [("cbData", wintypes.DWORD), ("pbData", ctypes.POINTER(ctypes.c_char))]
-
-
-class HIGHCONTRASTW(ctypes.Structure):
-    _fields_ = [("cbSize", wintypes.UINT), ("dwFlags", wintypes.DWORD), ("lpszDefaultScheme", wintypes.LPWSTR)]
-
-
-class SYSTEM_POWER_STATUS(ctypes.Structure):
-    _fields_ = [("ACLineStatus", wintypes.BYTE), ("BatteryFlag", wintypes.BYTE),
-                ("BatteryLifePercent", wintypes.BYTE), ("SystemStatusFlag", wintypes.BYTE),
-                ("BatteryLifeTime", wintypes.DWORD), ("BatteryFullLifeTime", wintypes.DWORD)]
 
 
 if IS_WINDOWS:
@@ -120,8 +102,6 @@ if IS_WINDOWS:
     _user32.PostMessageW.restype = wintypes.BOOL
     _dwm.DwmSetWindowAttribute.argtypes = [wintypes.HWND, wintypes.DWORD, ctypes.c_void_p, wintypes.DWORD]
     _dwm.DwmSetWindowAttribute.restype = ctypes.c_long
-    _dwm.DwmExtendFrameIntoClientArea.argtypes = [wintypes.HWND, ctypes.POINTER(MARGINS)]
-    _dwm.DwmExtendFrameIntoClientArea.restype = ctypes.c_long
     _shell32.SHAppBarMessage.argtypes = [wintypes.DWORD, ctypes.POINTER(APPBARDATA)]
     _shell32.SHAppBarMessage.restype = ctypes.c_size_t
     _crypt32.CryptProtectData.argtypes = [ctypes.POINTER(DATA_BLOB), wintypes.LPCWSTR, ctypes.POINTER(DATA_BLOB),
@@ -131,18 +111,6 @@ if IS_WINDOWS:
                                             ctypes.c_void_p, ctypes.c_void_p, wintypes.DWORD,
                                             ctypes.POINTER(DATA_BLOB)]
     _kernel32.LocalFree.argtypes = [ctypes.c_void_p]
-    _kernel32.GetSystemPowerStatus.argtypes = [ctypes.POINTER(SYSTEM_POWER_STATUS)]
-    _user32.GetDC.argtypes = [wintypes.HWND]
-    _user32.GetDC.restype = wintypes.HDC
-    _user32.ReleaseDC.argtypes = [wintypes.HWND, wintypes.HDC]
-    _user32.WindowFromPoint.argtypes = [wintypes.POINT]
-    _user32.WindowFromPoint.restype = wintypes.HWND
-    _user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
-    _user32.GetAncestor.restype = wintypes.HWND
-    _user32.GetForegroundWindow.restype = wintypes.HWND
-    _gdi32 = ctypes.windll.gdi32
-    _gdi32.GetPixel.argtypes = [wintypes.HDC, ctypes.c_int, ctypes.c_int]
-    _gdi32.GetPixel.restype = wintypes.DWORD
 
 
 def _set_dword_attr(hwnd: int, attr: int, value: int) -> bool:
@@ -155,24 +123,6 @@ def set_dark_title(hwnd: int, dark: bool) -> None:
         return
     if not _set_dword_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, int(dark)):
         _set_dword_attr(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE_OLD, int(dark))
-
-
-_backdrop_supported: bool | None = None
-
-
-def backdrop_supported() -> bool:
-    """Whether this Windows can draw a system backdrop (Mica / Acrylic) behind a window: Windows 11, or
-    Windows 10 with pywinstyles' blur. Decided once; JBrowser's look never depends on a single call."""
-    global _backdrop_supported
-    if _backdrop_supported is None:
-        if not IS_WINDOWS:
-            _backdrop_supported = False
-        elif WIN_BUILD >= 22000:
-            _backdrop_supported = True
-        else:
-            import importlib.util
-            _backdrop_supported = importlib.util.find_spec("pywinstyles") is not None
-    return _backdrop_supported
 
 
 def _colorref(c: QColor) -> int:
@@ -188,47 +138,9 @@ def set_caption_colors(hwnd: int, background: QColor, text: QColor) -> None:
 
 
 def set_corner_preference(hwnd: int, preference: int = DWMWCP_ROUND) -> None:
-    """Rounded corners (2 = round, 3 = small) — used for popups, menus and tooltips."""
+    """Rounded corners (2 = round, 3 = small) for windows, popups, menus and tooltips."""
     if IS_WINDOWS and WIN_BUILD >= 22000:
         _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, preference)
-
-
-def apply_backdrop(hwnd: int, material: str, dark: bool) -> bool:
-    """Apply a Windows 11 system backdrop. Returns True when a translucent material is active.
-    (ui/backdrop.py decides when; the result is only logged, never used to change the look.)"""
-    if not IS_WINDOWS:
-        return False
-    set_dark_title(hwnd, dark)
-    _set_dword_attr(hwnd, 2, 2)  # DWMWA_NCRENDERING_POLICY = DWMNCRP_ENABLED (full screen may disable it)
-    _set_dword_attr(hwnd, DWMWA_WINDOW_CORNER_PREFERENCE, DWMWCP_ROUND)
-    margins = MARGINS(0, 0, 0, 0)
-    _dwm.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
-    if material == "solid":
-        _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS["solid"])
-        return False
-    if WIN_BUILD >= 22523:
-        return _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS.get(material, 2))
-    if WIN_BUILD >= 22000:
-        return _set_dword_attr(hwnd, DWMWA_MICA_EFFECT_LEGACY, 1)
-    # Windows 10: fall back to pywinstyles' acrylic blur-behind if available.
-    try:
-        import pywinstyles  # type: ignore
-
-        pywinstyles.apply_style(int(hwnd), "acrylic")  # accepts a raw HWND
-        return True
-    except Exception as exc:  # pragma: no cover - depends on OS build
-        log.info("No system backdrop available: %s", exc)
-        return False
-
-
-def apply_popup_backdrop(hwnd: int, dark: bool) -> bool:
-    """Acrylic behind a borderless popup (Windows 11 22H2 and later). Returns True when active."""
-    if not IS_WINDOWS or WIN_BUILD < 22523:
-        return False
-    set_dark_title(hwnd, dark)
-    margins = MARGINS(-1, -1, -1, -1)        # a popup has no frame: the whole window is backdrop
-    _dwm.DwmExtendFrameIntoClientArea(hwnd, ctypes.byref(margins))
-    return _set_dword_attr(hwnd, DWMWA_SYSTEMBACKDROP_TYPE, BACKDROPS["acrylic"])
 
 
 def refresh_frame(hwnd: int) -> None:
@@ -244,98 +156,33 @@ def set_transitions(hwnd: int, enabled: bool) -> None:
 
 def set_cloak(hwnd: int, cloaked: bool) -> bool:
     """Hide (or show again) a window from the screen without hiding it from Windows: a new window is
-    cloaked until its material and first frame are ready, so it never flashes white or black."""
+    cloaked until its first frame is painted, so it never flashes white or black."""
     return IS_WINDOWS and _set_dword_attr(hwnd, DWMWA_CLOAK, int(cloaked))
 
 
-# ---------------------------------------------------------------------------- can Windows show a material?
-# Mica and Acrylic only appear when Windows draws them. With transparency effects off, energy saver on,
-# high contrast or over Remote Desktop, Windows draws a plain fill instead, and JBrowser's see-through
-# layers would sit on top of whatever that fill is. ui/backdrop.py (LookGuard) paints JBrowser's own
-# opaque base in those cases.
-def transparency_effects_on() -> bool:
-    """Settings → Personalisation → Colours → Transparency effects."""
+# ---------------------------------------------------------------------------- the desktop (Frosted look)
+def wallpaper_path() -> str:
+    """The desktop wallpaper's image file, or "" (a solid colour, or not Windows)."""
     if not IS_WINDOWS:
-        return False
+        return ""
+    buf = ctypes.create_unicode_buffer(1024)
+    if _user32.SystemParametersInfoW(SPI_GETDESKWALLPAPER, len(buf), buf, 0):
+        return buf.value
+    return ""
+
+
+def desktop_color() -> QColor | None:
+    """Settings → Personalisation → Background → Solid colour, or None."""
+    if not IS_WINDOWS:
+        return None
     try:
         import winreg
-        with winreg.OpenKey(winreg.HKEY_CURRENT_USER,
-                            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize") as key:
-            value, _ = winreg.QueryValueEx(key, "EnableTransparency")
-        return bool(value)
-    except OSError:
-        return True                       # never written: Windows' default (on)
-
-
-def high_contrast_on() -> bool:
-    if not IS_WINDOWS:
-        return False
-    hc = HIGHCONTRASTW()
-    hc.cbSize = ctypes.sizeof(HIGHCONTRASTW)
-    if _user32.SystemParametersInfoW(0x0042, hc.cbSize, ctypes.byref(hc), 0):     # SPI_GETHIGHCONTRAST
-        return bool(hc.dwFlags & 0x1)                                              # HCF_HIGHCONTRASTON
-    return False
-
-
-def energy_saver_on() -> bool:
-    """Battery saver / energy saver, which turns Windows' transparency effects off while it's on."""
-    if not IS_WINDOWS:
-        return False
-    status = SYSTEM_POWER_STATUS()
-    if _kernel32.GetSystemPowerStatus(ctypes.byref(status)):
-        return status.SystemStatusFlag == 1
-    return False
-
-
-def remote_session() -> bool:
-    return IS_WINDOWS and bool(_user32.GetSystemMetrics(0x1000))                 # SM_REMOTESESSION
-
-
-def material_blockers() -> list[str]:
-    """Why Windows won't draw Mica or Acrylic right now (empty when it will)."""
-    if not IS_WINDOWS:
-        return ["not Windows"]
-    out = []
-    if not transparency_effects_on():
-        out.append("transparency effects are off")
-    if energy_saver_on():
-        out.append("energy saver is on")
-    if high_contrast_on():
-        out.append("a high contrast theme is on")
-    if remote_session():
-        out.append("Remote Desktop")
-    return out
-
-
-def sample_own_pixel(hwnd: int, x: int, y: int) -> tuple[int, int, int] | None:
-    """The colour on screen at client pixel (x, y) of ``hwnd``, as Windows composited it, or None when
-    another window covers that point (then it says nothing about ``hwnd``)."""
-    if not IS_WINDOWS:
+        with winreg.OpenKey(winreg.HKEY_CURRENT_USER, r"Control Panel\Colors") as key:
+            value, _ = winreg.QueryValueEx(key, "Background")
+        r, g, b = (int(v) for v in str(value).split()[:3])
+        return QColor(r, g, b)
+    except (OSError, ValueError):
         return None
-    pt = wintypes.POINT(x, y)
-    _user32.ClientToScreen(hwnd, ctypes.byref(pt))
-    top = _user32.WindowFromPoint(pt)
-    if not top or int(_user32.GetAncestor(top, 2) or 0) != int(hwnd):              # GA_ROOT
-        return None
-    dc = _user32.GetDC(None)
-    if not dc:
-        return None
-    try:
-        c = _gdi32.GetPixel(dc, pt.x, pt.y)
-    finally:
-        _user32.ReleaseDC(None, dc)
-    if c == 0xFFFFFFFF:                                                            # CLR_INVALID
-        return None
-    return c & 0xFF, (c >> 8) & 0xFF, (c >> 16) & 0xFF
-
-
-def foreground_window() -> int:
-    return int(_user32.GetForegroundWindow() or 0) if IS_WINDOWS else 0
-
-
-def post_syscommand(hwnd: int, command: int) -> None:
-    if IS_WINDOWS:
-        _user32.PostMessageW(hwnd, WM_SYSCOMMAND, command, 0)
 
 
 def is_maximized(hwnd: int) -> bool:
@@ -387,16 +234,8 @@ class NativeFrame:
         self.resizable: Callable[[], bool] = lambda: True
         # Right-click on a drag region: show the app's own menu instead of the system menu.
         self.on_caption_menu: Callable[[], None] | None = None
-        # Windows changed a setting that can reset a window's light/dark state (ui/backdrop.py).
+        # Windows changed a setting: light/dark, accent colour, wallpaper (ui/backdrop.py, ui/frost.py).
         self.on_system_change: Callable[[], None] | None = None
-        # Minimise / maximise / restore asked for by Windows (taskbar, Win+arrow keys, caption double-click).
-        # Returns True when the window takes it over and sends the command again itself (MainWindow.transition).
-        self.on_transition: Callable[[int], bool] | None = None
-        self.passing: int | None = None     # a command sent again by the window: let Windows carry it out
-        # Windows draws Mica and Acrylic as a flat grey or white fill while a window is inactive. JBrowser
-        # keeps its frame in the active state instead, so the window looks the same whether or not it has
-        # the focus. (Qt still learns about activation from WM_ACTIVATE.)
-        self.keep_active_look = os.environ.get("JBROWSER_INACTIVE_LOOK") != "1"
 
     def _set_hover(self, value: bool) -> None:
         if value != self._max_hover:
@@ -404,15 +243,16 @@ class NativeFrame:
             self._on_max_hover(value)
 
     def handle(self, msg_ptr: int) -> tuple[bool, int]:
-        if not self.enabled:
+        # Every message of the window comes through here: read only its number first (MSG.message sits
+        # after the HWND) and leave the ones this class doesn't handle to Qt straight away.
+        if not self.enabled or ctypes.c_uint.from_address(msg_ptr + _MSG_OFFSET).value not in _HANDLED:
             return False, 0
         msg = wintypes.MSG.from_address(msg_ptr)
         m = msg.message
         hwnd = msg.hWnd
         if m == WM_NCCALCSIZE and msg.wParam:
-            # The whole window becomes client area. (Keeping DefWindowProc's invisible side
-            # borders makes DWM composite the Direct3D swap chain over an opaque white
-            # redirection surface, which defeats Mica.) Resizing is handled in WM_NCHITTEST.
+            # The whole window becomes client area (the caption is JBrowser's own); resizing is handled
+            # in WM_NCHITTEST.
             if _user32.IsZoomed(hwnd):
                 params = NCCALCSIZE_PARAMS.from_address(msg.lParam)
                 fx, fy = _frame_thickness(hwnd)
@@ -476,11 +316,8 @@ class NativeFrame:
                 return True, code
             return True, HTCLIENT
         if m == WM_NCACTIVATE:
-            # lParam = -1 stops DefWindowProc from painting a classic caption over the client. wParam TRUE
-            # keeps the frame, and the material behind the window, in their active look (see above);
-            # the result is TRUE either way, so the window is still allowed to lose the focus.
-            active = 1 if self.keep_active_look else msg.wParam
-            return True, _user32.DefWindowProcW(hwnd, m, active, -1)
+            # lParam = -1 stops DefWindowProc from painting a classic caption over the client.
+            return True, _user32.DefWindowProcW(hwnd, m, msg.wParam, -1)
         if m == WM_NCMOUSELEAVE:
             self._set_hover(False)
             return False, 0
@@ -496,15 +333,6 @@ class NativeFrame:
                 from PyQt6.QtCore import QTimer
                 QTimer.singleShot(0, self.on_caption_menu)   # never run a menu inside the window procedure
             return True, 0
-        if m == WM_SYSCOMMAND and self.on_transition is not None:
-            cmd = msg.wParam & 0xFFF0
-            if cmd in (SC_MINIMIZE, SC_MAXIMIZE, SC_RESTORE):
-                if self.passing == cmd:
-                    self.passing = None
-                    return False, 0
-                if self.on_transition(cmd):
-                    return True, 0
-            return False, 0
         if m in _SYSTEM_CHANGE_MESSAGES and self.on_system_change:
             from PyQt6.QtCore import QTimer
             QTimer.singleShot(0, self.on_system_change)      # after Qt has handled the message too

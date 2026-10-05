@@ -27,7 +27,7 @@
 
 JBrowser replaces the tab strip with an **infinite horizontal canvas of web cards** and organises them into
 **isolated Spaces**, driven from a vertical sidebar and a keyboard-first **Lazy Toolbar**. It runs in a
-native-feeling Windows 11 window with an Acrylic or Mica backdrop, and it is built with Python and
+native-feeling Windows 11 window with its own frosted look, and it is built with Python and
 PyQt6 / Qt WebEngine (Chromium).
 
 <p align="center">
@@ -82,9 +82,17 @@ See **[docs/FEATURES.md](docs/FEATURES.md)** for the full list and the keyboard 
 
 ## Release notes
 
-### 2.0.2 (latest) · 5 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.2)
+### 2.0.3 (latest) · 5 October 2026 · [download](https://github.com/The-JBrowser-Team/JBrowser/releases/tag/v2.0.3)
 
-- **No more light or dark box** over the top right of the window on some PCs (it went away only after minimising).
+- **Frosted, JBrowser's own look**: a soft, blurred tint of your wallpaper's colours, painted by JBrowser itself, so
+  it looks the same on every PC. Settings › Appearance offers *Frosted (default)* and *Solid*; Acrylic, Mica and Mica
+  Alt are gone.
+- **A quicker Settings**: it opens about three times faster, and colour tints and the look change instantly.
+  JBrowser also does less work when idle.
+
+### 2.0.2 · 5 October 2026
+
+- **No more light or dark box** over the top right of the window on some PCs.
 
 ### 2.0.1 · 4 October 2026
 
@@ -238,7 +246,6 @@ It builds on these projects, each under its own licence:
   Chromium's BSD-style licences)
 - [cryptography](https://cryptography.io/) (Apache 2.0 or BSD)
 - [requests](https://requests.readthedocs.io/) (Apache 2.0)
-- [pywinstyles](https://github.com/Akascape/py-window-styles) (CC0)
 - [Mozilla Readability](https://github.com/mozilla/readability) for reading mode (Apache 2.0, included unmodified in
   [jbrowser/engine/vendor/readability](jbrowser/engine/vendor/readability))
 

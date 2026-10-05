@@ -19,8 +19,7 @@ the frozen `JBrowser.exe` all call it.
       type that needs a start-up flag). Flags JBrowser added in an earlier run are remembered in
       `JBROWSER_ADDED_CHROMIUM_FLAGS` and dropped, so a removed proxy doesn't survive a restart.
     - `QT_WIDGETS_RHI=1` and `QT_WIDGETS_RHI_BACKEND=d3d11`: widget windows composite through Direct3D from the
-      start. Otherwise the first web card converts the window, which recreates its handle (a flicker) and drops the
-      Mica backdrop.
+      start. Otherwise the first web card converts the window, which recreates its handle (a flicker)<!-- if < 2.0.3 --> and drops the Mica backdrop<!-- endif -->.
     - `QT_MEDIA_BACKEND=windows`: sound effects use the native backend, so the build needs no FFmpeg.
 <!-- if >= 1.6.0 -->
     - [[new 1.6.0]] **Graphics acceleration** (`advanced.gpu_mode`, read from the settings file): `auto` keeps the

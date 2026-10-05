@@ -22,7 +22,6 @@ if TYPE_CHECKING:
 EntryRole = Qt.ItemDataRole.UserRole + 1
 HeaderRole = Qt.ItemDataRole.UserRole + 2
 EMPTY_TEXT = "Cards you close appear here"
-GLASS_ALPHA = (0.42, 0.50)      # how much of the dialog colour lies over the Acrylic (dark, light)
 
 
 def ago(ts: float, now: float | None = None) -> str:
@@ -173,8 +172,7 @@ class ArchivePopup(QFrame):
         self.hover_row = -1
         self.hover_remove = False
         self.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.backdrop = Backdrop(self, "popup")      # Acrylic behind the popup (ui/backdrop.py)
+        self.backdrop = Backdrop(self, "popup")      # rounded corners, light/dark frame (ui/backdrop.py)
         self.setFixedSize(380, 480)
         lay = QVBoxLayout(self)
         lay.setContentsMargins(14, 14, 14, 12)
@@ -269,19 +267,7 @@ class ArchivePopup(QFrame):
     def paintEvent(self, _e) -> None:
         th = theme()
         p = QPainter(self)
-        p.setRenderHint(QPainter.RenderHint.Antialiasing)
-        if self.backdrop.active and th.see_through:     # Acrylic behind the popup, like the main window
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-            p.fillRect(self.rect(), Qt.GlobalColor.transparent)
-            p.setCompositionMode(QPainter.CompositionMode.CompositionMode_SourceOver)
-            layer = th.c("dialog")
-            layer.setAlphaF(GLASS_ALPHA[0 if th.dark else 1])
-            p.fillRect(self.rect(), layer)
-            wash = th.backdrop_wash()          # the colour tint, as on the main window
-            if wash is not None:
-                p.fillRect(self.rect(), wash)
-        else:
-            p.fillRect(self.rect(), th.c("dialog_solid"))
-            p.setPen(QPen(th.c("panel_border"), 1))
-            p.drawRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
+        p.fillRect(self.rect(), th.c("dialog_solid"))
+        p.setPen(QPen(th.c("panel_border"), 1))
+        p.drawRect(QRectF(self.rect()).adjusted(0.5, 0.5, -0.5, -0.5))
         p.end()

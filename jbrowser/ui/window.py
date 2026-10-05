@@ -5,18 +5,18 @@ import logging
 
 from PyQt6.QtCore import QEvent, QPoint, QRect, Qt, QTimer
 from PyQt6.QtGui import QCursor, QGuiApplication, QPainter
-from PyQt6.QtWidgets import (QApplication, QHBoxLayout, QMainWindow, QMenu, QSystemTrayIcon, QVBoxLayout,
-                             QWidget)
+from PyQt6.QtWidgets import QApplication, QHBoxLayout, QMainWindow, QSystemTrayIcon, QVBoxLayout, QWidget
 
 from jbrowser import APP_NAME
 from jbrowser.context import AppContext, UiHooks
 from jbrowser.platform import win
 from jbrowser.ui.actions import register_commands
-from jbrowser.ui.backdrop import Backdrop, WindowTransitions, caption_hit, look_guard
+from jbrowser.ui.backdrop import Backdrop, caption_hit
 from jbrowser.ui.canvas import SpaceStack
 from jbrowser.ui.card import WebCard
 from jbrowser.ui.controller import BrowserController
 from jbrowser.ui.favorites_bar import FavoritesBar
+from jbrowser.ui.frost import frost
 from jbrowser.ui.gallery import Gallery
 from jbrowser.ui.hotkeys import HotkeySheet
 from jbrowser.ui.icons import app_icon
@@ -28,13 +28,22 @@ from jbrowser.ui.widgets import ToastManager
 
 log = logging.getLogger(__name__)
 
+# The application-wide events MainWindow.eventFilter acts on.
+_WATCHED_EVENTS = frozenset((QEvent.Type.MouseMove, QEvent.Type.MouseButtonRelease, QEvent.Type.MouseButtonPress,
+                             QEvent.Type.Wheel, QEvent.Type.Show))
+
 
 class RootWidget(QWidget):
-    def paintEvent(self, _e) -> None:
+    """The window's background: the Frosted picture or the Solid colour (Theme.paint_backdrop). The window is
+    opaque and every pixel of it is painted by JBrowser."""
+
+    def __init__(self, parent: QWidget):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_OpaquePaintEvent)   # it paints every pixel itself
+
+    def paintEvent(self, e) -> None:
         p = QPainter(self)
-        # JBrowser's base colour, then the tint (or incognito black); the window colour with Solid. The ribbon,
-        # the bookmarks bar, the sidebar and the canvas paint the same under themselves.
-        theme().paint_base(p, self.rect())
+        theme().paint_backdrop(p, self, e.rect())
         p.end()
 
 
@@ -109,7 +118,6 @@ class MainWindow(QMainWindow):
         self._shut_down = False
         self.setWindowTitle(APP_NAME)
         self.setWindowIcon(app_icon())
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setMinimumSize(760, 480)
 
         self.ui = BrowserController(ctx, self)
@@ -157,23 +165,13 @@ class MainWindow(QMainWindow):
         self._peek_timer.setInterval(140)
         self._peek_timer.timeout.connect(self._maybe_peek)
 
-        # One full repaint after anything that could leave part of the window stale (the window gains or loses
-        # the focus, a menu or tooltip closes over it, Windows changes a setting): the repaint minimising and
-        # restoring used to be the only cure for.
-        self._heal = QTimer(self)
-        self._heal.setSingleShot(True)
-        self._heal.setInterval(90)
-        self._heal.timeout.connect(self._repaint_all)
         th = theme()
         self.backdrop = Backdrop(self)
-        self.guard = look_guard()             # an opaque base whenever Windows draws no material behind us
-        self.guard.watch(self, self.titlebar, self._probe_spot)
         self.native.on_system_change = self._on_system_change
-        self.transitions = WindowTransitions(self, self.native, self._repaint_all)   # no colour warp
-        self.transition = self.transitions.run
+        frost().changed.connect(self._repaint_all)            # a new wallpaper, or a resized window's picture
         ctx.settings.changed.connect(lambda k, _v: self._apply_transitions() if k == "appearance.window_animations"
                                      else None)
-        th.changed.connect(self.update)
+        th.changed.connect(self._repaint_all)
         # Incognito spaces are always black; everything else follows the chosen theme and tint.
         ctx.state.activeSpaceChanged.connect(lambda sp, _prev: th.set_incognito(bool(sp and sp.incognito)))
         active = ctx.state.active_space
@@ -215,21 +213,12 @@ class MainWindow(QMainWindow):
         else:
             self.show()
 
-    # ------------------------------------------------------------- backdrop
-    # The system material and the window's light/dark mode belong to self.backdrop (ui/backdrop.py).
+    # ------------------------------------------------------------- frame and look
+    # The window's light/dark frame belongs to self.backdrop (ui/backdrop.py); its Frosted picture to
+    # ui/frost.py.
     def _on_system_change(self) -> None:
         self.backdrop.schedule()
-        self.guard.system_changed()
-        self._heal.start()
-
-    def _probe_spot(self) -> QPoint | None:
-        """The top edge of the title bar above the address bar (title bar coordinates), where only the
-        backdrop is painted."""
-        tb, root = self.titlebar, self.centralWidget()
-        if not tb.isVisible() or self._immersive is not None or self._onboarding is not None:
-            return None
-        spot = QPoint(tb.pill.geometry().center().x(), 2)
-        return spot if root.childAt(tb.mapTo(root, spot)) is tb else None      # nothing laid over it
+        QTimer.singleShot(400, frost().check)         # a new wallpaper reaches the registry a moment later
 
     # ----------------------------------------------------------- native frame
     def nativeEvent(self, event_type, message):
@@ -250,10 +239,12 @@ class MainWindow(QMainWindow):
         return caption_hit(self, local, self.titlebar.max_btn)
 
     # --------------------------------------------------- minimise / maximise
-    # self.transition (ui/backdrop.py WindowTransitions) paints the window opaque while Windows animates.
     def _repaint_all(self) -> None:
+        # The root, not the window: the root covers the window and paints every pixel (WA_OpaquePaintEvent),
+        # so Qt leaves nothing to repaint for an update() of the window itself. The root's repaint includes
+        # every widget on it.
         if not self._shut_down:
-            self.update()
+            self.centralWidget().update()
             for c in self.stack.canvases.values():
                 c.update()
 
@@ -266,8 +257,8 @@ class MainWindow(QMainWindow):
         self._apply_transitions()
 
     def changeEvent(self, e) -> None:
-        if e.type() == QEvent.Type.ActivationChange and not self._shut_down:
-            self._heal.start()
+        if e.type() == QEvent.Type.ActivationChange and self.isActiveWindow() and not self._shut_down:
+            frost().check()                              # a wallpaper slideshow may have moved on (cheap)
         if e.type() == QEvent.Type.WindowStateChange:
             self.titlebar.set_maximized(self.isMaximized())
             if self._immersive is None:
@@ -354,20 +345,13 @@ class MainWindow(QMainWindow):
         return None
 
     def eventFilter(self, obj, ev) -> bool:
+        # Every event of the application passes through here (paints, timers, ...): leave at once unless it's
+        # one of the few kinds handled below.
         t = ev.type()
+        if t not in _WATCHED_EVENTS:
+            return False
         if self._alt_drag is not None and t in (QEvent.Type.MouseMove, QEvent.Type.MouseButtonRelease):
             return self._alt_drag_event(t, ev)
-        if t == QEvent.Type.Polish and isinstance(obj, QMenu) and not obj.property("jbGlass"):
-            # Menus on frosted glass, like the window (QMenu polishes itself before its native window
-            # exists, which is when a window can still be made translucent).
-            obj.setProperty("jbGlass", True)
-            if theme().material_shown:
-                obj.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-                Backdrop(obj, "popup")
-            return False
-        if t == QEvent.Type.Hide and isinstance(obj, QWidget) and obj.isWindow() and \
-                obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip) and not self._shut_down:
-            self._heal.start()                 # a menu or tooltip closed over the window: repaint it whole
         if t == QEvent.Type.Show and isinstance(obj, QWidget) and obj.isWindow() and \
                 obj.windowType() in (Qt.WindowType.Popup, Qt.WindowType.ToolTip):
             # Native Windows 11 rounded corners + border for menus, combo popups and tooltips.

@@ -1,6 +1,6 @@
 """Settings window.
 
-Translucent navigation pane on the left (Acrylic / Mica shows through), option cards on
+Navigation pane on the left (in groups), option cards on
 the right. Every card explains in plain language what the option does, and every control
 writes straight into the settings store, so changes apply immediately.
 """
@@ -180,11 +180,15 @@ class SettingsWindow(ChromeWindow):
         self.stack = QStackedWidget()
         self.stack.setObjectName("SettingsStack")
         body.addWidget(self.stack, 1)
-        builders = {"general": self._general, "search": self._search, "defaults": self._defaults,
-                    "appearance": self._appearance, "ribbon": self._ribbon, "privacy": self._privacy,
-                    "clear": self._clear, "passwords": self._passwords, "downloads": self._downloads,
-                    "performance": self._performance, "network": self._network, "advanced": self._advanced,
-                    "reset": self._reset, "about": self._about}
+        # Pages are built when first shown (or all at once when you search; each takes a few hundredths of a
+        # second): Settings opens without building 14 pages first, and switching between dark and light restyles
+        # only the pages you have visited.
+        self._builders = {"general": self._general, "search": self._search, "defaults": self._defaults,
+                          "appearance": self._appearance, "ribbon": self._ribbon, "privacy": self._privacy,
+                          "clear": self._clear, "passwords": self._passwords, "downloads": self._downloads,
+                          "performance": self._performance, "network": self._network, "advanced": self._advanced,
+                          "reset": self._reset, "about": self._about}
+        self._built: set[str] = set()
         head_font = self.nav.font()
         head_font.setPointSizeF(max(7.5, head_font.pointSizeF() - 1))
         head_font.setWeight(QFont.Weight.DemiBold)
@@ -202,11 +206,29 @@ class SettingsWindow(ChromeWindow):
                 it.setSizeHint(QSize(200, 36))
                 self.nav.addItem(it)
                 self._index[key] = self.stack.count()
-                self._current_page = key
-                self.stack.addWidget(builders[key]())
+                self.stack.addWidget(QWidget())       # a placeholder until the page is built
         self._style_nav()
         self.nav.currentRowChanged.connect(self._on_nav)
         self.show_page("general")
+
+    def _ensure_page(self, key: str) -> None:
+        if key in self._built or key not in self._builders:
+            return
+        self._built.add(key)
+        self._current_page = key
+        page = self._builders[key]()
+        i = self._index[key]
+        placeholder = self.stack.widget(i)
+        current = self.stack.currentIndex() == i
+        self.stack.insertWidget(i, page)
+        self.stack.removeWidget(placeholder)
+        placeholder.deleteLater()
+        if current:
+            self.stack.setCurrentIndex(i)
+
+    def _build_all(self) -> None:
+        for key in self._builders:
+            self._ensure_page(key)
 
     # ------------------------------------------------------------ plumbing
     def _listen(self, signal, slot: Callable) -> None:
@@ -230,6 +252,7 @@ class SettingsWindow(ChromeWindow):
         item = self.nav.item(row)
         key = item.data(Qt.ItemDataRole.UserRole) if item is not None else None
         if key in self._index:
+            self._ensure_page(key)
             self.stack.setCurrentIndex(self._index[key])
 
     def show_page(self, key: str) -> None:
@@ -280,6 +303,8 @@ class SettingsWindow(ChromeWindow):
 
     def _filter(self, text: str) -> None:
         words = text.lower().split()
+        if words:
+            self._build_all()                                # searching needs every page's cards
         pages_with_hits: list[str] = []
         for page, card in self._cards:
             hit = all(w in card.search_text for w in words)
@@ -383,12 +408,9 @@ class SettingsWindow(ChromeWindow):
                         self._combo("appearance.theme", [("system", "Match Windows"), ("dark", "Dark"),
                                                          ("light", "Light")])),
             SettingCard("tiles", "Window material",
-                        "The see-through look of the window. Acrylic blurs what's behind it, Mica takes a soft tint "
-                        "from your wallpaper (Mica Alt a stronger one), and Solid turns see-through effects off and "
-                        "uses the least graphics power. When Windows has transparency effects or energy saver "
-                        "turned off, JBrowser looks like Solid until they're back.",
-                        self._combo("appearance.material", [("acrylic", "Acrylic (default)"), ("mica", "Mica"),
-                                                            ("mica_alt", "Mica Alt"), ("solid", "Solid")])),
+                        "Frosted lays a soft, frosted tint of your wallpaper's colours under the window. Solid "
+                        "uses one calm, even colour.",
+                        self._combo("appearance.material", [("frosted", "Frosted (default)"), ("solid", "Solid")])),
             self._tint_card(),
             self._toggle_card("appearance.use_accent", "heart", "Use my Windows accent colour",
                               "Buttons, highlights and the active card's border use your Windows accent colour. "
@@ -398,8 +420,7 @@ class SettingsWindow(ChromeWindow):
                         "Cards, menus and the sidebar slide smoothly. Turn off if your PC feels slow or you prefer "
                         "less motion: everything then changes instantly.", self._toggle("appearance.animations")),
             self._toggle_card("appearance.window_animations", "restore", "Animate minimising and maximising",
-                              "Windows' own animation when the window is minimised, maximised or restored. If the "
-                              "window flickers or changes colour at those moments on your PC, turn this off."),
+                              "Windows' own animation when the window is minimised, maximised or restored."),
             self._toggle_card("appearance.sounds", "volume", "Sound effects",
                               "The gentle sounds of the welcome screen. JBrowser makes no sounds while you browse."),
             _section("Websites"),
@@ -509,7 +530,7 @@ class SettingsWindow(ChromeWindow):
         picker.changed.connect(lambda key: self.s.set("appearance.tint", key))
         self._listen(self.s.changed, lambda k, v: picker.set_value(v or "none") if k == "appearance.tint" else None)
         return SettingCard("colour", "Colour tint",
-                           "A gentle colour for the window (a little stronger with the Solid material). Incognito "
+                           "A gentle colour for the window (a little stronger with Solid). Incognito "
                            "spaces always stay black.", extra=picker)
 
     def _sidebar_card(self) -> SettingCard:

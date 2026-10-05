@@ -11,7 +11,9 @@ description: The packages JBrowser needs, how tools/update_deps.py manages them,
 |---|---|
 | **PyQt6** | Qt 6 widgets, networking, multimedia, printing |
 | **PyQt6-WebEngine** | Qt WebEngine (Chromium) and `QWebEngineView` |
+<!-- if < 2.0.3 -->
 | **pywinstyles** | small Windows styling helpers |
+<!-- endif -->
 | **requests** | background downloads of the filter and threat lists |
 | **cryptography** | AES-GCM and Scrypt for the password vault |
 

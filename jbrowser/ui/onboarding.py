@@ -1,7 +1,7 @@
 """The first-run welcome: a fade-in logo intro, three story slides, setup pages and a
 guided tour of the real interface.
 
-Everything is painted on one full-window layer that sits on the Acrylic backdrop (the
+Everything is painted on one full-window layer over the window's own background (the
 browser UI is hidden until the tour), with a single animation clock driving every effect:
 
 * intro     three brand-coloured orbs swirl in and merge; the logo springs out of the
@@ -408,19 +408,9 @@ def preview_material(kind: str) -> Callable[[QPainter, QRectF], None]:
             rg.setColorAt(0, QColor(255, 255, 255, 110 if i != 1 else 70))
             rg.setColorAt(1, QColor(255, 255, 255, 0))
             p.fillRect(r, QBrush(rg))
-        base = QColor(24, 24, 30) if dark else QColor(246, 246, 248)
-        if kind == "acrylic":
-            base.setAlpha(150)
-            p.fillRect(r, base)
-            noise = random.Random(7)
-            p.setPen(Qt.PenStyle.NoPen)
-            for _ in range(140):
-                x = r.left() + noise.random() * r.width()
-                y = r.top() + noise.random() * r.height()
-                p.setBrush(QColor(255, 255, 255, 14))
-                p.drawEllipse(QPointF(x, y), 1.0, 1.0)
-        elif kind == "mica":
-            base.setAlpha(215)
+        base = QColor(20, 20, 26) if dark else QColor(245, 245, 248)
+        if kind == "frosted":
+            base.setAlpha(196 if dark else 188)          # the wallpaper's colours, softly, under the tint
             p.fillRect(r, base)
         else:
             base.setAlpha(255)
@@ -625,7 +615,7 @@ class Onboarding(QWidget):
         self.min_btn = IconButton("min", "Minimize", self, size=40, glyph_px=9, width=46)
         self.max_btn = IconButton("max", "Maximize", self, size=40, glyph_px=9, width=46)
         self.close_btn = IconButton("close", "Close", self, size=40, glyph_px=9, width=46, variant="close")
-        self.min_btn.clicked.connect(lambda: self.win.transition(self.win.showMinimized))
+        self.min_btn.clicked.connect(self.win.showMinimized)
         self.max_btn.clicked.connect(self.ui.toggle_maximize)
         self.close_btn.clicked.connect(self.win.close)
         self.mute_btn = IconButton("volume", "Sound effects on (click to mute)", self, size=34, glyph_px=14)
@@ -702,9 +692,8 @@ class Onboarding(QWidget):
         pg.section("Window material")
         group2 = QButtonGroup(pg)
         tiles = []
-        for kind, title, desc in (("acrylic", "Acrylic", "Frosted glass that softly blurs your desktop."),
-                                  ("mica", "Mica", "A calm tint taken from your wallpaper."),
-                                  ("solid", "Solid", "No transparency. Lightest on battery.")):
+        for kind, title, desc in (("frosted", "Frosted", "A soft, frosted tint of your wallpaper's colours."),
+                                  ("solid", "Solid", "One calm, even colour.")):
             t = ChoiceTile(title, desc, preview_material(kind), height=176, parent=pg)
             t.setChecked(s.get("appearance.material") == kind)
             t.clicked.connect(lambda _c=False, k=kind: s.set("appearance.material", k))
@@ -719,7 +708,7 @@ class Onboarding(QWidget):
         tint_row.addWidget(tint)
         tint_row.addStretch(1)
         pg.lay.addLayout(tint_row)
-        tint_hint = QLabel("A gentle tint for the window: soft over Acrylic and Mica, a little stronger with Solid. "
+        tint_hint = QLabel("A gentle tint for the window: soft with Frosted, a little stronger with Solid. "
                            "Incognito spaces always stay black.", pg)
         tint_hint.setProperty("hint", True)
         tint_hint.setWordWrap(True)

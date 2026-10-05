@@ -23,7 +23,7 @@ $env:JBROWSER_SKIP_WELCOME = "1"; $env:JBROWSER_SKIP_UPDATES = "1"
 
 Go through what applies to your change:
 
-- **Both themes** and **all materials** (Acrylic, Mica, Mica Alt, Solid)<!-- if >= 1.5.0 -->, with and without a colour tint<!-- endif -->.
+- **Both themes** and <!-- if >= 2.0.3 -->**both materials** (Frosted, Solid)<!-- else -->**all materials** (Acrylic, Mica, Mica Alt, Solid)<!-- endif --><!-- if >= 1.5.0 -->, with and without a colour tint<!-- endif -->.
 - ***Fluid animations* off**: everything must still work, instantly.
 - **An incognito space**: no history, favicons, archive, session or passwords may be written.
 - **Several spaces**: the change behaves correctly in the space you are not looking at, and after switching.

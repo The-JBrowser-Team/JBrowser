@@ -1,12 +1,14 @@
-"""Theme engine: dark/light palettes with alpha-layered surfaces over Mica / Acrylic."""
+"""Theme engine: dark/light palettes with alpha-layered surfaces over JBrowser's own Frosted look (ui/frost.py)
+or a Solid colour. Windows are opaque; Windows' see-through materials are never used."""
 from __future__ import annotations
 
 from PyQt6.QtCore import QObject, Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont, QGuiApplication, QImage, QPainter, QPalette
+from PyQt6.QtGui import QColor, QFont, QGuiApplication, QPainter, QPalette
 from PyQt6.QtWidgets import QApplication
 
 from jbrowser.core.settings import Settings
 from jbrowser.platform import win
+from jbrowser.ui.frost import frost
 
 _theme: "Theme | None" = None
 
@@ -27,7 +29,7 @@ DARK = {
     "sleep": "rgba(160,170,255,0.85)", "minimap": "rgba(255,255,255,0.10)",
     "window_tint": "rgba(10,10,14,0.16)", "layer": "rgba(32,32,38,0.70)", "layer_solid": "#232329",
     "card_hover": "rgba(255,255,255,0.045)", "focus_ring": "rgba(255,255,255,0.22)",
-    "backdrop_base": "rgba(24,24,30,0.58)", "menu": "rgba(36,36,43,0.80)",
+    "frost_tint": "rgba(20,20,26,0.80)",
 }
 LIGHT = {
     "window": "#f3f3f3", "text": "#1a1a1d", "text2": "rgba(0,0,0,0.62)", "text3": "rgba(0,0,0,0.42)",
@@ -43,12 +45,12 @@ LIGHT = {
     "sleep": "rgba(90,100,200,0.85)", "minimap": "rgba(0,0,0,0.10)",
     "window_tint": "rgba(255,255,255,0.12)", "layer": "rgba(251,251,253,0.76)", "layer_solid": "#f9f9fb",
     "card_hover": "rgba(0,0,0,0.03)", "focus_ring": "rgba(0,0,0,0.22)",
-    "backdrop_base": "rgba(246,246,249,0.55)", "menu": "rgba(250,250,252,0.80)",
+    "frost_tint": "rgba(245,245,248,0.74)",
 }
 
 
-# Colour tints (Settings → Appearance, and the welcome's look page). Over Acrylic / Mica they are a
-# light wash over the backdrop; with the Solid material they are blended into the surfaces.
+# Colour tints (Settings → Appearance, and the welcome's look page). With Frosted they are a light wash over
+# the frosted picture; with Solid they are blended into the surfaces.
 TINTS: dict[str, tuple[str, str]] = {
     "rose": ("Rose", "#e8577a"), "coral": ("Coral", "#ff7a59"), "amber": ("Amber", "#f0a830"),
     "lime": ("Lime", "#98c950"), "mint": ("Mint", "#3ecf9b"), "teal": ("Teal", "#23b0ad"),
@@ -61,18 +63,11 @@ _SOLID_MIX = {"window": (0.20, 0.15), "sidebar_solid": (0.24, 0.19), "canvas_sol
 _WASH_ALPHA = (0.15, 0.10)          # the translucent wash (dark, light): a tint, never a paint job
 _OUTLINE_WASH = (0.30, 0.12)        # how far the active card's outline is washed towards white (dark, light)
 _OUTLINE_GREY = ("#8b9099", "#9aa0a8")   # the outline without a tint (dark, light)
-# Opaque base while the window minimises or maximises (Theme.hold_opaque), and whenever Windows isn't
-# drawing a material behind JBrowser (Theme.see_through): Windows 11's own colour behind Mica / Acrylic
-# windows that can't show it (dark, light), so the hand-over is barely visible.
-TRANSITION_BASE = ("#202020", "#f3f3f3")
-# Windows 10's blur has no tint of its own (Windows 11's Acrylic and Mica do), so JBrowser's base over
-# it is denser there: the window keeps its colours whatever is behind it (dark, light).
-_WIN10_BASE = ("rgba(28,28,34,0.86)", "rgba(246,246,249,0.84)")
 # Incognito spaces always look black, whatever the theme or tint (like other browsers' private windows).
 _INCOGNITO = {"window": "#0a0a0c", "sidebar_solid": "#0e0e11", "canvas_solid": "#070709", "card_solid": "#141417",
               "dialog_solid": "#121215", "layer_solid": "#141417", "sidebar": "rgba(0,0,0,0.30)",
-              "canvas": "rgba(0,0,0,0.42)", "window_tint": "rgba(0,0,0,0.62)",
-              "backdrop_base": "rgba(8,8,10,0.62)", "menu": "rgba(20,20,23,0.86)"}
+              "canvas": "rgba(0,0,0,0.42)", "window_tint": "rgba(0,0,0,0.62)", "frost_tint": "rgba(6,6,8,0.93)"}
+MATERIALS = ("frosted", "solid")
 
 
 def mix(base: QColor, other: QColor, amount: float) -> QColor:
@@ -112,18 +107,15 @@ class Theme(QObject):
         self.dark = True
         self.accent = QColor("#4c8dff")
         self.tokens: dict[str, str] = dict(DARK)
+        # True with the Frosted look (JBrowser's own frosted picture under its windows, ui/frost.py); False
+        # with Solid. Surfaces are partly see-through over the frosted picture and opaque with Solid.
         self.translucent = True
-        self.hold_opaque = False         # set by MainWindow.transition while Windows animates the window
-        # False while Windows can't draw Mica / Acrylic behind JBrowser (transparency effects off, energy
-        # saver, high contrast, Remote Desktop, a graphics path without see-through windows). Set by
-        # ui/backdrop.py LookGuard; JBrowser then paints an opaque base of its own.
-        self.see_through = True
-        self._flat_key: tuple | None = None   # backdrop_color() cache
-        self._flat = QColor(0, 0, 0, 0)
         self.tint: QColor | None = None
         self.incognito = False
         self._syncing = False
         self._colors: dict[str, QColor] = {}
+        self._qss_tokens: dict[str, str] = dict(DARK)
+        self._qss = ""                                  # the style sheet last given to Qt
         hints = QGuiApplication.styleHints()
         if hasattr(hints, "colorSchemeChanged"):
             hints.colorSchemeChanged.connect(lambda _s: self.refresh())
@@ -162,8 +154,7 @@ class Theme(QObject):
     def _request_scheme(self, dark: bool | None) -> None:
         """Tell Qt which scheme JBrowser shows (None: follow Windows). Qt re-applies its own idea of
         light/dark to every window's frame whenever the application palette changes, which Windows
-        triggers on its own (accent colour, energy saver, ...). With Windows in Light mode and
-        JBrowser in Dark mode, that turned the Acrylic backdrop light behind light text."""
+        triggers on its own (accent colour, energy saver, ...), so the two must agree."""
         hints = QGuiApplication.styleHints()
         if not hasattr(hints, "setColorScheme"):       # Qt < 6.8
             return
@@ -185,13 +176,15 @@ class Theme(QObject):
             self._request_scheme(None)                  # so _system_dark() reads Windows' own setting
         self.dark = self.incognito or (self._system_dark() if mode == "system" else mode == "dark")
         self.tokens = dict(DARK if self.dark else LIGHT)
-        if win.IS_WINDOWS and not win.IS_WIN11:
-            self.tokens["backdrop_base"] = _WIN10_BASE[0 if self.dark else 1]
         tint = TINTS.get(self.settings.get("appearance.tint") or "")
         self.tint = QColor(tint[1]) if tint and not self.incognito else None
         if self.incognito:
             self.tokens.update(_INCOGNITO)
-        elif self.tint is not None:
+        # The style sheet (menus, inputs, lists, ...) takes the colours without the tint: Qt restyles every widget
+        # of the app when the style sheet changes (a third of a second with Settings open), and picking a colour
+        # tint then never needs it.
+        self._qss_tokens = dict(self.tokens)
+        if self.tint is not None:
             i = 0 if self.dark else 1
             for key, amounts in _SOLID_MIX.items():
                 self.tokens[key] = mix(parse_color(self.tokens[key]), self.tint, amounts[i]).name()
@@ -205,10 +198,7 @@ class Theme(QObject):
         elif not self.dark and accent.lightness() > 170:
             accent = accent.darker(135)
         self.accent = accent
-        # Translucent or solid follows the setting and what Windows can do, never a momentary answer
-        # from Windows: flipping the whole look on a failed call restyled every widget and could
-        # leave the window black or white.
-        self.translucent = self.settings.get("appearance.material") != "solid" and win.backdrop_supported()
+        self.translucent = self.settings.get("appearance.material") != "solid"
         self._colors = {k: parse_color(v) for k, v in self.tokens.items()}
         self._colors["accent"] = QColor(accent)
         self.apply()
@@ -242,68 +232,28 @@ class Theme(QObject):
         return c
 
     def backdrop_wash(self) -> QColor | None:
-        """Colour laid over the Acrylic / Mica backdrop of the main window: the tint, black for
-        incognito, or None for the plain material."""
+        """Colour laid over the frosted picture: the tint, black for incognito, or None."""
         if self.incognito or self.tint is not None:
             return self.c("window_tint")
         return None
 
-    @property
-    def material_shown(self) -> bool:
-        """True when a see-through material (Mica / Acrylic) is chosen and Windows is drawing it."""
-        return self.translucent and self.see_through
-
-    def set_see_through(self, on: bool) -> None:
-        """Windows started or stopped drawing materials behind JBrowser (ui/backdrop.py LookGuard)."""
-        if bool(on) != self.see_through:
-            self.see_through = bool(on)
-            self.apply()              # menus switch between frosted glass and an opaque background
-            self.changed.emit()
-
-    def backdrop_layers(self) -> list[QColor]:
-        """What a translucent window paints over the system backdrop, bottom first: JBrowser's own
-        base colour, then the tint wash. The base keeps dark windows dark and light ones light
-        whatever Windows draws behind them; the frosted backdrop still shows through."""
-        layers = [self.c("backdrop_base")]
+    def frost_look(self) -> tuple:
+        """What the frosted picture depends on besides the wallpaper: its tint and the colour wash."""
         wash = self.backdrop_wash()
-        if wash is not None:
-            layers.append(wash)
-        if self.hold_opaque or not self.see_through:
-            # Nothing of the window may depend on what Windows draws behind it: while it animates a
-            # minimise or maximise (it draws a snapshot, and on some PCs the see-through parts of that
-            # snapshot come out in the wrong colours), and while it isn't drawing a material at all.
-            # Under everything goes the colour Windows itself shows behind such windows.
-            layers.insert(0, QColor(TRANSITION_BASE[0 if self.dark else 1]))
-        return layers
+        return self.c("frost_tint").rgba(), (wash.rgba() if wash is not None else 0)
 
-    def backdrop_color(self) -> QColor:
-        """backdrop_layers() flattened into one colour (with alpha), or the solid window colour. The ribbon,
-        the bookmarks bar and the sidebar paint it under themselves (CompositionMode_Source), so their pixels
-        never depend on the window background being repainted underneath them: when it wasn't, on some PCs,
-        a rectangle of bare backdrop (light or dark) showed through until the window was minimised."""
-        if not self.translucent:
-            return self.c("window")
-        layers = self.backdrop_layers()
-        key = tuple(c.rgba() for c in layers)
-        if key != self._flat_key:
-            img = QImage(1, 1, QImage.Format.Format_ARGB32_Premultiplied)
-            img.fill(Qt.GlobalColor.transparent)
-            p = QPainter(img)
-            for c in layers:
-                p.fillRect(0, 0, 1, 1, c)
-            p.end()
-            self._flat_key, self._flat = key, img.pixelColor(0, 0)
-        return QColor(self._flat)
-
-    def paint_base(self, p: QPainter, rect) -> None:
-        """Paint backdrop_color() over rect, replacing whatever was there."""
-        p.save()
-        p.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
-        p.fillRect(rect, self.backdrop_color())
-        p.restore()
+    def paint_backdrop(self, p: QPainter, widget, rect, layer: str | None = None) -> None:
+        """Paint the window's background under ``rect`` of ``widget``: the Frosted picture (fitted to the
+        widget's window, so every widget's part lines up), or the Solid colour. ``layer`` is a surface token
+        laid over it (the canvas's), baked into the picture so it costs nothing extra."""
+        if self.translucent:
+            frost().paint(p, widget, rect, self.frost_look(), self.c(layer).rgba() if layer else 0)
+        else:
+            p.fillRect(rect, self.c(layer + "_solid") if layer and layer + "_solid" in self._colors
+                       else self.c("window"))
 
     def surface(self, token: str) -> QColor:
-        """Surface color honoring the solid (no Mica) material."""
+        """Surface colour: partly see-through over Frosted, opaque with Solid."""
         if not self.translucent and token + "_solid" in self._colors:
             return self.c(token + "_solid")
         return self.c(token)
@@ -338,20 +288,24 @@ class Theme(QObject):
         pal.setColor(QPalette.ColorRole.PlaceholderText, self.c("text3"))
         pal.setColor(QPalette.ColorRole.Link, self.accent)
         app.setPalette(pal)
-        app.setStyleSheet(self.stylesheet())
+        qss = self.stylesheet()
+        if qss != self._qss:                            # restyling is slow: only when it changed
+            self._qss = qss
+            app.setStyleSheet(qss)                      # (repaints every widget)
+        else:
+            for w in app.topLevelWidgets():             # the new colours, everywhere (the main window repaints
+                if w.isVisible():                       # its root itself, on `changed`)
+                    w.update()
 
     def stylesheet(self) -> str:
-        t = dict(self.tokens)
+        t = self._qss_tokens
         a = self.accent.name()
         at = self.accent_text().name()
         a_soft = f"rgba({self.accent.red()},{self.accent.green()},{self.accent.blue()},0.22)"
         a_hover = self.accent.lighter(112).name() if self.dark else self.accent.darker(110).name()
-        dialog_bg = t["dialog_solid"]
-        # Menus are frosted glass over Acrylic (Windows rounds them and draws their outline); with the
-        # Solid material, or while Windows draws no materials, they have an opaque background.
-        glass = self.material_shown
-        menu_bg = t["menu"] if glass else t["dialog_solid"]
-        menu_border = "none" if glass else f"1px solid {t['panel_border']}"
+        # Menus are opaque (Windows 11 rounds their corners).
+        menu_bg = t["dialog_solid"]
+        menu_border = f"1px solid {t['panel_border']}"
         from jbrowser.ui.icons import glyph_png
         check_png = glyph_png("check", self.accent_text(), 14)
         arrow_png = glyph_png("chev_down", self.c("text2"), 12)
@@ -445,7 +399,6 @@ QFrame#SettingCard {{ background: {t['card_hover']}; border: 1px solid {t['divid
 QSplitter::handle {{ background: {t['divider']}; }}
 QSplitter::handle:hover {{ background: {a}; }}
 
-QDialog#JDialog {{ background: {dialog_bg}; }}
 QWidget#DialogBody {{ background: transparent; }}
 QStackedWidget#SettingsStack > QWidget {{ background: transparent; }}
 QScrollArea {{ background: transparent; border: none; }}

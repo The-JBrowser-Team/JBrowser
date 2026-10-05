@@ -5,6 +5,31 @@ and versions follow [Semantic Versioning](https://semver.org/) (`major.minor.pat
 
 Each release section below becomes the release notes on GitHub (see [docs/RELEASING.md](docs/RELEASING.md)).
 
+## [2.0.3] - 2026-10-05
+
+JBrowser now paints its own frosted look, and Settings opens about three times faster.
+
+### Changed
+- **Frosted, JBrowser's own look.** Settings › Appearance › *Window material* now offers **Frosted (default)** and
+  **Solid**. Frosted lays a soft, blurred tint of your wallpaper's colours under the window, painted by JBrowser
+  itself, so it looks the same on every PC: on Windows 10 and 11, in front or behind other windows, and with
+  transparency effects or energy saver on or off. Your wallpaper never leaves your PC. Acrylic, Mica and Mica Alt,
+  which Windows drew behind the window, are gone; if you used one of them, JBrowser switches to Frosted. Solid stays
+  Solid.
+- **A quicker Settings.** It opens about three times faster, because each page is built the moment you first open
+  it instead of all fourteen before the window appears. Picking a colour tint or switching between Frosted and Solid
+  now responds instantly, where it used to freeze Settings for a moment, and switching between dark and light is
+  about four times quicker.
+- **Lighter on your PC.** JBrowser no longer watches the window's colours in the background, its windows are drawn
+  without transparency, and the mouse and window messages take a shorter path through the app, so it does less work
+  when idle and while you move around.
+- Menus and the Archive are solid panels.
+- One fewer library in the app (pywinstyles).
+
+### Fixed
+- Nothing that Windows draws can show through a JBrowser window any more, so no light or dark boxes and no colour
+  changes after minimising, maximising or switching windows.
+
 ## [2.0.2] - 2026-10-05
 
 ### Fixed
